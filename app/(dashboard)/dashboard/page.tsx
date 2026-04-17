@@ -1,124 +1,291 @@
+import { desc, eq } from "drizzle-orm";
+import { FileText, Key, Plus, Sparkles, StickyNote, Upload } from "lucide-react";
+import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { requireSessionWithAccount } from "@/lib/api/session";
+import { db } from "@/lib/db";
+import { files as filesTable, notes as notesTable } from "@/lib/db/schema";
+import { formatBytes, formatRelative } from "@/lib/format";
 import { getQuota } from "@/lib/quota";
+import { QuotaRing } from "./_quota-ring";
 
-function formatBytes(n: number) {
-  if (n < 1024) return `${n} B`;
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
-  if (n < 1024 * 1024 * 1024) return `${(n / 1024 / 1024).toFixed(1)} MB`;
-  return `${(n / 1024 / 1024 / 1024).toFixed(2)} GB`;
-}
+export default async function DashboardPage() {
+  const { session, ownerAccountId } = await requireSessionWithAccount();
+  const [quota, recentNotes, recentFiles] = await Promise.all([
+    getQuota(ownerAccountId),
+    db
+      .select({
+        id: notesTable.id,
+        title: notesTable.title,
+        updatedAt: notesTable.updatedAt,
+      })
+      .from(notesTable)
+      .where(eq(notesTable.ownerAccountId, ownerAccountId))
+      .orderBy(desc(notesTable.updatedAt))
+      .limit(5),
+    db
+      .select({
+        id: filesTable.id,
+        filename: filesTable.filename,
+        sizeBytes: filesTable.sizeBytes,
+        mimeType: filesTable.mimeType,
+        createdAt: filesTable.createdAt,
+      })
+      .from(filesTable)
+      .where(eq(filesTable.ownerAccountId, ownerAccountId))
+      .orderBy(desc(filesTable.createdAt))
+      .limit(5),
+  ]);
 
-function pct(used: number, max: number) {
-  if (max === 0) return 0;
-  return Math.min(100, Math.round((used / max) * 100));
-}
+  const firstName = session.user.name?.split(" ")[0] ?? "Hallo";
 
-function UsageBar({ used, max }: { used: number; max: number }) {
-  const p = pct(used, max);
   return (
-    <div className="h-2 w-full rounded-full bg-muted">
-      <div
-        className="h-2 rounded-full bg-foreground transition-all"
-        style={{ width: `${p}%` }}
-      />
+    <div className="space-y-8">
+      {/* Hero */}
+      <div className="relative overflow-hidden rounded-2xl border bg-gradient-to-br from-indigo-500/10 via-fuchsia-500/5 to-amber-500/10 p-8">
+        <div className="absolute -right-12 -top-12 h-40 w-40 rounded-full bg-fuchsia-500/10 blur-3xl" />
+        <div className="absolute -bottom-10 -left-10 h-40 w-40 rounded-full bg-indigo-500/10 blur-3xl" />
+        <div className="relative flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <Sparkles className="h-3.5 w-3.5" />
+              Dashboard
+            </div>
+            <h1 className="mt-1 text-3xl font-semibold tracking-tight">
+              Willkommen, {firstName}.
+            </h1>
+            <p className="mt-1 max-w-xl text-sm text-muted-foreground">
+              Dein persönlicher MCP-Wissens-Pool — erreichbar aus allen
+              KI-Clients, die du über <em>Settings → MCP-Tokens</em> verbindest.
+            </p>
+          </div>
+          <Badge
+            variant="secondary"
+            className="border-indigo-500/20 bg-indigo-500/10 text-indigo-700 dark:text-indigo-300"
+          >
+            Plan: {quota.planId}
+          </Badge>
+        </div>
+      </div>
+
+      {/* Quick actions */}
+      <div className="grid gap-3 sm:grid-cols-3">
+        <QuickAction
+          href="/notes/new"
+          icon={<Plus className="h-4 w-4" />}
+          label="Neue Note"
+          description="Markdown oder Plaintext, wird automatisch embedded."
+        />
+        <QuickAction
+          href="/files"
+          icon={<Upload className="h-4 w-4" />}
+          label="File hochladen"
+          description="Drag & Drop, bis 10 MB pro Datei."
+        />
+        <QuickAction
+          href="/settings"
+          icon={<Key className="h-4 w-4" />}
+          label="MCP-Token"
+          description="Claude Desktop, ChatGPT, Cursor anbinden."
+        />
+      </div>
+
+      {/* Quota rings */}
+      <div>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          Kontingent
+        </h2>
+        <div className="grid gap-4 lg:grid-cols-3">
+          <Card>
+            <CardContent className="pt-6">
+              <QuotaRing
+                label="Speicher"
+                value={quota.usedBytes}
+                max={quota.maxBytes}
+                colorVar="var(--chart-1)"
+                formatValue={formatBytes}
+              />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <QuotaRing
+                label="Files"
+                value={quota.filesCount}
+                max={quota.maxFiles}
+                colorVar="var(--chart-2)"
+                unitSuffix="Dateien"
+              />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <QuotaRing
+                label="Notes"
+                value={quota.notesCount}
+                max={quota.maxNotes}
+                colorVar="var(--chart-3)"
+                unitSuffix="Notes"
+              />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Activity */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <StickyNote className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-base">Letzte Notes</CardTitle>
+              </div>
+              <Link
+                href="/notes"
+                className="text-xs text-muted-foreground underline-offset-4 hover:underline"
+              >
+                Alle ansehen
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {recentNotes.length === 0 ? (
+              <EmptyActivity
+                icon={<StickyNote className="h-6 w-6 text-muted-foreground" />}
+                label="Noch keine Notes"
+                cta="Erste anlegen"
+                href="/notes/new"
+              />
+            ) : (
+              <ul className="space-y-1">
+                {recentNotes.map((n) => (
+                  <li key={n.id}>
+                    <Link
+                      href={`/notes/${n.id}`}
+                      className="flex items-center justify-between gap-3 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-muted/50"
+                    >
+                      <span className="truncate">{n.title}</span>
+                      <span className="shrink-0 text-xs text-muted-foreground">
+                        {formatRelative(n.updatedAt)}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-base">Letzte Files</CardTitle>
+              </div>
+              <Link
+                href="/files"
+                className="text-xs text-muted-foreground underline-offset-4 hover:underline"
+              >
+                Alle ansehen
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {recentFiles.length === 0 ? (
+              <EmptyActivity
+                icon={<FileText className="h-6 w-6 text-muted-foreground" />}
+                label="Noch keine Files"
+                cta="Erste hochladen"
+                href="/files"
+              />
+            ) : (
+              <ul className="space-y-1">
+                {recentFiles.map((f) => (
+                  <li
+                    key={f.id}
+                    className="flex items-center justify-between gap-3 rounded-md px-2 py-1.5 text-sm"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate">{f.filename}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {f.mimeType} · {formatBytes(f.sizeBytes)}
+                      </div>
+                    </div>
+                    <span className="shrink-0 text-xs text-muted-foreground">
+                      {formatRelative(f.createdAt)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
 
-export default async function DashboardPage() {
-  const { session, ownerAccountId } = await requireSessionWithAccount();
-  const quota = await getQuota(ownerAccountId);
-
+function QuickAction({
+  href,
+  icon,
+  label,
+  description,
+}: {
+  href: string;
+  icon: React.ReactNode;
+  label: string;
+  description: string;
+}) {
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Willkommen zurück</h1>
-        <p className="text-sm text-muted-foreground">
-          Dein persönlicher MCP-Wissens-Pool. Plan:{" "}
-          <Badge variant="secondary">{quota.planId}</Badge>
-        </p>
+    <Link
+      href={href}
+      className="group relative overflow-hidden rounded-xl border bg-card p-4 transition-all hover:-translate-y-0.5 hover:border-foreground/20 hover:shadow-md"
+    >
+      <div className="flex items-start gap-3">
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500/15 to-fuchsia-500/15 text-indigo-700 dark:text-indigo-300">
+          {icon}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="font-medium">{label}</div>
+          <div className="mt-0.5 text-xs text-muted-foreground">
+            {description}
+          </div>
+        </div>
       </div>
+    </Link>
+  );
+}
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Speicher
-            </CardTitle>
-            <CardDescription className="text-2xl font-semibold text-foreground">
-              {formatBytes(quota.usedBytes)}{" "}
-              <span className="text-sm font-normal text-muted-foreground">
-                / {formatBytes(quota.maxBytes)}
-              </span>
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <UsageBar used={quota.usedBytes} max={quota.maxBytes} />
-            <p className="mt-2 text-xs text-muted-foreground">
-              {pct(quota.usedBytes, quota.maxBytes)}% belegt
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Files
-            </CardTitle>
-            <CardDescription className="text-2xl font-semibold text-foreground">
-              {quota.filesCount}{" "}
-              <span className="text-sm font-normal text-muted-foreground">
-                / {quota.maxFiles}
-              </span>
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <UsageBar used={quota.filesCount} max={quota.maxFiles} />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Notes
-            </CardTitle>
-            <CardDescription className="text-2xl font-semibold text-foreground">
-              {quota.notesCount}{" "}
-              <span className="text-sm font-normal text-muted-foreground">
-                / {quota.maxNotes}
-              </span>
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <UsageBar used={quota.notesCount} max={quota.maxNotes} />
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Nächste Schritte</CardTitle>
-          <CardDescription>
-            Angemeldet als {session.user.email}.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="text-sm text-muted-foreground space-y-2">
-          <p>
-            Lege einen <strong>Space</strong> an, füge Notes hinzu oder lade
-            Files hoch.
-          </p>
-          <p>
-            In <strong>Settings</strong> generierst du deinen MCP-Token für
-            Claude Desktop, ChatGPT, Cursor &amp; Co.
-          </p>
-        </CardContent>
-      </Card>
+function EmptyActivity({
+  icon,
+  label,
+  cta,
+  href,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  cta: string;
+  href: string;
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed py-8 text-center">
+      {icon}
+      <div className="text-sm text-muted-foreground">{label}</div>
+      <Button
+        size="sm"
+        variant="outline"
+        nativeButton={false}
+        render={<Link href={href}>{cta}</Link>}
+      />
     </div>
   );
 }

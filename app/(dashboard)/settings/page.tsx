@@ -1,4 +1,5 @@
 import { and, desc, eq, isNull } from "drizzle-orm";
+import { Key, Plug } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -35,31 +36,54 @@ export default async function SettingsPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold">Settings</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
         <p className="text-sm text-muted-foreground">
           Verwalte deine MCP-Tokens und die Anbindung an KI-Clients.
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
+      <Card className="overflow-hidden">
+        <div className="absolute right-0 top-0 h-24 w-24 rounded-full bg-gradient-to-br from-indigo-500/15 to-fuchsia-500/10 blur-2xl" />
+        <CardHeader className="relative">
           <div className="flex items-center justify-between gap-4">
-            <div>
-              <CardTitle>MCP-Tokens</CardTitle>
-              <CardDescription>
-                Je ein Token pro KI-Client. Du kannst Tokens jederzeit
-                widerrufen.
-              </CardDescription>
+            <div className="flex items-center gap-3">
+              <div className="grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br from-indigo-500/15 to-fuchsia-500/15 text-indigo-700 dark:text-indigo-300">
+                <Key className="h-4 w-4" />
+              </div>
+              <div>
+                <CardTitle>MCP-Tokens</CardTitle>
+                <CardDescription>
+                  Je ein Token pro KI-Client. Widerrufen sperrt den Zugriff
+                  sofort.
+                </CardDescription>
+              </div>
             </div>
             <TokenCreateDialog />
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="relative">
           <TokenList tokens={tokens} />
         </CardContent>
       </Card>
 
-      <McpInstructions />
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br from-emerald-500/15 to-teal-500/15 text-emerald-700 dark:text-emerald-400">
+              <Plug className="h-4 w-4" />
+            </div>
+            <div>
+              <CardTitle>MCP-Verbindung einrichten</CardTitle>
+              <CardDescription>
+                Konfigurations-Snippets für Claude Desktop, ChatGPT und Cursor.
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <McpInstructions />
+        </CardContent>
+      </Card>
     </div>
   );
 }
