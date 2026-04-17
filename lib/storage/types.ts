@@ -1,10 +1,11 @@
 /**
- * Storage abstraction. MVP backs everything onto Vercel Blob (access: private);
- * V2 may route per-account (BYO-bucket). Providers identify themselves with a
- * stable `name` matching the `storage_provider` column on `files`.
+ * Storage abstraction. Backends:
+ *   - "vercel_blob" — always-on internal storage, env-configured
+ *   - "s3" — N named per-account providers (table `storage_providers`)
  *
- * Blobs are private: the storage key is an opaque pathname, not a URL.
- * Downloads go through the Next.js server so ownership can be re-checked.
+ * Blobs are private: the storage key is an opaque pathname or S3 key, never
+ * a publicly-reachable URL. Downloads go through the Next.js server so
+ * ownership can be re-checked on each request.
  */
 
 export type StorageProviderName = "vercel_blob" | "s3";

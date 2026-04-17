@@ -570,7 +570,6 @@ export function registerTools(server: McpServer): void {
           filename,
           mimeType: mime_type,
           sizeBytes: putResult.sizeBytes,
-          storageProvider: provider.name,
           storageProviderId: providerId,
           storageKey: putResult.storageKey,
         })

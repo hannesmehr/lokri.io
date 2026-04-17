@@ -50,6 +50,13 @@
       "when": 1776455093102,
       "tag": "0006_lying_riptide",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1776455931326,
+      "tag": "0007_new_lucky_pierre",
+      "breakpoints": true
     }
   ]
 }

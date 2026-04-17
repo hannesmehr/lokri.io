@@ -122,7 +122,6 @@ export async function POST(req: NextRequest) {
         filename: file.name,
         mimeType,
         sizeBytes: putResult.sizeBytes,
-        storageProvider: provider.name,
         storageProviderId: providerId,
         storageKey: putResult.storageKey,
       })

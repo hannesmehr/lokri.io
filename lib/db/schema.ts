@@ -271,15 +271,6 @@ export const ownerAccounts = pgTable(
       .notNull()
       .references(() => plans.id),
     /**
-     * @deprecated — kept on the row for legacy reads; new code picks the
-     * active provider via the `storage_providers` table + optional
-     * `spaces.storage_provider_id` override. Will be dropped in a later
-     * cleanup migration once all older files are re-linked.
-     */
-    storageProvider: text("storage_provider").notNull().default("vercel_blob"),
-    /** @deprecated — superseded by `storage_providers`. */
-    storageConfigEncrypted: text("storage_config_encrypted"),
-    /**
      * When the current paid plan expires. NULL means free plan (no expiry).
      * On expiry, quota helpers fall back to the free plan's limits but do
      * NOT touch the `plan_id` field (which stays as the last-paid tier for
@@ -473,13 +464,6 @@ export const files = pgTable(
     filename: text("filename").notNull(),
     mimeType: text("mime_type").notNull(),
     sizeBytes: bigint("size_bytes", { mode: "number" }).notNull(),
-    /**
-     * Legacy discriminator — kept in sync with `storage_provider_id`:
-     * null → "vercel_blob", set → "s3". New code reads
-     * `storage_provider_id` directly; this column will be dropped once the
-     * admin tooling can be sure no caller still reads it.
-     */
-    storageProvider: text("storage_provider").notNull().default("vercel_blob"),
     /**
      * Points at the row in `storage_providers` for S3-backed files. Null for
      * files on the internal Vercel Blob — the absence of a row discriminates.

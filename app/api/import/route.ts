@@ -334,7 +334,6 @@ async function importFiles(
           filename: entry.filename,
           mimeType: entry.mimeType,
           sizeBytes: put.sizeBytes,
-          storageProvider: provider.name,
           storageProviderId: providerId,
           storageKey: put.storageKey,
         })
