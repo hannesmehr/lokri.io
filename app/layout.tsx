@@ -26,9 +26,43 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "lokri.io",
+  metadataBase: new URL(
+    process.env.BETTER_AUTH_URL ??
+      (process.env.VERCEL_PROJECT_PRODUCTION_URL
+        ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+        : "http://localhost:3000"),
+  ),
+  title: {
+    default: "lokri.io — DSGVO-konformer MCP-Gateway",
+    template: "%s · lokri.io",
+  },
   description:
-    "DSGVO-konformer MCP-Gateway für Power-User mit mehreren KI-Clients.",
+    "Ein gemeinsames Gedächtnis für Claude Desktop, ChatGPT und Cursor. EU-hosted, DSGVO-konform, dir gehörend.",
+  applicationName: "lokri.io",
+  keywords: [
+    "MCP",
+    "Model Context Protocol",
+    "Claude Desktop",
+    "ChatGPT",
+    "Cursor",
+    "Semantic search",
+    "DSGVO",
+    "EU-hosted",
+    "KI-Memory",
+    "pgvector",
+  ],
+  authors: [{ name: "Hannes Mehr" }],
+  creator: "Hannes Mehr",
+  publisher: "Hannes Mehr",
+  robots: { index: true, follow: true },
+  openGraph: {
+    type: "website",
+    locale: "de_DE",
+    siteName: "lokri.io",
+  },
+  twitter: {
+    card: "summary_large_image",
+  },
 };
 
 export default function RootLayout({
