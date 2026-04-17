@@ -4,6 +4,7 @@ import { z } from "zod";
 import {
   apiError,
   notFound,
+  parseJsonBody,
   serverError,
   unauthorized,
   zodError,
@@ -14,6 +15,7 @@ import { db } from "@/lib/db";
 import { notes } from "@/lib/db/schema";
 import { embedText } from "@/lib/embeddings";
 import { applyQuotaDelta } from "@/lib/quota";
+import { limit, rateLimitResponse } from "@/lib/rate-limit";
 
 const patchBodySchema = z
   .object({
@@ -50,11 +52,14 @@ export async function GET(_req: NextRequest, { params }: Params) {
 export async function PATCH(req: NextRequest, { params }: Params) {
   try {
     const { ownerAccountId } = await requireSessionWithAccount();
+    const rl = await limit("noteWrite", `u:${ownerAccountId}`);
+    if (!rl.ok) return rateLimitResponse(rl);
+
     const { id } = await params;
     const existing = await findOwnedNote(ownerAccountId, id);
     if (!existing) return notFound();
 
-    const json = await req.json().catch(() => null);
+    const json = await parseJsonBody(req, 2 * 1024 * 1024);
     const parsed = patchBodySchema.safeParse(json);
     if (!parsed.success) return zodError(parsed.error);
 

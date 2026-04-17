@@ -1,11 +1,17 @@
 import { and, cosineDistance, desc, eq, gt, sql } from "drizzle-orm";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
-import { serverError, unauthorized, zodError } from "@/lib/api/errors";
+import {
+  parseJsonBody,
+  serverError,
+  unauthorized,
+  zodError,
+} from "@/lib/api/errors";
 import { ApiAuthError, requireSessionWithAccount } from "@/lib/api/session";
 import { db } from "@/lib/db";
 import { fileChunks, files, notes } from "@/lib/db/schema";
 import { embedText } from "@/lib/embeddings";
+import { limit as rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 const bodySchema = z.object({
   query: z.string().trim().min(1).max(2000),
@@ -33,7 +39,10 @@ function makeSnippet(text: string, maxChars = 400): string {
 export async function POST(req: NextRequest) {
   try {
     const { ownerAccountId } = await requireSessionWithAccount();
-    const json = await req.json().catch(() => null);
+    const rl = await rateLimit("search", `u:${ownerAccountId}`);
+    if (!rl.ok) return rateLimitResponse(rl);
+
+    const json = await parseJsonBody(req, 64 * 1024);
     const parsed = bodySchema.safeParse(json);
     if (!parsed.success) return zodError(parsed.error);
 

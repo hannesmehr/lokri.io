@@ -2,7 +2,12 @@ import { desc, eq } from "drizzle-orm";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { ApiAuthError, requireSessionWithAccount } from "@/lib/api/session";
-import { serverError, unauthorized, zodError } from "@/lib/api/errors";
+import {
+  parseJsonBody,
+  serverError,
+  unauthorized,
+  zodError,
+} from "@/lib/api/errors";
 import { db } from "@/lib/db";
 import { spaceMembers, spaces } from "@/lib/db/schema";
 
@@ -29,7 +34,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const { ownerAccountId } = await requireSessionWithAccount();
-    const json = await req.json().catch(() => null);
+    const json = await parseJsonBody(req, 64 * 1024);
     const parsed = createBodySchema.safeParse(json);
     if (!parsed.success) return zodError(parsed.error);
 

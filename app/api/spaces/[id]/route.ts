@@ -1,7 +1,13 @@
 import { eq } from "drizzle-orm";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
-import { notFound, serverError, unauthorized, zodError } from "@/lib/api/errors";
+import {
+  notFound,
+  parseJsonBody,
+  serverError,
+  unauthorized,
+  zodError,
+} from "@/lib/api/errors";
 import { findOwnedSpace } from "@/lib/api/ownership";
 import { ApiAuthError, requireSessionWithAccount } from "@/lib/api/session";
 import { db } from "@/lib/db";
@@ -38,7 +44,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     const existing = await findOwnedSpace(ownerAccountId, id);
     if (!existing) return notFound();
 
-    const json = await req.json().catch(() => null);
+    const json = await parseJsonBody(req, 64 * 1024);
     const parsed = patchBodySchema.safeParse(json);
     if (!parsed.success) return zodError(parsed.error);
 

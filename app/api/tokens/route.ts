@@ -1,10 +1,16 @@
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
-import { serverError, unauthorized, zodError } from "@/lib/api/errors";
+import {
+  parseJsonBody,
+  serverError,
+  unauthorized,
+  zodError,
+} from "@/lib/api/errors";
 import { ApiAuthError, requireSessionWithAccount } from "@/lib/api/session";
 import { db } from "@/lib/db";
 import { apiTokens } from "@/lib/db/schema";
+import { limit, rateLimitResponse } from "@/lib/rate-limit";
 import { generateApiToken } from "@/lib/tokens";
 
 const createBodySchema = z.object({
@@ -43,7 +49,10 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const { ownerAccountId } = await requireSessionWithAccount();
-    const json = await req.json().catch(() => null);
+    const rl = await limit("tokenCreate", `u:${ownerAccountId}`);
+    if (!rl.ok) return rateLimitResponse(rl);
+
+    const json = await parseJsonBody(req, 16 * 1024);
     const parsed = createBodySchema.safeParse(json);
     if (!parsed.success) return zodError(parsed.error);
 

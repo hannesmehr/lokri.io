@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import {
   apiError,
+  parseJsonBody,
   paymentRequired,
   serverError,
   unauthorized,
@@ -14,6 +15,7 @@ import { db } from "@/lib/db";
 import { notes } from "@/lib/db/schema";
 import { embedText } from "@/lib/embeddings";
 import { applyQuotaDelta, checkQuota } from "@/lib/quota";
+import { limit, rateLimitResponse } from "@/lib/rate-limit";
 
 const listQuerySchema = z.object({
   spaceId: z.uuid().optional(),
@@ -62,7 +64,11 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const { ownerAccountId } = await requireSessionWithAccount();
-    const json = await req.json().catch(() => null);
+    const rl = await limit("noteWrite", `u:${ownerAccountId}`);
+    if (!rl.ok) return rateLimitResponse(rl);
+
+    // Notes allow up to 1_000_000 chars of content — bump parse cap accordingly.
+    const json = await parseJsonBody(req, 2 * 1024 * 1024);
     const parsed = createBodySchema.safeParse(json);
     if (!parsed.success) return zodError(parsed.error);
 

@@ -18,6 +18,8 @@
     "@base-ui/react": "^1.4.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@neondatabase/serverless": "^1.0.2",
+    "@upstash/ratelimit": "^2.0.8",
+    "@upstash/redis": "^1.37.0",
     "@vercel/blob": "^2.3.3",
     "ai": "^6.0.168",
     "bcryptjs": "^3.0.3",

@@ -1,6 +1,11 @@
 import { createMcpHandler, withMcpAuth } from "mcp-handler";
 import { extractBearer, verifyMcpBearer } from "@/lib/mcp/auth";
 import { registerTools } from "@/lib/mcp/tools";
+import {
+  ipFromHeaders,
+  limit,
+  rateLimitResponse,
+} from "@/lib/rate-limit";
 
 /**
  * MCP Streamable HTTP endpoint.
@@ -42,11 +47,26 @@ const authed = withMcpAuth(
   { required: true },
 );
 
+/** Short, opaque key for Redis — avoids storing the full bearer in rate-limit buckets. */
+function bearerKey(bearer: string | null, ip: string): string {
+  if (!bearer) return `ip:${ip}`;
+  // 16 chars of the token is collision-resistant enough to distinguish clients
+  // and not enough to be useful if the Redis dataset leaks.
+  return `t:${bearer.slice(0, 16)}`;
+}
+
 /**
  * Wrap the authenticated handler so a 401 gets the RFC 9728 hint the spec
  * requires for OAuth 2.1 discovery (`mcp-handler`'s built-in 401 omits it).
+ * Also enforces a per-principal rate limit pre-auth so invalid-token spammers
+ * can't exhaust bcrypt CPU.
  */
 async function handle(req: Request): Promise<Response> {
+  const bearer = extractBearer(req.headers.get("authorization"));
+  const ip = ipFromHeaders(req.headers);
+  const rl = await limit("mcpCall", bearerKey(bearer, ip));
+  if (!rl.ok) return rateLimitResponse(rl);
+
   const res = await authed(req);
   if (res.status !== 401) return res;
 

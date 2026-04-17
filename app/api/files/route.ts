@@ -15,6 +15,7 @@ import { db } from "@/lib/db";
 import { fileChunks, files } from "@/lib/db/schema";
 import { chunkText, embedTexts } from "@/lib/embeddings";
 import { applyQuotaDelta, checkQuota } from "@/lib/quota";
+import { limit, rateLimitResponse } from "@/lib/rate-limit";
 import { getStorageProvider } from "@/lib/storage";
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB per file (spec)
@@ -62,6 +63,8 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const { ownerAccountId } = await requireSessionWithAccount();
+    const rl = await limit("fileUpload", `u:${ownerAccountId}`);
+    if (!rl.ok) return rateLimitResponse(rl);
 
     const ctype = req.headers.get("content-type") ?? "";
     if (!ctype.startsWith("multipart/form-data")) {

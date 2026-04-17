@@ -70,6 +70,8 @@ Alle gehen in `.env.local` (lokal) bzw. Vercel-Project-Settings (Deploy).
 | `BETTER_AUTH_URL` | `http://localhost:3000` (dev) bzw. deine Prod-URL | ja |
 | `BLOB_READ_WRITE_TOKEN` | Vercel → Storage → Blob Store anlegen → Token | ja für Uploads |
 | `AI_GATEWAY_API_KEY` | Vercel → AI Gateway → Create Key | ja für Embeddings |
+| `UPSTASH_REDIS_REST_URL` + `_TOKEN` | Upstash Redis (free) — Vercel Marketplace oder console.upstash.com | dringend für Prod (Rate-Limiting) |
+| `RESEND_API_KEY` | resend.com → API Keys → Sending-only | sobald der Mailer verdrahtet ist |
 
 ### Scripts
 

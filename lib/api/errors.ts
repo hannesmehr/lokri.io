@@ -33,6 +33,29 @@ export function tooLarge(message = "Payload too large") {
   return apiError(message, 413);
 }
 
+/**
+ * Parse a JSON body with an upper size limit. Prevents a malicious client
+ * from streaming a 1 GB payload just to crash our JSON parser.
+ *
+ * Returns `null` on any error (bad JSON, oversize, no body). Callers then
+ * run Zod validation against `null`, which fails predictably with a clear
+ * 400 response.
+ */
+export async function parseJsonBody<T = unknown>(
+  req: Request,
+  maxBytes = 1024 * 1024, // 1 MB default
+): Promise<T | null> {
+  const cl = req.headers.get("content-length");
+  if (cl && Number(cl) > maxBytes) return null;
+  try {
+    const text = await req.text();
+    if (text.length > maxBytes) return null;
+    return JSON.parse(text) as T;
+  } catch {
+    return null;
+  }
+}
+
 export function zodError(err: ZodError) {
   return apiError("Validation failed", 400, err.flatten());
 }
