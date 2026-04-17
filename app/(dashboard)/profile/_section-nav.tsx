@@ -16,7 +16,7 @@ export function SectionNav({
 }) {
   const pathname = usePathname();
   return (
-    <nav className="flex items-center gap-1 overflow-x-auto border-b text-sm">
+    <nav className="flex items-center gap-1 overflow-x-auto overflow-y-hidden border-b text-sm">
       {items.map((item) => {
         const active =
           pathname === item.href ||

@@ -14,7 +14,6 @@ const NAV = [
   { href: "/notes", label: "Notes" },
   { href: "/files", label: "Files" },
   { href: "/mcp", label: "MCP" },
-  { href: "/billing", label: "Billing" },
 ];
 
 export default async function DashboardLayout({
