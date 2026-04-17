@@ -156,10 +156,9 @@ export async function POST(req: NextRequest) {
       files: 1,
     });
 
-    return NextResponse.json(
-      { file: row, url: putResult.url },
-      { status: 201 },
-    );
+    // No public URL — clients download via `/api/files/<id>/content`, which
+    // proxies through this server after an ownership check.
+    return NextResponse.json({ file: row }, { status: 201 });
   } catch (err) {
     if (err instanceof ApiAuthError) return unauthorized(err.message);
     return serverError(err);

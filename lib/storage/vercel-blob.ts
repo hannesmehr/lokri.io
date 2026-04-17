@@ -1,5 +1,6 @@
-import { del, head, put } from "@vercel/blob";
+import { del, get as blobGet, put } from "@vercel/blob";
 import type {
+  StorageGetResult,
   StorageProvider,
   StoragePutInput,
   StoragePutResult,
@@ -20,8 +21,28 @@ function slugifyFilename(filename: string): string {
 
 function byteLength(content: Uint8Array | Buffer | Blob): number {
   if (content instanceof Blob) return content.size;
-  // Buffer is a Uint8Array subclass in Node.
   return (content as Uint8Array).byteLength;
+}
+
+async function streamToUint8Array(stream: ReadableStream): Promise<Uint8Array> {
+  const reader = stream.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    if (value) {
+      chunks.push(value);
+      total += value.byteLength;
+    }
+  }
+  const out = new Uint8Array(total);
+  let offset = 0;
+  for (const c of chunks) {
+    out.set(c, offset);
+    offset += c.byteLength;
+  }
+  return out;
 }
 
 export class VercelBlobProvider implements StorageProvider {
@@ -43,8 +64,8 @@ export class VercelBlobProvider implements StorageProvider {
     const safe = slugifyFilename(filename) || "file";
     const key = `${ownerAccountId}/${crypto.randomUUID()}-${safe}`;
 
-    // Vercel Blob's put() wants Blob | Buffer | ReadableStream | File — not a
-    // plain Uint8Array. Wrap it in Buffer.from() (zero-copy in Node).
+    // @vercel/blob's put wants Blob | Buffer | ReadableStream | File — wrap
+    // plain Uint8Arrays via Buffer.from() (zero-copy in Node).
     const body =
       content instanceof Blob
         ? content
@@ -53,15 +74,14 @@ export class VercelBlobProvider implements StorageProvider {
           : Buffer.from(content);
 
     const blob = await put(key, body, {
-      access: "public",
+      access: "private",
       contentType: mimeType,
       token: this.token,
       addRandomSuffix: false,
     });
 
     return {
-      storageKey: blob.url,
-      url: blob.url,
+      storageKey: blob.pathname,
       sizeBytes: byteLength(content),
     };
   }
@@ -70,20 +90,22 @@ export class VercelBlobProvider implements StorageProvider {
     try {
       await del(storageKey, { token: this.token });
     } catch (err) {
-      // Delete should be idempotent; swallow 404s.
       if (err instanceof Error && /not.*found|404/i.test(err.message)) return;
       throw err;
     }
   }
 
-  async get(storageKey: string): Promise<Uint8Array> {
-    // `head` validates the blob exists (and yields its URL if we ever stop
-    // storing the URL as the key). For now key === url, so we just fetch.
-    const { url } = await head(storageKey, { token: this.token });
-    const res = await fetch(url);
-    if (!res.ok) {
-      throw new Error(`Vercel Blob fetch failed: ${res.status} ${res.statusText}`);
+  async get(storageKey: string): Promise<StorageGetResult> {
+    const result = await blobGet(storageKey, {
+      access: "private",
+      token: this.token,
+    });
+    if (!result || !result.stream) {
+      throw new Error(`Blob not found: ${storageKey}`);
     }
-    return new Uint8Array(await res.arrayBuffer());
+    const content = await streamToUint8Array(result.stream);
+    const mimeType =
+      result.headers.get("content-type") ?? result.blob?.contentType ?? undefined;
+    return { content, mimeType };
   }
 }

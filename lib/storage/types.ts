@@ -1,7 +1,10 @@
 /**
- * Storage abstraction. MVP backs everything onto Vercel Blob; V2 may route
- * per-account (BYO-bucket). Providers identify themselves with a stable
- * `name` that matches the `storage_provider` column on `files`.
+ * Storage abstraction. MVP backs everything onto Vercel Blob (access: private);
+ * V2 may route per-account (BYO-bucket). Providers identify themselves with a
+ * stable `name` matching the `storage_provider` column on `files`.
+ *
+ * Blobs are private: the storage key is an opaque pathname, not a URL.
+ * Downloads go through the Next.js server so ownership can be re-checked.
  */
 
 export type StorageProviderName = "vercel_blob";
@@ -20,21 +23,24 @@ export interface StoragePutInput {
 export interface StoragePutResult {
   /** Opaque, provider-specific key. Persist this in `files.storage_key`. */
   storageKey: string;
-  /** Publicly reachable URL (Vercel Blob URLs are unguessable). */
-  url: string;
   /** Exact byte count of the stored object. */
   sizeBytes: number;
+}
+
+export interface StorageGetResult {
+  content: Uint8Array;
+  mimeType?: string;
 }
 
 export interface StorageProvider {
   readonly name: StorageProviderName;
 
-  /** Upload bytes; returns the persisted storage key + URL + size. */
+  /** Upload bytes; returns the persisted storage key + size. */
   put(input: StoragePutInput): Promise<StoragePutResult>;
 
   /** Delete by storage key. Idempotent (no error if missing). */
   delete(storageKey: string): Promise<void>;
 
-  /** Fetch raw bytes. */
-  get(storageKey: string): Promise<Uint8Array>;
+  /** Fetch raw bytes + content-type. Used by the download proxy. */
+  get(storageKey: string): Promise<StorageGetResult>;
 }

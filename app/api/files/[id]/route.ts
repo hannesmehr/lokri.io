@@ -16,8 +16,11 @@ export async function GET(_req: NextRequest, { params }: Params) {
     const { id } = await params;
     const file = await findOwnedFile(ownerAccountId, id);
     if (!file) return notFound();
-    // storage_key is the download URL for Vercel Blob; expose it as `url`.
-    return NextResponse.json({ file, url: file.storageKey });
+    // Download link is a same-origin proxy — auth-checked on each request.
+    return NextResponse.json({
+      file,
+      downloadUrl: `/api/files/${file.id}/content`,
+    });
   } catch (err) {
     if (err instanceof ApiAuthError) return unauthorized(err.message);
     return serverError(err);
