@@ -66,6 +66,7 @@ export default async function NotesPage({
           </p>
         </div>
         <Button
+          nativeButton={false}
           render={
             <Link
               href={
