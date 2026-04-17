@@ -110,7 +110,7 @@ export default async function DashboardPage() {
                 value={quota.usedBytes}
                 max={quota.maxBytes}
                 colorVar="var(--chart-1)"
-                formatValue={formatBytes}
+                kind="bytes"
               />
             </CardContent>
           </Card>
@@ -121,6 +121,7 @@ export default async function DashboardPage() {
                 value={quota.filesCount}
                 max={quota.maxFiles}
                 colorVar="var(--chart-2)"
+                kind="count"
                 unitSuffix="Dateien"
               />
             </CardContent>
@@ -132,6 +133,7 @@ export default async function DashboardPage() {
                 value={quota.notesCount}
                 max={quota.maxNotes}
                 colorVar="var(--chart-3)"
+                kind="count"
                 unitSuffix="Notes"
               />
             </CardContent>

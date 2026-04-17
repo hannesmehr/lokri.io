@@ -2,27 +2,37 @@
 
 import { PolarAngleAxis, RadialBar, RadialBarChart } from "recharts";
 import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
+import { formatBytes } from "@/lib/format";
 
 interface Props {
   label: string;
   value: number;
   max: number;
   colorVar: string; // e.g. "var(--chart-1)"
-  formatValue?: (n: number) => string;
+  /**
+   * How to format the numeric value. Using a discriminator rather than a
+   * function prop because this component is a Client Component and function
+   * props from Server Components don't serialize across the boundary.
+   */
+  kind: "bytes" | "count";
   unitSuffix?: string;
 }
 
+function formatValue(n: number, kind: Props["kind"]): string {
+  if (kind === "bytes") return formatBytes(n);
+  return n.toLocaleString("de-DE");
+}
+
 /**
- * Donut-style progress ring. The inner text shows the percentage; the label
- * and value lines sit below. Kept as a client component so recharts only
- * ships when a dashboard card actually renders it.
+ * Donut-style progress ring. Inner text shows the percentage; label and
+ * value sit beside it.
  */
 export function QuotaRing({
   label,
   value,
   max,
   colorVar,
-  formatValue = (n) => n.toLocaleString("de-DE"),
+  kind,
   unitSuffix,
 }: Props) {
   const safeMax = max > 0 ? max : 1;
@@ -31,10 +41,7 @@ export function QuotaRing({
   const data = [{ name: label, value: pct, fill: colorVar }];
 
   const config = {
-    value: {
-      label,
-      color: colorVar,
-    },
+    value: { label, color: colorVar },
   } satisfies ChartConfig;
 
   return (
@@ -79,7 +86,7 @@ export function QuotaRing({
           {label}
         </div>
         <div className="text-2xl font-semibold leading-tight">
-          {formatValue(value)}
+          {formatValue(value, kind)}
           {unitSuffix ? (
             <span className="ml-1 text-sm font-normal text-muted-foreground">
               {unitSuffix}
@@ -87,7 +94,7 @@ export function QuotaRing({
           ) : null}
         </div>
         <div className="text-xs text-muted-foreground">
-          von {formatValue(max)} {unitSuffix ?? ""}
+          von {formatValue(max, kind)} {unitSuffix ?? ""}
         </div>
       </div>
     </div>
