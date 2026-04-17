@@ -219,6 +219,24 @@ export function BucketBrowser({ spaceId, defaultProviderName }: Props) {
     void load(prefix);
   }
 
+  async function reindexFile(fileId: string) {
+    setBusyKey(fileId);
+    const res = await fetch(`/api/files/${fileId}/reindex`, { method: "POST" });
+    setBusyKey(null);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({ error: "Fehler" }));
+      toast.error(body.error ?? "Re-Index fehlgeschlagen.");
+      return;
+    }
+    const body: { chunks: number } = await res.json();
+    toast.success(
+      body.chunks > 0
+        ? `Neu indiziert — ${body.chunks} Chunks embedded.`
+        : "Kein Text extrahierbar.",
+    );
+    void load(prefix);
+  }
+
   async function bulkImport() {
     const keys = [...selected];
     if (keys.length === 0) return;
@@ -706,15 +724,23 @@ export function BucketBrowser({ spaceId, defaultProviderName }: Props) {
                         Ausblenden (auch für MCP)
                       </DropdownMenuItem>
                     )}
-                    {o.kind === "internal" && o.fileId ? (
+                    {o.fileId ? (
                       <>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
-                          onClick={() => deleteInternal(o.fileId!, name)}
+                          onClick={() => reindexFile(o.fileId!)}
                         >
-                          <Trash2 className="h-3.5 w-3.5" />
-                          Löschen
+                          <Sparkles className="h-3.5 w-3.5" />
+                          Neu indizieren
                         </DropdownMenuItem>
+                        {o.kind === "internal" ? (
+                          <DropdownMenuItem
+                            onClick={() => deleteInternal(o.fileId!, name)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            Löschen
+                          </DropdownMenuItem>
+                        ) : null}
                       </>
                     ) : null}
                   </DropdownMenuContent>

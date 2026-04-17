@@ -2,9 +2,10 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { fileChunks, files } from "@/lib/db/schema";
 import { chunkText, embedTexts } from "@/lib/embeddings";
-import { isTextualMime, mimeTypeFromFilename } from "@/lib/mime";
+import { mimeTypeFromFilename } from "@/lib/mime";
 import { applyQuotaDelta, checkQuota } from "@/lib/quota";
 import type { S3Provider } from "@/lib/storage/s3";
+import { extractText } from "@/lib/text-extract";
 
 export type ImportStatus =
   | "imported"
@@ -91,9 +92,9 @@ export async function importExternalKey(
       })
       .returning({ id: files.id });
 
-    if (isTextualMime(mime)) {
-      try {
-        const text = Buffer.from(content).toString("utf-8");
+    try {
+      const text = await extractText(content, mime);
+      if (text && text.length > 0) {
         const chunks = chunkText(text);
         if (chunks.length > 0) {
           const { embeddings, model } = await embedTexts(chunks);
@@ -107,13 +108,13 @@ export async function importExternalKey(
             })),
           );
         }
-      } catch (err) {
-        // Non-fatal: file is stored, just not embedded. Admin can re-index.
-        console.error(
-          `[space-import] embedding failed for ${row.id} (${relativeKey}):`,
-          err,
-        );
       }
+    } catch (err) {
+      // Non-fatal: file is stored, just not embedded. Admin can re-index.
+      console.error(
+        `[space-import] embedding failed for ${row.id} (${relativeKey}):`,
+        err,
+      );
     }
 
     await applyQuotaDelta(ctx.ownerAccountId, {

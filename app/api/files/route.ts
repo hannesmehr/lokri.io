@@ -17,6 +17,7 @@ import { chunkText, embedTexts } from "@/lib/embeddings";
 import { applyQuotaDelta, checkQuota } from "@/lib/quota";
 import { limit, rateLimitResponse } from "@/lib/rate-limit";
 import { getProviderForNewUpload } from "@/lib/storage";
+import { extractText } from "@/lib/text-extract";
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB per file (spec)
 
@@ -127,12 +128,11 @@ export async function POST(req: NextRequest) {
       })
       .returning();
 
-    // Text extraction — cheap cases only. OCR / PDF extraction is deferred.
-    const isTextual =
-      mimeType.startsWith("text/") || mimeType === "application/json";
-    if (isTextual) {
-      try {
-        const text = content.toString("utf-8");
+    // Text extraction — handles text/*, JSON, PDF, DOCX. Non-extractable
+    // types (images, archives) are stored without chunks.
+    try {
+      const text = await extractText(content, mimeType);
+      if (text && text.length > 0) {
         const chunks = chunkText(text);
         if (chunks.length > 0) {
           const { embeddings, model } = await embedTexts(chunks);
@@ -146,15 +146,15 @@ export async function POST(req: NextRequest) {
             })),
           );
         }
-      } catch (embedErr) {
-        // Don't fail the upload if embedding fails — log and continue. The
-        // file is still stored & listable; it just won't be searchable until
-        // re-indexed (future job).
-        console.error(
-          `[api/files] Embedding failed for ${row.id}, stored without chunks:`,
-          embedErr,
-        );
       }
+    } catch (embedErr) {
+      // Don't fail the upload if extraction/embedding fails — log and
+      // continue. File stays stored + listable; future re-index job can
+      // pick it up.
+      console.error(
+        `[api/files] extract/embed failed for ${row.id}, stored without chunks:`,
+        embedErr,
+      );
     }
 
     await applyQuotaDelta(ownerAccountId, {

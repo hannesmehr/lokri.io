@@ -15,6 +15,7 @@ import {
   spaces as spacesTable,
 } from "@/lib/db/schema";
 import { chunkText, embedText, embedTexts } from "@/lib/embeddings";
+import { extractText } from "@/lib/text-extract";
 import { applyQuotaDelta, checkQuota } from "@/lib/quota";
 import { limit, rateLimitResponse } from "@/lib/rate-limit";
 import { getProviderForNewUpload } from "@/lib/storage";
@@ -339,13 +340,11 @@ async function importFiles(
         })
         .returning({ id: filesTable.id });
 
-      // Auto-chunk+embed textual content so search works immediately.
-      const isTextual =
-        entry.mimeType.startsWith("text/") ||
-        entry.mimeType === "application/json";
-      if (isTextual) {
-        try {
-          const text = bytes.toString("utf-8");
+      // Auto-extract+chunk+embed so search works immediately. Handles
+      // text/*, JSON, PDF, DOCX; skips binary types.
+      try {
+        const text = await extractText(bytes, entry.mimeType);
+        if (text && text.length > 0) {
           const chunks = chunkText(text);
           if (chunks.length > 0) {
             const { embeddings, model } = await embedTexts(chunks);
@@ -359,12 +358,12 @@ async function importFiles(
               })),
             );
           }
-        } catch (err) {
-          console.error(
-            `[import] embed failed for ${entry.archivePath}, file kept without chunks:`,
-            err,
-          );
         }
+      } catch (err) {
+        console.error(
+          `[import] extract/embed failed for ${entry.archivePath}, file kept without chunks:`,
+          err,
+        );
       }
       await applyQuotaDelta(ownerAccountId, {
         bytes: put.sizeBytes,
