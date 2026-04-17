@@ -2,7 +2,11 @@ import { NextResponse, type NextRequest } from "next/server";
 import { notFound, serverError, unauthorized } from "@/lib/api/errors";
 import { findOwnedFile } from "@/lib/api/ownership";
 import { ApiAuthError, requireSessionWithAccount } from "@/lib/api/session";
-import { getStorageProvider } from "@/lib/storage";
+import {
+  getStorageProviderForFile,
+  loadStorageContext,
+} from "@/lib/storage";
+import type { StorageProviderName } from "@/lib/storage/types";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -18,7 +22,11 @@ export async function GET(_req: NextRequest, { params }: Params) {
     const file = await findOwnedFile(ownerAccountId, id);
     if (!file) return notFound();
 
-    const provider = getStorageProvider();
+    const storageCtx = await loadStorageContext(ownerAccountId);
+    const provider = getStorageProviderForFile(
+      file.storageProvider as StorageProviderName,
+      storageCtx,
+    );
     const { content, mimeType } = await provider.get(file.storageKey);
 
     const headers = new Headers({

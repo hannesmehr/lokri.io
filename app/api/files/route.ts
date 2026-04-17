@@ -16,7 +16,10 @@ import { fileChunks, files } from "@/lib/db/schema";
 import { chunkText, embedTexts } from "@/lib/embeddings";
 import { applyQuotaDelta, checkQuota } from "@/lib/quota";
 import { limit, rateLimitResponse } from "@/lib/rate-limit";
-import { getStorageProvider } from "@/lib/storage";
+import {
+  getCurrentStorageProvider,
+  loadStorageContext,
+} from "@/lib/storage";
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB per file (spec)
 
@@ -102,7 +105,8 @@ export async function POST(req: NextRequest) {
 
     const content = Buffer.from(await file.arrayBuffer());
     const mimeType = file.type || "application/octet-stream";
-    const provider = getStorageProvider();
+    const storageCtx = await loadStorageContext(ownerAccountId);
+    const provider = getCurrentStorageProvider(storageCtx);
 
     const putResult = await provider.put({
       ownerAccountId,

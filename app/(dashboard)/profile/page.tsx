@@ -1,5 +1,5 @@
-import { desc, eq } from "drizzle-orm";
-import { Download, FileText, Lock, User } from "lucide-react";
+import { eq } from "drizzle-orm";
+import { ArrowLeftRight, HardDrive, Lock, Shield, User } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -9,39 +9,35 @@ import {
 } from "@/components/ui/card";
 import { requireSessionWithAccount } from "@/lib/api/session";
 import { db } from "@/lib/db";
-import { invoices } from "@/lib/db/schema";
+import { ownerAccounts } from "@/lib/db/schema";
 import { ChangePasswordDialog } from "./_change-password-dialog";
+import { DangerZone } from "./_danger-zone";
+import { DataPortability } from "./_data-portability";
 import { ProfileForm } from "./_profile-form";
-
-function formatCents(c: number): string {
-  return (c / 100).toFixed(2).replace(".", ",") + " €";
-}
+import { StorageSection } from "./_storage-section";
+import { TwoFactorSection } from "./_two-factor-section";
 
 export default async function ProfilePage() {
   const { session, ownerAccountId } = await requireSessionWithAccount();
-  const invoiceRows = await db
+  const [account] = await db
     .select({
-      id: invoices.id,
-      invoiceNumber: invoices.invoiceNumber,
-      description: invoices.description,
-      grossCents: invoices.grossCents,
-      issuedAt: invoices.issuedAt,
-      status: invoices.status,
+      storageProvider: ownerAccounts.storageProvider,
+      storageConfigEncrypted: ownerAccounts.storageConfigEncrypted,
     })
-    .from(invoices)
-    .where(eq(invoices.ownerAccountId, ownerAccountId))
-    .orderBy(desc(invoices.issuedAt))
-    .limit(50);
+    .from(ownerAccounts)
+    .where(eq(ownerAccounts.id, ownerAccountId))
+    .limit(1);
 
   return (
     <div className="space-y-8">
       <div>
         <h1 className="font-display text-4xl leading-tight">Profil</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Persönliche Daten und Zugangskontrolle deines Accounts.
+          Persönliche Daten, Sicherheit und Daten-Portabilität.
         </p>
       </div>
 
+      {/* Persönliche Daten */}
       <Card>
         <CardHeader>
           <div className="flex items-center gap-3">
@@ -66,6 +62,7 @@ export default async function ProfilePage() {
         </CardContent>
       </Card>
 
+      {/* Passwort */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between gap-4">
@@ -85,62 +82,82 @@ export default async function ProfilePage() {
         </CardHeader>
       </Card>
 
+      {/* Sicherheit (2FA) */}
       <Card>
         <CardHeader>
           <div className="flex items-center gap-3">
-            <div className="grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br from-emerald-500/15 to-teal-500/15 text-emerald-700 dark:text-emerald-400">
-              <FileText className="h-4 w-4" />
+            <div className="grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br from-violet-500/15 to-pink-500/15 text-violet-700 dark:text-violet-400">
+              <Shield className="h-4 w-4" />
             </div>
             <div>
-              <CardTitle>Rechnungen</CardTitle>
+              <CardTitle>Sicherheit</CardTitle>
               <CardDescription>
-                Alle Zahlungen als PDF-Download.
+                Zusätzlicher Schutz für deinen Account.
               </CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          {invoiceRows.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Noch keine Rechnungen — du bist auf dem Free-Plan.
-            </p>
-          ) : (
-            <div className="divide-y rounded-md border">
-              {invoiceRows.map((inv) => (
-                <div
-                  key={inv.id}
-                  className="flex items-center justify-between gap-4 px-4 py-3 text-sm"
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-baseline gap-2">
-                      <code className="font-mono text-xs">
-                        {inv.invoiceNumber}
-                      </code>
-                      <span className="truncate">{inv.description}</span>
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {new Date(inv.issuedAt).toLocaleDateString("de-DE")} ·{" "}
-                      <span className="tabular-nums">
-                        {formatCents(inv.grossCents)}
-                      </span>{" "}
-                      · {inv.status}
-                    </div>
-                  </div>
-                  <a
-                    href={`/api/invoices/${inv.id}/pdf`}
-                    target="_blank"
-                    rel="noopener"
-                    className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                  >
-                    <Download className="h-3.5 w-3.5" />
-                    PDF
-                  </a>
-                </div>
-              ))}
-            </div>
-          )}
+          <TwoFactorSection
+            enabled={Boolean(
+              (session.user as { twoFactorEnabled?: boolean }).twoFactorEnabled,
+            )}
+          />
         </CardContent>
       </Card>
+
+      {/* Storage-Backend (BYO-S3) */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br from-cyan-500/15 to-sky-500/15 text-cyan-700 dark:text-cyan-400">
+              <HardDrive className="h-4 w-4" />
+            </div>
+            <div>
+              <CardTitle>Storage</CardTitle>
+              <CardDescription>
+                Neue Uploads in lokris Blob-Storage oder deinem eigenen
+                S3-Bucket (AWS, R2, B2, MinIO …). Bereits existierende Dateien
+                bleiben da wo sie sind.
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <StorageSection
+            currentProvider={
+              (account?.storageProvider ?? "vercel_blob") as
+                | "vercel_blob"
+                | "s3"
+            }
+            configured={account?.storageConfigEncrypted !== null}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Daten-Portabilität */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br from-sky-500/15 to-emerald-500/15 text-sky-700 dark:text-sky-400">
+              <ArrowLeftRight className="h-4 w-4" />
+            </div>
+            <div>
+              <CardTitle>Daten-Portabilität</CardTitle>
+              <CardDescription>
+                Export als ZIP (DSGVO Art. 20) oder Import aus einem
+                lokri-Export / Obsidian-Vault.
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <DataPortability />
+        </CardContent>
+      </Card>
+
+      {/* Danger Zone */}
+      <DangerZone userEmail={session.user.email} />
     </div>
   );
 }

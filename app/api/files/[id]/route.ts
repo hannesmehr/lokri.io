@@ -6,7 +6,11 @@ import { ApiAuthError, requireSessionWithAccount } from "@/lib/api/session";
 import { db } from "@/lib/db";
 import { files } from "@/lib/db/schema";
 import { applyQuotaDelta } from "@/lib/quota";
-import { getStorageProvider } from "@/lib/storage";
+import {
+  getStorageProviderForFile,
+  loadStorageContext,
+} from "@/lib/storage";
+import type { StorageProviderName } from "@/lib/storage/types";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -36,7 +40,11 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
 
     // Delete from object storage first. If that 404s it's fine (idempotent);
     // any other failure aborts so we don't get orphaned DB rows.
-    const provider = getStorageProvider();
+    const storageCtx = await loadStorageContext(ownerAccountId);
+    const provider = getStorageProviderForFile(
+      existing.storageProvider as StorageProviderName,
+      storageCtx,
+    );
     await provider.delete(existing.storageKey);
 
     // DB cascades file_chunks.

@@ -271,6 +271,21 @@ export const ownerAccounts = pgTable(
       .notNull()
       .references(() => plans.id),
     /**
+     * Currently configured storage backend for NEW file uploads. Existing
+     * files keep their original `files.storage_provider` value — switching
+     * doesn't migrate old data, it just routes future writes.
+     * Defaults to `vercel_blob`; BYO-S3 is an upgrade users opt into.
+     */
+    storageProvider: text("storage_provider").notNull().default("vercel_blob"),
+    /**
+     * Encrypted JSON bundle for `storage_provider = "s3"`. Plaintext:
+     * `{ endpoint, region, bucket, accessKeyId, secretAccessKey, pathPrefix? }`.
+     * AES-256-GCM with a key derived from `STORAGE_CONFIG_KEY` (fallback
+     * `BETTER_AUTH_SECRET`). Stored here to avoid a second table round-trip
+     * on every file op — account rows are small + cached.
+     */
+    storageConfigEncrypted: text("storage_config_encrypted"),
+    /**
      * When the current paid plan expires. NULL means free plan (no expiry).
      * On expiry, quota helpers fall back to the free plan's limits but do
      * NOT touch the `plan_id` field (which stays as the last-paid tier for

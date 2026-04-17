@@ -14,7 +14,12 @@ import { db } from "@/lib/db";
 import { fileChunks, files, notes, spaces } from "@/lib/db/schema";
 import { chunkText, embedText, embedTexts } from "@/lib/embeddings";
 import { applyQuotaDelta, checkQuota } from "@/lib/quota";
-import { getStorageProvider } from "@/lib/storage";
+import {
+  getCurrentStorageProvider,
+  getStorageProviderForFile,
+  loadStorageContext,
+} from "@/lib/storage";
+import type { StorageProviderName } from "@/lib/storage/types";
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 
@@ -453,13 +458,18 @@ export function registerTools(server: McpServer): void {
           mimeType: files.mimeType,
           sizeBytes: files.sizeBytes,
           storageKey: files.storageKey,
+          storageProvider: files.storageProvider,
         })
         .from(files)
         .where(and(eq(files.id, id), eq(files.ownerAccountId, ownerAccountId)))
         .limit(1);
       if (!file) return toolError(`File not found: ${id}`);
 
-      const provider = getStorageProvider();
+      const storageCtx = await loadStorageContext(ownerAccountId);
+      const provider = getStorageProviderForFile(
+        file.storageProvider as StorageProviderName,
+        storageCtx,
+      );
       const { content } = await provider.get(file.storageKey);
       return ok({
         id: file.id,
@@ -520,7 +530,8 @@ export function registerTools(server: McpServer): void {
       });
       if (!quota.ok) return toolError(`Quota exceeded: ${quota.reason}`);
 
-      const provider = getStorageProvider();
+      const storageCtx = await loadStorageContext(ownerAccountId);
+      const provider = getCurrentStorageProvider(storageCtx);
       const putResult = await provider.put({
         ownerAccountId,
         filename,
@@ -599,13 +610,18 @@ export function registerTools(server: McpServer): void {
           id: files.id,
           storageKey: files.storageKey,
           sizeBytes: files.sizeBytes,
+          storageProvider: files.storageProvider,
         })
         .from(files)
         .where(and(eq(files.id, id), eq(files.ownerAccountId, ownerAccountId)))
         .limit(1);
       if (!existing) return toolError(`File not found: ${id}`);
 
-      const provider = getStorageProvider();
+      const storageCtx = await loadStorageContext(ownerAccountId);
+      const provider = getStorageProviderForFile(
+        existing.storageProvider as StorageProviderName,
+        storageCtx,
+      );
       await provider.delete(existing.storageKey);
       await db.delete(files).where(eq(files.id, id));
       await applyQuotaDelta(ownerAccountId, {

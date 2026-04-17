@@ -17,7 +17,10 @@ import {
 import { chunkText, embedText, embedTexts } from "@/lib/embeddings";
 import { applyQuotaDelta, checkQuota } from "@/lib/quota";
 import { limit, rateLimitResponse } from "@/lib/rate-limit";
-import { getStorageProvider } from "@/lib/storage";
+import {
+  getCurrentStorageProvider,
+  loadStorageContext,
+} from "@/lib/storage";
 
 /**
  * Import endpoint.
@@ -292,7 +295,8 @@ async function importFiles(
   }>,
   summary: ImportSummary,
 ) {
-  const provider = getStorageProvider();
+  const storageCtx = await loadStorageContext(ownerAccountId);
+  const provider = getCurrentStorageProvider(storageCtx);
   for (const entry of entries) {
     const zipped = zip.file(entry.archivePath);
     if (!zipped) {

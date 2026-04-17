@@ -7,7 +7,7 @@
  * Downloads go through the Next.js server so ownership can be re-checked.
  */
 
-export type StorageProviderName = "vercel_blob";
+export type StorageProviderName = "vercel_blob" | "s3";
 
 export interface StoragePutInput {
   /** Owner account the file belongs to — used as a key prefix. */

@@ -22,7 +22,11 @@ import {
   resetPasswordTemplate,
   verifyEmailTemplate,
 } from "./mailer/templates";
-import { getStorageProvider } from "./storage";
+import {
+  getStorageProviderForFile,
+  loadStorageContext,
+} from "./storage";
+import type { StorageProviderName } from "./storage/types";
 
 const FREE_PLAN_ID = "free";
 
@@ -164,20 +168,32 @@ export const auth = betterAuth({
 
         for (const m of memberships) {
           const fileRows = await db
-            .select({ id: filesTable.id, storageKey: filesTable.storageKey })
+            .select({
+              id: filesTable.id,
+              storageKey: filesTable.storageKey,
+              storageProvider: filesTable.storageProvider,
+            })
             .from(filesTable)
             .where(eq(filesTable.ownerAccountId, m.accountId));
           if (fileRows.length === 0) continue;
-          const provider = getStorageProvider();
+          // Load the account's storage context ONCE per account — S3 decrypt
+          // is scrypt-heavy, we don't want that per file.
+          const storageCtx = await loadStorageContext(m.accountId);
           await Promise.all(
-            fileRows.map((f) =>
-              provider.delete(f.storageKey).catch((err) => {
+            fileRows.map(async (f) => {
+              try {
+                const provider = getStorageProviderForFile(
+                  f.storageProvider as StorageProviderName,
+                  storageCtx,
+                );
+                await provider.delete(f.storageKey);
+              } catch (err) {
                 console.error(
                   `[auth.deleteUser] Blob delete failed for ${f.id}:`,
                   err,
                 );
-              }),
-            ),
+              }
+            }),
           );
         }
 

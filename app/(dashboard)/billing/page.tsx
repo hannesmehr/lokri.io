@@ -1,5 +1,5 @@
-import { asc, eq } from "drizzle-orm";
-import { Check, Sparkles } from "lucide-react";
+import { asc, desc, eq } from "drizzle-orm";
+import { Check, Download, FileText, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/card";
 import { requireSessionWithAccount } from "@/lib/api/session";
 import { db } from "@/lib/db";
-import { ownerAccounts, plans } from "@/lib/db/schema";
+import { invoices, ownerAccounts, plans } from "@/lib/db/schema";
 import { UpgradeButton } from "./_upgrade-button";
 
 function formatCents(cents: number): string {
@@ -34,7 +34,7 @@ export default async function BillingPage({
   const { ownerAccountId } = await requireSessionWithAccount();
   const { cancelled } = await searchParams;
 
-  const [account, allPlans] = await Promise.all([
+  const [account, allPlans, invoiceRows] = await Promise.all([
     db
       .select()
       .from(ownerAccounts)
@@ -42,6 +42,19 @@ export default async function BillingPage({
       .limit(1)
       .then((r) => r[0]),
     db.select().from(plans).orderBy(asc(plans.sortOrder)),
+    db
+      .select({
+        id: invoices.id,
+        invoiceNumber: invoices.invoiceNumber,
+        description: invoices.description,
+        grossCents: invoices.grossCents,
+        issuedAt: invoices.issuedAt,
+        status: invoices.status,
+      })
+      .from(invoices)
+      .where(eq(invoices.ownerAccountId, ownerAccountId))
+      .orderBy(desc(invoices.issuedAt))
+      .limit(50),
   ]);
 
   const now = new Date();
@@ -194,13 +207,67 @@ export default async function BillingPage({
         })}
       </div>
 
+      {/* Rechnungen */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br from-emerald-500/15 to-teal-500/15 text-emerald-700 dark:text-emerald-400">
+              <FileText className="h-4 w-4" />
+            </div>
+            <div>
+              <CardTitle>Rechnungen</CardTitle>
+              <CardDescription>
+                PDF-Download aller bisherigen Zahlungen.
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {invoiceRows.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Noch keine Rechnungen — du bist auf dem Free-Plan.
+            </p>
+          ) : (
+            <div className="divide-y rounded-md border">
+              {invoiceRows.map((inv) => (
+                <div
+                  key={inv.id}
+                  className="flex items-center justify-between gap-4 px-4 py-3 text-sm"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline gap-2">
+                      <code className="font-mono text-xs">
+                        {inv.invoiceNumber}
+                      </code>
+                      <span className="truncate">{inv.description}</span>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {new Date(inv.issuedAt).toLocaleDateString("de-DE")} ·{" "}
+                      <span className="tabular-nums">
+                        {formatCents(inv.grossCents)}
+                      </span>{" "}
+                      · {inv.status}
+                    </div>
+                  </div>
+                  <a
+                    href={`/api/invoices/${inv.id}/pdf`}
+                    target="_blank"
+                    rel="noopener"
+                    className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    PDF
+                  </a>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <p className="text-xs text-muted-foreground">
         Zahlungsabwicklung über PayPal. One-time-Captures, kein Auto-Renewal
-        — du musst vor Ablauf aktiv verlängern. Rechnungen landen unter{" "}
-        <Link href="/profile" className="underline-offset-4 hover:underline">
-          /profile
-        </Link>
-        .
+        — du musst vor Ablauf aktiv verlängern.
       </p>
     </div>
   );
