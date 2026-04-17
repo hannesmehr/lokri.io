@@ -239,10 +239,19 @@ export const oauthConsent = pgTable(
 export const plans = pgTable("plans", {
   id: text("id").primaryKey(), // e.g. "free", "starter", "pro"
   name: text("name").notNull(),
+  description: text("description"),
   maxBytes: bigint("max_bytes", { mode: "number" }).notNull(),
   maxFiles: integer("max_files").notNull(),
   maxNotes: integer("max_notes").notNull(),
+  // Legacy column — kept so we don't have to drop it. New code uses cents
+  // for correct decimal arithmetic.
   priceEurMonthly: integer("price_eur_monthly").notNull().default(0),
+  priceMonthlyCents: integer("price_monthly_cents").notNull().default(0),
+  priceYearlyCents: integer("price_yearly_cents").notNull().default(0),
+  /** Display order in the pricing table (ascending). */
+  sortOrder: integer("sort_order").notNull().default(0),
+  /** False for `free`/deprecated tiers — hides them from the upgrade UI. */
+  isPurchasable: boolean("is_purchasable").notNull().default(false),
 });
 
 // ---------------------------------------------------------------------------
@@ -258,6 +267,17 @@ export const ownerAccounts = pgTable(
     planId: text("plan_id")
       .notNull()
       .references(() => plans.id),
+    /**
+     * When the current paid plan expires. NULL means free plan (no expiry).
+     * On expiry, quota helpers fall back to the free plan's limits but do
+     * NOT touch the `plan_id` field (which stays as the last-paid tier for
+     * accurate invoice history). A user can re-renew any time; on successful
+     * capture, this is bumped by one billing period from `now()` (or from
+     * the old expiry, if still in the future — i.e. grace stacking).
+     */
+    planExpiresAt: timestamp("plan_expires_at", { withTimezone: true }),
+    /** Last successful renewal — for UI ("zuletzt verlängert am …"). */
+    planRenewedAt: timestamp("plan_renewed_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -449,6 +469,112 @@ export const notes = pgTable(
 
 // ---------------------------------------------------------------------------
 // Usage quota (one row per owner_account)
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Billing
+// ---------------------------------------------------------------------------
+
+export const billingPeriodEnum = pgEnum("billing_period", [
+  "monthly",
+  "yearly",
+]);
+
+export const orderStatusEnum = pgEnum("order_status", [
+  "created",
+  "captured",
+  "refunded",
+  "failed",
+]);
+
+/**
+ * One row per PayPal Order (created). Captured orders unlock the associated
+ * plan for the purchased period and generate an `invoices` row. Idempotency
+ * lives on `payment_id` (PayPal Capture ID).
+ */
+export const orders = pgTable(
+  "orders",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    ownerAccountId: uuid("owner_account_id")
+      .notNull()
+      .references(() => ownerAccounts.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    planId: text("plan_id")
+      .notNull()
+      .references(() => plans.id),
+    period: billingPeriodEnum("period").notNull(),
+    /** Amount actually charged, in EUR cents. Matches PayPal capture. */
+    amountCents: integer("amount_cents").notNull(),
+    /** PayPal's `order.id` — returned on create. Not unique (one retry possible). */
+    paypalOrderId: text("paypal_order_id").notNull(),
+    /** PayPal Capture ID — unique once captured. Null for uncaptured orders. */
+    paymentId: text("payment_id").unique(),
+    status: orderStatusEnum("status").notNull().default("created"),
+    capturedAt: timestamp("captured_at", { withTimezone: true }),
+    /** Billing window this purchase opens. */
+    startsAt: timestamp("starts_at", { withTimezone: true }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("orders_owner_account_id_idx").on(t.ownerAccountId),
+    index("orders_user_id_idx").on(t.userId),
+    index("orders_paypal_order_id_idx").on(t.paypalOrderId),
+  ],
+);
+
+/**
+ * Generated PDF invoices, one per captured order. Invoice numbers are
+ * sequential per year: `LK-YYYY-NNNN`. PDFs live in Vercel Blob (private),
+ * served via `/api/invoices/[id]/pdf` after auth check.
+ */
+export const invoices = pgTable(
+  "invoices",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    invoiceNumber: text("invoice_number").notNull().unique(),
+    orderId: uuid("order_id")
+      .notNull()
+      .references(() => orders.id, { onDelete: "restrict" }),
+    ownerAccountId: uuid("owner_account_id")
+      .notNull()
+      .references(() => ownerAccounts.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    customerName: text("customer_name").notNull(),
+    customerEmail: text("customer_email").notNull(),
+    description: text("description").notNull(),
+    /** Amounts in EUR cents — net (ohne Steuer), tax, gross (mit Steuer). */
+    netCents: integer("net_cents").notNull(),
+    taxCents: integer("tax_cents").notNull(),
+    grossCents: integer("gross_cents").notNull(),
+    /** Tax rate as basis-points hundredth — 1900 = 19.00%. 0 for Kleinunternehmer. */
+    taxRateBp: integer("tax_rate_bp").notNull(),
+    /** Full URL (Vercel Blob private path) for the PDF. */
+    storageKey: text("storage_key").notNull(),
+    paymentId: text("payment_id").notNull().unique(),
+    paymentMethod: text("payment_method").notNull().default("paypal"),
+    status: text("status").notNull().default("paid"),
+    issuedAt: timestamp("issued_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("invoices_owner_account_id_idx").on(t.ownerAccountId),
+    index("invoices_user_id_idx").on(t.userId),
+    index("invoices_order_id_idx").on(t.orderId),
+  ],
+);
+
 // ---------------------------------------------------------------------------
 
 export const usageQuota = pgTable("usage_quota", {

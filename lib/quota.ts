@@ -2,6 +2,8 @@ import { eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { ownerAccounts, plans, usageQuota } from "@/lib/db/schema";
 
+const FREE_PLAN_ID = "free";
+
 export interface QuotaDelta {
   /** Bytes to add (negative to subtract). */
   bytes?: number;
@@ -26,15 +28,22 @@ async function ensureQuotaRow(ownerAccountId: string): Promise<void> {
 }
 
 /**
- * Current quota + limits for an owner_account. Lazily creates the
- * `usage_quota` row on first read.
+ * Current quota + limits for an owner_account.
+ *
+ * Expiry logic: if `plan_expires_at` has passed (or is NULL for paid plans),
+ * we transparently fall back to the free plan's limits. The `plan_id`
+ * column stays untouched for invoice/audit history; a renewal simply bumps
+ * `plan_expires_at` again.
  */
 export async function getQuota(ownerAccountId: string): Promise<QuotaStatus> {
   await ensureQuotaRow(ownerAccountId);
 
+  // Pull both the current plan row AND the free plan in one go so we can
+  // swap without a second query when expired.
   const [row] = await db
     .select({
       planId: plans.id,
+      planExpiresAt: ownerAccounts.planExpiresAt,
       usedBytes: usageQuota.usedBytes,
       filesCount: usageQuota.filesCount,
       notesCount: usageQuota.notesCount,
@@ -52,7 +61,47 @@ export async function getQuota(ownerAccountId: string): Promise<QuotaStatus> {
       `Quota lookup failed for owner_account ${ownerAccountId} — missing account or plan row`,
     );
   }
-  return row;
+
+  const isFree = row.planId === FREE_PLAN_ID;
+  const expired =
+    !isFree && row.planExpiresAt !== null && row.planExpiresAt < new Date();
+  // Also treat paid plans with no expiry set at all as expired (safe default).
+  const needsFallback =
+    !isFree && (row.planExpiresAt === null || expired);
+
+  if (!needsFallback) {
+    return {
+      planId: row.planId,
+      usedBytes: row.usedBytes,
+      filesCount: row.filesCount,
+      notesCount: row.notesCount,
+      maxBytes: row.maxBytes,
+      maxFiles: row.maxFiles,
+      maxNotes: row.maxNotes,
+    };
+  }
+
+  // Fall back to free-plan limits. Single extra query; cheap.
+  const [free] = await db
+    .select({
+      maxBytes: plans.maxBytes,
+      maxFiles: plans.maxFiles,
+      maxNotes: plans.maxNotes,
+    })
+    .from(plans)
+    .where(eq(plans.id, FREE_PLAN_ID));
+  if (!free) {
+    throw new Error("Free plan row missing — re-run pnpm db:seed.");
+  }
+  return {
+    planId: FREE_PLAN_ID,
+    usedBytes: row.usedBytes,
+    filesCount: row.filesCount,
+    notesCount: row.notesCount,
+    maxBytes: free.maxBytes,
+    maxFiles: free.maxFiles,
+    maxNotes: free.maxNotes,
+  };
 }
 
 export type QuotaCheckResult =
