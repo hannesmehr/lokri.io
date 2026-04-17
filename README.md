@@ -93,43 +93,39 @@ pnpm db:seed          # Free-Plan seeden
 
 ### Claude Desktop
 
-Claude Desktop akzeptiert aktuell (Q2 2026) Remote-MCPs nur mit OAuth 2.1.
-Für Bearer-Token-Auth brauchst du die stdio-Brücke
-[`mcp-remote`](https://www.npmjs.com/package/mcp-remote). Einmalig global
-installieren:
+lokri implementiert **OAuth 2.1** inkl. Dynamic Client Registration (RFC 7591)
+und PKCE. Claude Desktop kann direkt nativ verbinden — kein `mcp-remote`,
+kein manueller Token.
 
-```bash
-npm install -g mcp-remote
-which mcp-remote            # merk dir den Pfad
-```
-
-Dann `~/Library/Application Support/Claude/claude_desktop_config.json`
-(macOS) bzw. `%APPDATA%\Claude\claude_desktop_config.json` (Windows)
-bearbeiten:
+In `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
+bzw. `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
 
 ```json
 {
   "mcpServers": {
     "lokri": {
-      "command": "/absolute/path/to/node",
-      "args": [
-        "/absolute/path/to/mcp-remote",
-        "https://your-lokri-domain/api/mcp",
-        "--header",
-        "Authorization:Bearer lk_DEIN_TOKEN"
-      ]
+      "type": "http",
+      "url": "https://your-lokri-domain/api/mcp"
     }
   }
 }
 ```
 
-**Achtung nvm-Nutzer**: Claude Desktop erbt den Login-Shell-PATH, aber
-nvm sortiert Versionen nicht chronologisch. Wenn eine alte Node-Version
-zuerst im PATH steht, schlägt der Start fehl. Daher die **absoluten
-Pfade** zu Node 22+ und zum `mcp-remote`-Binary verwenden (nicht `npx`).
+Beim ersten Tool-Call triggert Claude automatisch den OAuth-Flow: Browser
+öffnet das lokri-Login, User consented, Claude tauscht den Code gegen einen
+Access-Token. Logs: `~/Library/Logs/Claude/mcp.log`.
 
-Claude Desktop komplett quitten (⌘Q) und neu starten. Die Logs landen in
-`~/Library/Logs/Claude/mcp-server-lokri.log`.
+**Discovery unter der Haube:**
+
+1. `POST /api/mcp` → 401 mit
+   `WWW-Authenticate: Bearer resource_metadata="…/.well-known/oauth-protected-resource"`
+2. `GET /.well-known/oauth-protected-resource` → listet den Authorization
+   Server
+3. `GET /.well-known/oauth-authorization-server` → liefert
+   `authorization_endpoint`, `token_endpoint`, `registration_endpoint`,
+   `code_challenge_methods_supported: ["S256"]`
+4. `POST /api/auth/mcp/register` → registriert den Client dynamisch
+5. OAuth Authorization-Code-Flow mit PKCE
 
 ### ChatGPT
 

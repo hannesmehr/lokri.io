@@ -1,45 +1,65 @@
 import { createMcpHandler, withMcpAuth } from "mcp-handler";
-import { verifyBearerToken } from "@/lib/mcp/auth";
+import { extractBearer, verifyMcpBearer } from "@/lib/mcp/auth";
 import { registerTools } from "@/lib/mcp/tools";
 
 /**
- * MCP Streamable HTTP endpoint. Authenticated with a Bearer token minted in
- * the web dashboard (stored as bcrypt hash in `api_tokens`).
+ * MCP Streamable HTTP endpoint.
  *
- * We run on Node.js runtime — `bcryptjs` wants Node's `crypto`, and
- * `@modelcontextprotocol/sdk` uses Node-only APIs inside the transport.
+ * Authentication priority:
+ *   1. OAuth 2.1 access token issued by Better-Auth's `mcp` plugin. Clients
+ *      discover us via `/.well-known/oauth-protected-resource`, register
+ *      dynamically via `/api/auth/mcp/register`, and complete PKCE flows.
+ *   2. Legacy `lk_...` bearer tokens minted in the dashboard. Kept so
+ *      existing CLI/script integrations don't break.
  *
- * Stateless: no Redis, no SSE session persistence. Each request is its own
- * JSON-RPC exchange. Per-request account scoping happens via
- * `extra.authInfo.extra.ownerAccountId` inside each tool callback.
+ * On a missing/invalid bearer, we return 401 with a `WWW-Authenticate`
+ * header pointing to the Protected Resource Metadata (RFC 9728). Claude
+ * Desktop and other spec-compliant clients follow this automatically to
+ * kick off the OAuth flow.
  */
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 const handler = createMcpHandler(
-  (server) => {
-    // Tools read the account id from the per-call auth context. The factory
-    // itself is per-request in stateless mode, but we avoid touching the
-    // request here so registerTools stays pure.
-    registerTools(server);
-  },
+  (server) => registerTools(server),
   {},
   { basePath: "/api" },
 );
 
-const authedHandler = withMcpAuth(
+const authed = withMcpAuth(
   handler,
-  async (_req, bearer) => {
-    const ctx = await verifyBearerToken(bearer);
+  async (req, bearer) => {
+    const plaintext = bearer ?? extractBearer(req.headers.get("authorization"));
+    const ctx = await verifyMcpBearer(req.headers, plaintext);
     if (!ctx) return undefined; // mcp-handler returns 401 when required
     return {
-      token: bearer ?? "",
+      token: plaintext ?? "",
       clientId: ctx.tokenId,
       scopes: [],
-      extra: { ownerAccountId: ctx.ownerAccountId },
+      extra: { ownerAccountId: ctx.ownerAccountId, authKind: ctx.kind },
     };
   },
   { required: true },
 );
 
-export { authedHandler as GET, authedHandler as POST, authedHandler as DELETE };
+/**
+ * Wrap the authenticated handler so a 401 gets the RFC 9728 hint the spec
+ * requires for OAuth 2.1 discovery (`mcp-handler`'s built-in 401 omits it).
+ */
+async function handle(req: Request): Promise<Response> {
+  const res = await authed(req);
+  if (res.status !== 401) return res;
+
+  const origin = new URL(req.url).origin;
+  const headers = new Headers(res.headers);
+  headers.set(
+    "WWW-Authenticate",
+    `Bearer realm="lokri", resource_metadata="${origin}/.well-known/oauth-protected-resource"`,
+  );
+  // Re-build response because Headers is mutable but the body stream can
+  // only be consumed once.
+  const body = await res.arrayBuffer();
+  return new Response(body, { status: 401, headers });
+}
+
+export { handle as GET, handle as POST, handle as DELETE };

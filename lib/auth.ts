@@ -1,8 +1,12 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { mcp } from "better-auth/plugins";
 import { db } from "./db";
 import {
   accounts,
+  oauthAccessToken,
+  oauthApplication,
+  oauthConsent,
   ownerAccountMembers,
   ownerAccounts,
   sessions,
@@ -70,8 +74,31 @@ export const auth = betterAuth({
       session: sessions,
       account: accounts,
       verification: verifications,
+      // Tables added by the `mcp` plugin (OAuth 2.1 / OIDC for MCP clients):
+      oauthApplication,
+      oauthAccessToken,
+      oauthConsent,
     },
   }),
+
+  plugins: [
+    // Enables OAuth 2.1 + Dynamic Client Registration so remote MCP clients
+    // (Claude Desktop, ChatGPT, Cursor, …) can connect natively, without the
+    // `mcp-remote` stdio bridge. Exposes:
+    //   /api/auth/.well-known/oauth-authorization-server
+    //   /api/auth/.well-known/oauth-protected-resource
+    //   /api/auth/mcp/register     (RFC 7591 DCR)
+    //   /api/auth/mcp/authorize    (OAuth 2.1 authorize endpoint)
+    //   /api/auth/mcp/token        (token endpoint, PKCE required)
+    //   /api/auth/oauth2/consent   (consent endpoint)
+    //   /api/auth/mcp/get-session  (internal bearer verification)
+    //
+    // The root-level `/.well-known/*` routes proxy to these via the helper
+    // functions in `app/.well-known/*` route handlers.
+    mcp({
+      loginPage: "/login",
+    }),
+  ],
 
   emailAndPassword: {
     enabled: true,

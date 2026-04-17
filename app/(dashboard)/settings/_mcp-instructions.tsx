@@ -46,22 +46,20 @@ function CopyBlock({ label, snippet }: { label: string; snippet: string }) {
 }
 
 export function McpInstructions() {
-  const mcpUrl =
+  const origin =
     typeof window !== "undefined"
-      ? `${window.location.origin}/api/mcp`
-      : "https://your-domain/api/mcp";
+      ? window.location.origin
+      : "https://your-domain";
+  const mcpUrl = `${origin}/api/mcp`;
 
+  // Native OAuth snippet — Claude Desktop triggers the OAuth 2.1 flow
+  // automatically on first use. No token to paste, no proxy to install.
   const claudeDesktopSnippet = JSON.stringify(
     {
       mcpServers: {
         lokri: {
-          command: "/absolute/path/to/node",
-          args: [
-            "/absolute/path/to/mcp-remote",
-            mcpUrl,
-            "--header",
-            "Authorization:Bearer lk_DEIN_TOKEN_HIER",
-          ],
+          type: "http",
+          url: mcpUrl,
         },
       },
     },
@@ -70,17 +68,18 @@ export function McpInstructions() {
   );
 
   const chatgptSnippet = `URL: ${mcpUrl}
-Auth: Bearer Token (lk_DEIN_TOKEN_HIER)
-Tools: search, fetch, list_spaces, list_notes, list_files, create_note, update_note, delete_note, upload_file, delete_file`;
+Auth: OAuth 2.1 (automatic — ChatGPT handles DCR + PKCE)
+  OR: Bearer Token aus "MCP-Tokens" oben (Legacy-Pfad)
+Tools: search, fetch, list_spaces, list_notes, list_files,
+       create_note, update_note, delete_note, upload_file, delete_file`;
 
   const cursorSnippet = JSON.stringify(
     {
       mcpServers: {
         lokri: {
           url: mcpUrl,
-          headers: {
-            Authorization: "Bearer lk_DEIN_TOKEN_HIER",
-          },
+          // Cursor supports OAuth auto-discovery; if it doesn't, fall back to:
+          // headers: { Authorization: "Bearer lk_…" }
         },
       },
     },
@@ -90,28 +89,26 @@ Tools: search, fetch, list_spaces, list_notes, list_files, create_note, update_n
 
   return (
     <div className="space-y-6 text-sm">
-      <p className="text-muted-foreground">
-        Erstelle oben einen Token, ersetze im Snippet{" "}
-        <code className="rounded bg-muted px-1 py-0.5 text-xs">
-          lk_DEIN_TOKEN_HIER
-        </code>{" "}
-        und übernimm die Konfiguration in deinem Client.
-      </p>
+      <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3 text-xs text-emerald-900 dark:text-emerald-200">
+        <strong className="font-medium">OAuth 2.1 aktiv.</strong> Clients
+        discovern lokri über <code>/.well-known/oauth-protected-resource</code>,
+        registrieren sich per DCR (RFC 7591) und tauschen PKCE-Codes gegen
+        Access-Tokens. Du musst in modernen Clients <em>keinen</em> Token mehr
+        manuell kopieren — die Tokens oben sind für Legacy-Clients gedacht.
+      </div>
 
       <section className="space-y-3">
         <div className="flex items-baseline gap-2">
           <h3 className="text-sm font-semibold">Claude Desktop</h3>
-          <span className="text-xs text-muted-foreground">
-            via <code>mcp-remote</code> stdio-Bridge
-          </span>
+          <span className="text-xs text-muted-foreground">nativ (HTTP + OAuth)</span>
         </div>
         <p className="text-xs text-muted-foreground">
-          Einmalig <code>npm install -g mcp-remote</code>, dann in{" "}
+          In{" "}
           <code>~/Library/Application Support/Claude/claude_desktop_config.json</code>{" "}
           (macOS) bzw.{" "}
           <code>%APPDATA%\Claude\claude_desktop_config.json</code> (Windows).
-          Pfade zu <code>node</code> und <code>mcp-remote</code> absolut
-          eintragen (nvm-Nutzer: die aktuelle Version erzwingen).
+          Nach dem Restart triggert Claude den OAuth-Flow: Browser-Login via
+          lokri, Consent, fertig.
         </p>
         <CopyBlock
           label="claude_desktop_config.json"
@@ -122,8 +119,9 @@ Tools: search, fetch, list_spaces, list_notes, list_files, create_note, update_n
       <section className="space-y-3">
         <h3 className="text-sm font-semibold">ChatGPT (Developer Tools)</h3>
         <p className="text-xs text-muted-foreground">
-          MCP-Connector anlegen. Pflicht-Tools <code>search</code> und{" "}
-          <code>fetch</code> sind implementiert.
+          MCP-Connector anlegen. ChatGPT discovert OAuth automatisch; falls
+          es einen statischen Bearer erwartet, nutze einen Token aus{" "}
+          <em>MCP-Tokens</em> oben.
         </p>
         <CopyBlock label="Connector-Settings" snippet={chatgptSnippet} />
       </section>
@@ -131,14 +129,20 @@ Tools: search, fetch, list_spaces, list_notes, list_files, create_note, update_n
       <section className="space-y-3">
         <h3 className="text-sm font-semibold">Cursor / Codex</h3>
         <p className="text-xs text-muted-foreground">
-          In <code>~/.cursor/mcp.json</code> (Cursor) bzw. der Codex-MCP-Config.
+          In <code>~/.cursor/mcp.json</code> bzw. der Codex-MCP-Config.
+          Cursor unterstützt OAuth-Discovery; falls nicht verfügbar, trage
+          einen <code>Authorization: Bearer lk_…</code>-Header ein.
         </p>
         <CopyBlock label="mcp.json" snippet={cursorSnippet} />
       </section>
 
       <p className="text-xs text-muted-foreground">
-        Endpoint-URL:{" "}
-        <code className="rounded bg-muted px-1 py-0.5">{mcpUrl}</code>
+        Endpoint:{" "}
+        <code className="rounded bg-muted px-1 py-0.5">{mcpUrl}</code> ·
+        Discovery:{" "}
+        <code className="rounded bg-muted px-1 py-0.5">
+          {origin}/.well-known/oauth-protected-resource
+        </code>
       </p>
     </div>
   );
