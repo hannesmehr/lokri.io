@@ -85,6 +85,7 @@ export function SpaceCreateDialog() {
               maxLength={200}
               value={name}
               onChange={(e) => setName(e.target.value)}
+              autoComplete="off"
             />
           </div>
           <div className="space-y-2">

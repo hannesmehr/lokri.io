@@ -1,15 +1,25 @@
 import { embed, embedMany } from "ai";
+import {
+  DEFAULT_GATEWAY_MODEL,
+  EMBEDDING_DIMENSIONS,
+  getEmbeddingContext,
+} from "@/lib/embedding-keys";
 
 /**
- * Default embedding model. `openai/text-embedding-3-small` is routed through
- * the Vercel AI Gateway (requires `AI_GATEWAY_API_KEY`) and emits 1536-dim
- * vectors, matching the `vector(1536)` columns on `file_chunks` and `notes`.
+ * `openai/text-embedding-3-small` is the Gateway-routed fallback — when
+ * no per-account BYOK row exists, we use it (requires `AI_GATEWAY_API_KEY`).
+ * Emits 1536-dim vectors matching `vector(1536)` on `file_chunks` / `notes`.
+ *
+ * With a BYOK row, `getEmbeddingContext(ownerAccountId)` returns an
+ * `@ai-sdk/openai` provider instance so the request bypasses the Gateway
+ * entirely and goes straight to api.openai.com.
  */
-export const DEFAULT_EMBEDDING_MODEL = "openai/text-embedding-3-small";
-export const EMBEDDING_DIMENSIONS = 1536;
+export const DEFAULT_EMBEDDING_MODEL = DEFAULT_GATEWAY_MODEL;
+export { EMBEDDING_DIMENSIONS };
 
 export interface EmbedResult {
   embedding: number[];
+  /** Model id as persisted on the row (e.g. `"openai/text-embedding-3-small"`). */
   model: string;
 }
 
@@ -18,23 +28,32 @@ export interface EmbedManyResult {
   model: string;
 }
 
-/** Embed a single string. Returns the vector + the model id that produced it. */
+/**
+ * Embed a single string. Pass `ownerAccountId` to honour the account's
+ * BYOK row; omit it from background scripts / seed code where no account
+ * context exists (falls back to the Gateway-routed default).
+ */
 export async function embedText(
   text: string,
-  model: string = DEFAULT_EMBEDDING_MODEL,
+  ownerAccountId?: string,
 ): Promise<EmbedResult> {
-  const { embedding } = await embed({ model, value: text });
-  return { embedding, model };
+  const ctx = await getEmbeddingContext(ownerAccountId);
+  const { embedding } = await embed({ model: ctx.model, value: text });
+  return { embedding, model: ctx.modelId };
 }
 
-/** Batch-embed. Gateway handles parallelism; most providers cap at ~100/call. */
+/** Batch-embed. Most providers cap at ~100/call — caller must chunk. */
 export async function embedTexts(
   texts: string[],
-  model: string = DEFAULT_EMBEDDING_MODEL,
+  ownerAccountId?: string,
 ): Promise<EmbedManyResult> {
-  if (texts.length === 0) return { embeddings: [], model };
-  const { embeddings } = await embedMany({ model, values: texts });
-  return { embeddings, model };
+  if (texts.length === 0) {
+    const ctx = await getEmbeddingContext(ownerAccountId);
+    return { embeddings: [], model: ctx.modelId };
+  }
+  const ctx = await getEmbeddingContext(ownerAccountId);
+  const { embeddings } = await embedMany({ model: ctx.model, values: texts });
+  return { embeddings, model: ctx.modelId };
 }
 
 // ---------------------------------------------------------------------------

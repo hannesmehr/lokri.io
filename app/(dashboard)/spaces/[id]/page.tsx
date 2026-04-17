@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { CloudCog, FileText, Folder, HardDrive, StickyNote } from "lucide-react";
 import Link from "next/link";
 import { notFound as nextNotFound } from "next/navigation";
@@ -14,6 +14,7 @@ import { db } from "@/lib/db";
 import { files, notes, spaces, storageProviders } from "@/lib/db/schema";
 import { formatRelative } from "@/lib/format";
 import { BucketBrowser } from "./_bucket-browser";
+import { ReindexSpaceButton } from "./_reindex-button";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -81,6 +82,11 @@ export default async function SpaceDetailPage({ params }: Params) {
             {formatRelative(space.updatedAt)}
           </p>
         </div>
+        {fileCount > 0 ? (
+          <div className="flex items-center gap-2">
+            <ReindexSpaceButton spaceId={space.id} />
+          </div>
+        ) : null}
       </div>
 
       {/* Quick stats */}

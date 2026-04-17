@@ -304,6 +304,23 @@ export const ownerAccounts = pgTable(
  */
 export const storageProviderTypeEnum = pgEnum("storage_provider_type", [
   "s3",
+  "github",
+]);
+
+/**
+ * BYO-API-Key embeddings. One row per owner account. When present, the
+ * embedding pipeline skips the Vercel AI Gateway and calls the upstream
+ * provider directly with the user's key — cheaper for us, auditable for
+ * them, useful for DSGVO-strict deployments that don't want a US-hosted
+ * router in the path.
+ *
+ * The model must emit 1536-dim vectors — that's the hard-coded width of
+ * `notes.embedding` + `file_chunks.embedding` (pgvector HNSW index). If we
+ * ever want 3072-dim `text-embedding-3-large`, we have to add a second
+ * set of columns + re-embed everything.
+ */
+export const embeddingProviderTypeEnum = pgEnum("embedding_provider_type", [
+  "openai",
 ]);
 
 export const storageProviders = pgTable(
@@ -336,6 +353,34 @@ export const storageProviders = pgTable(
       t.ownerAccountId,
       t.name,
     ),
+  ],
+);
+
+export const embeddingKeys = pgTable(
+  "embedding_keys",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    ownerAccountId: uuid("owner_account_id")
+      .notNull()
+      .references(() => ownerAccounts.id, { onDelete: "cascade" }),
+    provider: embeddingProviderTypeEnum("provider").notNull(),
+    /** Provider-specific model id, e.g. `"text-embedding-3-small"`. */
+    model: text("model").notNull(),
+    /** AES-256-GCM-encrypted JSON `{ apiKey }`. Same key-derivation as storage. */
+    configEncrypted: text("config_encrypted").notNull(),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdateFn(() => new Date()),
+  },
+  (t) => [
+    // One key per account — simpler than N + default. Users who want to
+    // rotate upload a new key; the row is replaced.
+    uniqueIndex("embedding_keys_owner_account_id_idx").on(t.ownerAccountId),
   ],
 );
 
@@ -378,6 +423,14 @@ export const apiTokens = pgTable(
     name: text("name").notNull(), // e.g. "Claude Desktop"
     tokenHash: text("token_hash").notNull().unique(),
     tokenPrefix: text("token_prefix").notNull(), // e.g. "lk_abc..."
+    /**
+     * Null / empty = token has access to all spaces. Otherwise an array of
+     * space UUIDs the token may read/write. Tools enforce this on every
+     * call via the owner-account-scoped query.
+     */
+    spaceScope: uuid("space_scope").array(),
+    /** True = mutation tools refuse (create/update/delete/upload/reindex/etc). */
+    readOnly: boolean("read_only").notNull().default(false),
     lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()

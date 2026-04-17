@@ -10,7 +10,7 @@ import {
 } from "@/lib/api/errors";
 import { ApiAuthError, requireSessionWithAccount } from "@/lib/api/session";
 import { db } from "@/lib/db";
-import { files, spaces, storageProviders } from "@/lib/db/schema";
+import { files, spaces } from "@/lib/db/schema";
 
 export const runtime = "nodejs";
 
@@ -73,28 +73,13 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 
     // ── Propagate to imported files: mcp_hidden mirrors browser-hidden ──
     if (space.storageProviderId) {
-      const [providerRow] = await db
-        .select({
-          id: storageProviders.id,
-          configEncrypted: storageProviders.configEncrypted,
-        })
-        .from(storageProviders)
-        .where(
-          and(
-            eq(storageProviders.id, space.storageProviderId),
-            eq(storageProviders.ownerAccountId, ownerAccountId),
-          ),
-        )
-        .limit(1);
-      if (providerRow) {
-        // We need the root prefix to turn the relative key into the
-        // absolute `files.storage_key`. Load the config lazily.
-        const { decryptJson } = await import("@/lib/storage/encryption");
-        const { S3Provider } = await import("@/lib/storage/s3");
-        type S3Config = ConstructorParameters<typeof S3Provider>[0];
-        const config = decryptJson<S3Config>(providerRow.configEncrypted);
-        const rootPrefix = (config.pathPrefix ?? "").replace(/^\/+|\/+$/g, "");
-
+      const { loadBrowsableProvider } = await import("@/lib/storage");
+      try {
+        const { provider } = await loadBrowsableProvider(
+          ownerAccountId,
+          space.storageProviderId,
+        );
+        const rootPrefix = provider.rootPrefix;
         const isPrefix = parsed.data.key.endsWith("/");
         const absoluteKey = rootPrefix
           ? `${rootPrefix}/${parsed.data.key}`
@@ -110,10 +95,13 @@ export async function PATCH(req: NextRequest, { params }: Params) {
           .where(
             and(
               eq(files.ownerAccountId, ownerAccountId),
-              eq(files.storageProviderId, providerRow.id),
+              eq(files.storageProviderId, space.storageProviderId),
               keyCondition,
             ),
           );
+      } catch {
+        // Provider row missing — skip mirror, but the space-level hidden
+        // list is still updated (above).
       }
     }
 

@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
     if (!parsed.success) return zodError(parsed.error);
 
     const { query, limit, spaceId, minSimilarity } = parsed.data;
-    const { embedding } = await embedText(query);
+    const { embedding } = await embedText(query, ownerAccountId);
 
     // ----- Notes -----
     const noteSim = sql<number>`1 - (${cosineDistance(notes.embedding, embedding)})`;

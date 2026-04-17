@@ -13,6 +13,7 @@ import { db } from "@/lib/db";
 import { storageProviders } from "@/lib/db/schema";
 import { limit, rateLimitResponse } from "@/lib/rate-limit";
 import { encryptJson } from "@/lib/storage/encryption";
+import { GitHubProvider, type GitHubConfig } from "@/lib/storage/github";
 import { S3Provider, type S3Config } from "@/lib/storage/s3";
 
 export const runtime = "nodejs";
@@ -27,11 +28,36 @@ const s3ConfigSchema = z.object({
   forcePathStyle: z.boolean().optional(),
 });
 
-const createSchema = z.object({
-  name: z.string().trim().min(1).max(80),
-  type: z.literal("s3"),
-  s3: s3ConfigSchema,
+const githubConfigSchema = z.object({
+  accessToken: z.string().min(1).max(400).optional(),
+  owner: z
+    .string()
+    .trim()
+    .min(1)
+    .max(100)
+    .regex(/^[\w.-]+$/, "Ungültiger GitHub-Owner"),
+  repo: z
+    .string()
+    .trim()
+    .min(1)
+    .max(120)
+    .regex(/^[\w.-]+$/, "Ungültiger Repo-Name"),
+  ref: z.string().trim().max(200).optional(),
+  pathPrefix: z.string().max(200).optional(),
 });
+
+const createSchema = z.discriminatedUnion("type", [
+  z.object({
+    name: z.string().trim().min(1).max(80),
+    type: z.literal("s3"),
+    s3: s3ConfigSchema,
+  }),
+  z.object({
+    name: z.string().trim().min(1).max(80),
+    type: z.literal("github"),
+    github: githubConfigSchema,
+  }),
+]);
 
 // ---- List -----------------------------------------------------------------
 
@@ -84,21 +110,34 @@ export async function POST(req: NextRequest) {
     }
 
     // HARD requirement: connection must succeed before we persist.
-    const cfg: S3Config = parsed.data.s3;
-    try {
-      await new S3Provider(cfg).testConnection();
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Unknown error";
-      return apiError(`Verbindungstest fehlgeschlagen: ${msg}`, 400);
+    let configToEncrypt: S3Config | GitHubConfig;
+    if (parsed.data.type === "s3") {
+      const cfg: S3Config = parsed.data.s3;
+      try {
+        await new S3Provider(cfg).testConnection();
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Unknown error";
+        return apiError(`Verbindungstest fehlgeschlagen: ${msg}`, 400);
+      }
+      configToEncrypt = cfg;
+    } else {
+      const cfg: GitHubConfig = parsed.data.github;
+      try {
+        await new GitHubProvider(cfg).testConnection();
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Unknown error";
+        return apiError(`GitHub-Verbindungstest fehlgeschlagen: ${msg}`, 400);
+      }
+      configToEncrypt = cfg;
     }
 
-    const encrypted = encryptJson(cfg);
+    const encrypted = encryptJson(configToEncrypt);
     const [row] = await db
       .insert(storageProviders)
       .values({
         ownerAccountId,
         name: parsed.data.name,
-        type: "s3",
+        type: parsed.data.type,
         configEncrypted: encrypted,
       })
       .returning({

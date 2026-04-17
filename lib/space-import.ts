@@ -4,7 +4,7 @@ import { fileChunks, files } from "@/lib/db/schema";
 import { chunkText, embedTexts } from "@/lib/embeddings";
 import { mimeTypeFromFilename } from "@/lib/mime";
 import { applyQuotaDelta, checkQuota } from "@/lib/quota";
-import type { S3Provider } from "@/lib/storage/s3";
+import type { BrowsableProvider } from "@/lib/storage";
 import { extractText } from "@/lib/text-extract";
 
 export type ImportStatus =
@@ -24,7 +24,8 @@ export interface ImportContext {
   ownerAccountId: string;
   spaceId: string;
   providerId: string;
-  s3: S3Provider;
+  /** Any read-capable external provider (S3, GitHub, future Dropbox/GDrive). */
+  provider: BrowsableProvider;
   /** Provider's path prefix — used to build absolute `storage_key`. */
   rootPrefix: string;
 }
@@ -63,7 +64,7 @@ export async function importExternalKey(
 
   try {
     const { content, mimeType: detectedMime } =
-      await ctx.s3.getByRelativeKey(relativeKey);
+      await ctx.provider.getByRelativeKey(relativeKey);
     const filename = relativeKey.split("/").pop() || relativeKey;
     const mime = detectedMime ?? mimeTypeFromFilename(filename);
 
@@ -97,7 +98,7 @@ export async function importExternalKey(
       if (text && text.length > 0) {
         const chunks = chunkText(text);
         if (chunks.length > 0) {
-          const { embeddings, model } = await embedTexts(chunks);
+          const { embeddings, model } = await embedTexts(chunks, ctx.ownerAccountId);
           await db.insert(fileChunks).values(
             chunks.map((c, i) => ({
               fileId: row.id,

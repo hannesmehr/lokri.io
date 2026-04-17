@@ -17,20 +17,39 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export function TokenCreateDialog() {
+interface SpaceOption {
+  id: string;
+  name: string;
+}
+
+export function TokenCreateDialog({ spaces }: { spaces: SpaceOption[] }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
+  const [readOnly, setReadOnly] = useState(false);
+  const [scopeMode, setScopeMode] = useState<"all" | "selected">("all");
+  const [selectedSpaces, setSelectedSpaces] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [plaintext, setPlaintext] = useState<string | null>(null);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (scopeMode === "selected" && selectedSpaces.size === 0) {
+      toast.error("Wähle mindestens einen Space — oder nimm „alle Spaces“.");
+      return;
+    }
     setLoading(true);
+    const payload: Record<string, unknown> = {
+      name,
+      read_only: readOnly,
+    };
+    if (scopeMode === "selected") {
+      payload.space_scope = [...selectedSpaces];
+    }
     const res = await fetch("/api/tokens", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name }),
+      body: JSON.stringify(payload),
     });
     setLoading(false);
     if (!res.ok) {
@@ -47,6 +66,18 @@ export function TokenCreateDialog() {
     setOpen(false);
     setPlaintext(null);
     setName("");
+    setReadOnly(false);
+    setScopeMode("all");
+    setSelectedSpaces(new Set());
+  }
+
+  function toggleSpace(id: string) {
+    setSelectedSpaces((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   }
 
   function copyToClipboard() {
@@ -64,7 +95,7 @@ export function TokenCreateDialog() {
       }}
     >
       <DialogTrigger render={<Button>Neuer Token</Button>} />
-      <DialogContent>
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>
             {plaintext ? "Token erstellt" : "Neuer MCP-Token"}
@@ -72,7 +103,7 @@ export function TokenCreateDialog() {
           <DialogDescription>
             {plaintext
               ? "Kopiere den Token jetzt — er wird danach nicht mehr angezeigt."
-              : "Gib dem Token einen wiedererkennbaren Namen (z.B. den Client)."}
+              : "Gib dem Token einen Namen und entscheide, welchen Zugriff der Client bekommt."}
           </DialogDescription>
         </DialogHeader>
 
@@ -109,8 +140,75 @@ export function TokenCreateDialog() {
                 placeholder="z.B. Claude Desktop"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+                autoComplete="off"
               />
             </div>
+
+            {/* Scope --------------------------------------------------- */}
+            <div className="space-y-2">
+              <Label>Sichtbarkeit</Label>
+              <div className="flex gap-1 rounded-lg border bg-muted/40 p-1 text-xs">
+                <ScopeTab
+                  active={scopeMode === "all"}
+                  onClick={() => setScopeMode("all")}
+                  label="Alle Spaces"
+                  hint="voller Account-Zugriff"
+                />
+                <ScopeTab
+                  active={scopeMode === "selected"}
+                  onClick={() => setScopeMode("selected")}
+                  label="Nur ausgewählte"
+                  hint={
+                    spaces.length === 0
+                      ? "noch keine Spaces"
+                      : `${spaces.length} verfügbar`
+                  }
+                />
+              </div>
+              {scopeMode === "selected" ? (
+                spaces.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">
+                    Du hast noch keine Spaces angelegt. Erstelle zuerst einen
+                    Space, damit du ihn hier zuweisen kannst.
+                  </p>
+                ) : (
+                  <div className="max-h-48 space-y-1 overflow-y-auto rounded-md border p-2">
+                    {spaces.map((s) => (
+                      <label
+                        key={s.id}
+                        className="flex items-center gap-2 rounded px-2 py-1 text-sm transition-colors hover:bg-muted/50"
+                      >
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4"
+                          checked={selectedSpaces.has(s.id)}
+                          onChange={() => toggleSpace(s.id)}
+                        />
+                        <span className="truncate">{s.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                )
+              ) : null}
+            </div>
+
+            {/* Read-only ---------------------------------------------- */}
+            <label className="flex items-start gap-2 rounded-md border p-3 text-sm">
+              <input
+                type="checkbox"
+                className="mt-0.5 h-4 w-4"
+                checked={readOnly}
+                onChange={(e) => setReadOnly(e.target.checked)}
+              />
+              <div>
+                <div className="font-medium">Read-only</div>
+                <div className="text-xs text-muted-foreground">
+                  Der Client kann lesen & suchen, aber nichts anlegen,
+                  verändern oder löschen.
+                </div>
+              </div>
+            </label>
+
             <DialogFooter>
               <Button type="submit" disabled={loading || !name}>
                 {loading ? "Erstellen…" : "Token erstellen"}
@@ -120,5 +218,32 @@ export function TokenCreateDialog() {
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+function ScopeTab({
+  active,
+  onClick,
+  label,
+  hint,
+}: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+  hint: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={
+        active
+          ? "flex flex-1 flex-col items-start gap-0.5 rounded-md bg-background px-3 py-2 shadow-sm"
+          : "flex flex-1 flex-col items-start gap-0.5 rounded-md px-3 py-2 text-muted-foreground transition-colors hover:text-foreground"
+      }
+    >
+      <span className="font-medium">{label}</span>
+      <span className="text-[11px] text-muted-foreground">{hint}</span>
+    </button>
   );
 }

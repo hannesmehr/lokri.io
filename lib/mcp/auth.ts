@@ -11,6 +11,13 @@ export interface McpAuthContext {
   tokenName: string;
   /** "oauth" for Better-Auth-issued OAuth 2.1 access tokens, "legacy" for `lk_` bearer. */
   kind: "oauth" | "legacy";
+  /**
+   * Null/empty = unrestricted. Array = only these spaces are visible/
+   * mutable. OAuth tokens don't carry scopes yet (always null).
+   */
+  spaceScope: string[] | null;
+  /** True → mutation tools refuse. OAuth tokens default to false. */
+  readOnly: boolean;
 }
 
 /**
@@ -40,6 +47,8 @@ export async function verifyMcpBearer(
         tokenId: oauthSession.accessToken,
         tokenName: oauthSession.clientId,
         kind: "oauth",
+        spaceScope: null,
+        readOnly: false,
       };
     }
   } catch {
@@ -57,6 +66,8 @@ export async function verifyMcpBearer(
       ownerAccountId: apiTokens.ownerAccountId,
       name: apiTokens.name,
       tokenHash: apiTokens.tokenHash,
+      spaceScope: apiTokens.spaceScope,
+      readOnly: apiTokens.readOnly,
     })
     .from(apiTokens)
     .where(
@@ -76,6 +87,8 @@ export async function verifyMcpBearer(
         tokenId: row.id,
         tokenName: row.name,
         kind: "legacy",
+        spaceScope: row.spaceScope && row.spaceScope.length > 0 ? row.spaceScope : null,
+        readOnly: row.readOnly,
       };
     }
   }

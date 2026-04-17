@@ -121,6 +121,14 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: true,
+    /**
+     * Public self-service signup is closed for now — Better-Auth's
+     * `/sign-up/email` route returns `EMAIL_PASSWORD_SIGN_UP_DISABLED`.
+     * Existing users can still sign in, reset passwords, and change emails.
+     * Flip back to `false` (or remove the key) when we're ready to open
+     * registration again.
+     */
+    disableSignUp: true,
     // Password-reset: uses Resend via lib/mailer.
     sendResetPassword: async ({ user, url }) => {
       const tpl = resetPasswordTemplate({ name: user.name ?? null, url });

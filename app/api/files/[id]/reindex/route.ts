@@ -8,11 +8,9 @@ import {
 } from "@/lib/api/errors";
 import { ApiAuthError, requireSessionWithAccount } from "@/lib/api/session";
 import { db } from "@/lib/db";
-import { fileChunks, files } from "@/lib/db/schema";
-import { chunkText, embedTexts } from "@/lib/embeddings";
+import { files } from "@/lib/db/schema";
 import { limit, rateLimitResponse } from "@/lib/rate-limit";
-import { getProviderForFile } from "@/lib/storage";
-import { extractText } from "@/lib/text-extract";
+import { reindexFile } from "@/lib/reindex";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -39,36 +37,17 @@ export async function POST(_req: NextRequest, { params }: Params) {
       .limit(1);
     if (!file) return notFound();
 
-    const provider = await getProviderForFile(file.storageProviderId);
-    const { content } = await provider.get(file.storageKey);
-
-    const text = await extractText(content, file.mimeType);
-    if (!text || text.length === 0) {
+    const result = await reindexFile(file);
+    if (result.status === "no_text") {
       return apiError(
-        `Kein Text extrahierbar (${file.mimeType}). Binärdateien werden nicht indiziert.`,
+        result.reason ?? "Kein Text extrahierbar. Binärdateien werden nicht indiziert.",
         400,
       );
     }
-
-    // Replace existing chunks.
-    await db.delete(fileChunks).where(eq(fileChunks.fileId, file.id));
-
-    const chunks = chunkText(text);
-    if (chunks.length === 0) {
-      return NextResponse.json({ chunks: 0 });
+    if (result.status === "failed") {
+      return serverError(new Error(result.reason ?? "Reindex failed"));
     }
-    const { embeddings, model } = await embedTexts(chunks);
-    await db.insert(fileChunks).values(
-      chunks.map((c, i) => ({
-        fileId: file.id,
-        chunkIndex: i,
-        contentText: c,
-        embedding: embeddings[i],
-        embeddingModel: model,
-      })),
-    );
-
-    return NextResponse.json({ chunks: chunks.length });
+    return NextResponse.json({ chunks: result.chunks });
   } catch (err) {
     if (err instanceof ApiAuthError) return unauthorized(err.message);
     console.error("[files.reindex]", err);

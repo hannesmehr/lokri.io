@@ -94,13 +94,14 @@ export default function LoginPage() {
             {loading ? "Anmelden…" : "Anmelden"}
           </Button>
           <p className="text-sm text-muted-foreground">
-            Noch kein Account?{" "}
-            <Link
-              href="/register"
+            Registrierung ist aktuell geschlossen —{" "}
+            <a
+              href="mailto:hello@lokri.io"
               className="font-medium text-foreground underline-offset-4 hover:underline"
             >
-              Registrieren
-            </Link>
+              Kontakt
+            </a>{" "}
+            für Einladung.
           </p>
         </CardFooter>
       </form>

@@ -64,6 +64,27 @@
       "when": 1776457719444,
       "tag": "0008_stale_champions",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1776461513550,
+      "tag": "0009_medical_sleeper",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1776462340379,
+      "tag": "0010_sparkling_starhawk",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1776463138753,
+      "tag": "0011_demonic_viper",
+      "breakpoints": true
     }
   ]
 }

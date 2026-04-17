@@ -1,0 +1,1 @@
+ALTER TYPE "public"."storage_provider_type" ADD VALUE 'github';

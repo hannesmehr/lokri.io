@@ -108,11 +108,22 @@ export class S3Provider implements StorageProvider {
   }
 
   async put(input: StoragePutInput): Promise<StoragePutResult> {
-    const { ownerAccountId, filename, content, mimeType } = input;
+    const { ownerAccountId, filename, content, mimeType, targetPrefix } = input;
     const safe = slugifyFilename(filename) || "file";
-    const key = this.key(
-      `${ownerAccountId}/${crypto.randomUUID()}-${safe}`,
-    );
+    // Two layouts:
+    //   - targetPrefix set (D&D): {rootPrefix}/{targetPrefix}/{safe}
+    //     File lands where the user is looking in the browser; original
+    //     name preserved; collisions overwrite (standard file-manager UX).
+    //   - targetPrefix omitted (Files page): {rootPrefix}/{accountId}/
+    //     {uuid}-{safe}. Collision-free by construction.
+    const sub =
+      targetPrefix !== undefined
+        ? (() => {
+            const clean = targetPrefix.replace(/^\/+|\/+$/g, "");
+            return clean ? `${clean}/${safe}` : safe;
+          })()
+        : `${ownerAccountId}/${crypto.randomUUID()}-${safe}`;
+    const key = this.key(sub);
 
     const body =
       content instanceof Blob

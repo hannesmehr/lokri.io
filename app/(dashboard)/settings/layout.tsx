@@ -15,6 +15,7 @@ export default function SettingsLayout({ children }: { children: ReactNode }) {
           { href: "/settings", label: "Allgemein" },
           { href: "/settings/mcp", label: "MCP" },
           { href: "/settings/storage", label: "Storage" },
+          { href: "/settings/embedding-key", label: "Embedding-Key" },
         ]}
       />
       {children}

@@ -158,6 +158,13 @@ export const limiters = {
     limit: 10,
     window: "1 h",
   }),
+
+  /** Space-wide reindex — expensive (fan-out to AI Gateway). */
+  reindex: makeLimiter({
+    name: "reindex",
+    limit: 5,
+    window: "10 m",
+  }),
 } satisfies Record<string, Ratelimit | null>;
 
 export type LimiterName = keyof typeof limiters;

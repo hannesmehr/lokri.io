@@ -9,6 +9,8 @@ interface Token {
   id: string;
   name: string;
   tokenPrefix: string;
+  spaceScope: string[] | null;
+  readOnly: boolean;
   lastUsedAt: Date | string | null;
   createdAt: Date | string;
 }
@@ -47,11 +49,22 @@ export function TokenList({ tokens }: { tokens: Token[] }) {
           className="flex items-center justify-between gap-4 rounded-md border p-3"
         >
           <div className="min-w-0 flex-1">
-            <div className="flex items-baseline gap-2">
+            <div className="flex flex-wrap items-baseline gap-2">
               <div className="font-medium">{t.name}</div>
               <code className="text-xs text-muted-foreground">
                 {t.tokenPrefix}…
               </code>
+              {t.readOnly ? (
+                <span className="rounded border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-300">
+                  read-only
+                </span>
+              ) : null}
+              {t.spaceScope && t.spaceScope.length > 0 ? (
+                <span className="rounded border border-indigo-500/30 bg-indigo-500/10 px-1.5 py-0.5 text-[10px] font-medium text-indigo-700 dark:text-indigo-300">
+                  {t.spaceScope.length} Space
+                  {t.spaceScope.length === 1 ? "" : "s"}
+                </span>
+              ) : null}
             </div>
             <div className="text-xs text-muted-foreground">
               Erstellt {new Date(t.createdAt).toLocaleDateString("de-DE")} ·{" "}

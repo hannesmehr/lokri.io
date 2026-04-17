@@ -76,6 +76,9 @@ export async function POST(req: NextRequest) {
     const file = form.get("file");
     const spaceIdRaw = form.get("space_id");
     const spaceId = typeof spaceIdRaw === "string" && spaceIdRaw.length > 0 ? spaceIdRaw : null;
+    const targetPrefixRaw = form.get("target_prefix");
+    const targetPrefix =
+      typeof targetPrefixRaw === "string" ? targetPrefixRaw : undefined;
 
     if (!(file instanceof File)) {
       return apiError("Missing `file` field.", 400);
@@ -113,7 +116,42 @@ export async function POST(req: NextRequest) {
       filename: file.name,
       content,
       mimeType,
+      targetPrefix,
     });
+
+    // When `target_prefix` is provided (D&D), the storage key is determin-
+    // istic — if the user drops the same filename twice, S3 overwrites
+    // the object, and we must likewise replace the DB row to avoid
+    // ghost duplicates. `fileChunks` is ON DELETE CASCADE so old chunks
+    // vanish with the old row. Quota correction via negative delta.
+    if (providerId && targetPrefix !== undefined) {
+      const existing = await db
+        .select({ id: files.id, sizeBytes: files.sizeBytes })
+        .from(files)
+        .where(
+          and(
+            eq(files.ownerAccountId, ownerAccountId),
+            eq(files.storageProviderId, providerId),
+            eq(files.storageKey, putResult.storageKey),
+          ),
+        );
+      if (existing.length > 0) {
+        await db.delete(files).where(
+          and(
+            eq(files.ownerAccountId, ownerAccountId),
+            eq(files.storageProviderId, providerId),
+            eq(files.storageKey, putResult.storageKey),
+          ),
+        );
+        const freed = existing.reduce((n, r) => n + r.sizeBytes, 0);
+        if (freed > 0) {
+          await applyQuotaDelta(ownerAccountId, {
+            bytes: -freed,
+            files: -existing.length,
+          });
+        }
+      }
+    }
 
     const [row] = await db
       .insert(files)
@@ -135,7 +173,7 @@ export async function POST(req: NextRequest) {
       if (text && text.length > 0) {
         const chunks = chunkText(text);
         if (chunks.length > 0) {
-          const { embeddings, model } = await embedTexts(chunks);
+          const { embeddings, model } = await embedTexts(chunks, ownerAccountId);
           await db.insert(fileChunks).values(
             chunks.map((c, i) => ({
               fileId: row.id,

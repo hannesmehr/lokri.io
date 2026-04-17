@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { spaces, storageProviders } from "@/lib/db/schema";
 import { decryptJson } from "./encryption";
+import { GitHubProvider, type GitHubConfig } from "./github";
 import { S3Provider, type S3Config } from "./s3";
 import type { StorageProvider } from "./types";
 import { VercelBlobProvider } from "./vercel-blob";
@@ -89,6 +90,103 @@ async function loadProvider(providerId: string): Promise<StorageProvider> {
   if (row.type === "s3") {
     const config = decryptJson<S3Config>(row.configEncrypted);
     return new S3Provider(config);
+  }
+  if (row.type === "github") {
+    const config = decryptJson<GitHubConfig>(row.configEncrypted);
+    return new GitHubProvider(config);
+  }
+  throw new Error(`Unsupported storage provider type: ${row.type}`);
+}
+
+/**
+ * Minimal contract for providers that support browse + recursive listing.
+ * Both S3 and GitHub implement it; the `/browse` and bulk-import routes
+ * code against this interface so new read-only sources (Dropbox, GDrive,
+ * WebDAV…) can plug in without touching those call sites.
+ *
+ * `isReadOnly` lets the UI hide upload/delete controls cleanly.
+ */
+export interface BrowsableProvider {
+  readonly rootPrefix: string;
+  readonly isReadOnly: boolean;
+  listObjects(
+    relativePrefix: string,
+    continuationToken?: string,
+  ): Promise<{
+    directories: string[];
+    objects: Array<{
+      key: string;
+      size: number;
+      lastModified: string | null;
+    }>;
+    isTruncated: boolean;
+    nextContinuationToken: string | null;
+  }>;
+  listRecursive(
+    relativePrefix: string,
+    limit?: number,
+  ): Promise<{
+    objects: Array<{
+      key: string;
+      size: number;
+      lastModified: string | null;
+    }>;
+    truncatedAt: boolean;
+  }>;
+  getByRelativeKey(relativeKey: string): Promise<{
+    content: Uint8Array;
+    mimeType?: string;
+  }>;
+}
+
+/**
+ * Load a provider row + instantiate its browsable client in one step.
+ * Returns the instance paired with the row's `type` + `name` for display.
+ * Throws on unknown/unsupported provider types.
+ */
+export async function loadBrowsableProvider(
+  ownerAccountId: string,
+  providerId: string,
+): Promise<{
+  provider: BrowsableProvider;
+  type: "s3" | "github";
+  name: string;
+}> {
+  const [row] = await db
+    .select({
+      type: storageProviders.type,
+      configEncrypted: storageProviders.configEncrypted,
+      name: storageProviders.name,
+    })
+    .from(storageProviders)
+    .where(
+      and(
+        eq(storageProviders.id, providerId),
+        eq(storageProviders.ownerAccountId, ownerAccountId),
+      ),
+    )
+    .limit(1);
+  if (!row) {
+    throw new Error(`Storage provider not found: ${providerId}`);
+  }
+  if (row.type === "s3") {
+    const cfg = decryptJson<S3Config>(row.configEncrypted);
+    const s3 = new S3Provider(cfg);
+    // Object with `isReadOnly` surfaced at the call site — S3 is read/write.
+    return {
+      provider: Object.assign(s3, { isReadOnly: false }),
+      type: "s3",
+      name: row.name,
+    };
+  }
+  if (row.type === "github") {
+    const cfg = decryptJson<GitHubConfig>(row.configEncrypted);
+    const gh = new GitHubProvider(cfg);
+    return {
+      provider: Object.assign(gh, { isReadOnly: true }),
+      type: "github",
+      name: row.name,
+    };
   }
   throw new Error(`Unsupported storage provider type: ${row.type}`);
 }

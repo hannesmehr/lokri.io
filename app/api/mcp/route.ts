@@ -1,5 +1,7 @@
 import { createMcpHandler, withMcpAuth } from "mcp-handler";
 import { extractBearer, verifyMcpBearer } from "@/lib/mcp/auth";
+import { registerPrompts } from "@/lib/mcp/prompts";
+import { registerResources } from "@/lib/mcp/resources";
 import { registerTools } from "@/lib/mcp/tools";
 import {
   ipFromHeaders,
@@ -26,7 +28,11 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 const handler = createMcpHandler(
-  (server) => registerTools(server),
+  (server) => {
+    registerTools(server);
+    registerPrompts(server);
+    registerResources(server);
+  },
   {},
   { basePath: "/api" },
 );
@@ -41,7 +47,12 @@ const authed = withMcpAuth(
       token: plaintext ?? "",
       clientId: ctx.tokenId,
       scopes: [],
-      extra: { ownerAccountId: ctx.ownerAccountId, authKind: ctx.kind },
+      extra: {
+        ownerAccountId: ctx.ownerAccountId,
+        authKind: ctx.kind,
+        spaceScope: ctx.spaceScope,
+        readOnly: ctx.readOnly,
+      },
     };
   },
   { required: true },

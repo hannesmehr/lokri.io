@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/card";
 import { requireSessionWithAccount } from "@/lib/api/session";
 import { db } from "@/lib/db";
-import { apiTokens } from "@/lib/db/schema";
+import { apiTokens, spaces } from "@/lib/db/schema";
 import { McpInstructions } from "./_mcp-instructions";
 import { TokenList } from "./_token-list";
 import { TokenCreateDialog } from "./_token-create-dialog";
@@ -26,22 +26,31 @@ export default async function McpPage() {
   const { ownerAccountId } = await requireSessionWithAccount();
   const origin = await resolveOrigin();
 
-  const tokens = await db
-    .select({
-      id: apiTokens.id,
-      name: apiTokens.name,
-      tokenPrefix: apiTokens.tokenPrefix,
-      lastUsedAt: apiTokens.lastUsedAt,
-      createdAt: apiTokens.createdAt,
-    })
-    .from(apiTokens)
-    .where(
-      and(
-        eq(apiTokens.ownerAccountId, ownerAccountId),
-        isNull(apiTokens.revokedAt),
-      ),
-    )
-    .orderBy(desc(apiTokens.createdAt));
+  const [tokens, spaceRows] = await Promise.all([
+    db
+      .select({
+        id: apiTokens.id,
+        name: apiTokens.name,
+        tokenPrefix: apiTokens.tokenPrefix,
+        spaceScope: apiTokens.spaceScope,
+        readOnly: apiTokens.readOnly,
+        lastUsedAt: apiTokens.lastUsedAt,
+        createdAt: apiTokens.createdAt,
+      })
+      .from(apiTokens)
+      .where(
+        and(
+          eq(apiTokens.ownerAccountId, ownerAccountId),
+          isNull(apiTokens.revokedAt),
+        ),
+      )
+      .orderBy(desc(apiTokens.createdAt)),
+    db
+      .select({ id: spaces.id, name: spaces.name })
+      .from(spaces)
+      .where(eq(spaces.ownerAccountId, ownerAccountId))
+      .orderBy(desc(spaces.updatedAt)),
+  ]);
 
   return (
     <div className="space-y-8">
@@ -69,7 +78,7 @@ export default async function McpPage() {
                 </CardDescription>
               </div>
             </div>
-            <TokenCreateDialog />
+            <TokenCreateDialog spaces={spaceRows} />
           </div>
         </CardHeader>
         <CardContent className="relative">

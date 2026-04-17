@@ -7,13 +7,14 @@
  * return a loud error rather than silently operating on a wrong account.
  */
 
-import { and, cosineDistance, desc, eq, sql } from "drizzle-orm";
+import { and, cosineDistance, desc, eq, inArray, sql, type AnyColumn, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { db } from "@/lib/db";
 import { fileChunks, files, notes, spaces } from "@/lib/db/schema";
 import { chunkText, embedText, embedTexts } from "@/lib/embeddings";
 import { applyQuotaDelta, checkQuota } from "@/lib/quota";
+import { reindexFile } from "@/lib/reindex";
 import {
   getProviderForFile,
   getProviderForNewUpload,
@@ -31,18 +32,64 @@ type ToolExtra = {
   authInfo?: {
     extra?: {
       ownerAccountId?: string;
+      spaceScope?: string[] | null;
+      readOnly?: boolean;
     };
   };
 };
 
-function requireOwnerAccountId(extra: ToolExtra): string {
+interface AuthCtx {
+  ownerAccountId: string;
+  /** Null = unrestricted; Array = only these spaces are accessible. */
+  spaceScope: string[] | null;
+  readOnly: boolean;
+}
+
+function requireAuth(extra: ToolExtra): AuthCtx {
   const id = extra?.authInfo?.extra?.ownerAccountId;
   if (!id || typeof id !== "string") {
     throw new Error(
       "Missing auth context (expected ownerAccountId on authInfo.extra).",
     );
   }
-  return id;
+  return {
+    ownerAccountId: id,
+    spaceScope: extra?.authInfo?.extra?.spaceScope ?? null,
+    readOnly: extra?.authInfo?.extra?.readOnly ?? false,
+  };
+}
+
+/**
+ * Add a `space_id IN (scope)` clause when a scoped token is in play. Null
+ * spaces (account-level, unassigned) are excluded from scoped tokens —
+ * scoping is strict. Returns the extra condition or `undefined` when the
+ * token is unrestricted.
+ */
+function scopeCondition(
+  column: AnyColumn,
+  scope: string[] | null,
+): SQL | undefined {
+  if (!scope || scope.length === 0) return undefined;
+  return inArray(column, scope);
+}
+
+/** Guard for mutations — returns a tool error when the token is read-only. */
+function readOnlyGuard(ctx: AuthCtx): ToolResult | null {
+  if (ctx.readOnly) {
+    return toolError("This token is read-only — mutations are refused.");
+  }
+  return null;
+}
+
+/** Guard for tools that explicitly target a space — refuses out-of-scope IDs. */
+function spaceInScope(scope: string[] | null, spaceId: string): boolean {
+  if (!scope || scope.length === 0) return true;
+  return scope.includes(spaceId);
+}
+
+/** Back-compat shim for tools that only need the account id. */
+function requireOwnerAccountId(extra: ToolExtra): string {
+  return requireAuth(extra).ownerAccountId;
 }
 
 function ok(data: unknown): ToolResult {
@@ -82,11 +129,13 @@ export function registerTools(server: McpServer): void {
       },
     },
     async ({ query, limit }, extra) => {
-      const ownerAccountId = requireOwnerAccountId(extra as ToolExtra);
+      const auth = requireAuth(extra as ToolExtra);
+      const { ownerAccountId, spaceScope } = auth;
       const n = limit ?? 10;
-      const { embedding } = await embedText(query);
+      const { embedding } = await embedText(query, ownerAccountId);
 
       const noteSim = sql<number>`1 - (${cosineDistance(notes.embedding, embedding)})`;
+      const noteScope = scopeCondition(notes.spaceId, spaceScope);
       const noteRows = await db
         .select({
           id: notes.id,
@@ -99,12 +148,14 @@ export function registerTools(server: McpServer): void {
           and(
             eq(notes.ownerAccountId, ownerAccountId),
             eq(notes.mcpHidden, false),
+            ...(noteScope ? [noteScope] : []),
           ),
         )
         .orderBy(desc(noteSim))
         .limit(n);
 
       const chunkSim = sql<number>`1 - (${cosineDistance(fileChunks.embedding, embedding)})`;
+      const fileScope = scopeCondition(files.spaceId, spaceScope);
       const chunkRows = await db
         .select({
           id: fileChunks.id,
@@ -118,6 +169,7 @@ export function registerTools(server: McpServer): void {
           and(
             eq(files.ownerAccountId, ownerAccountId),
             eq(files.mcpHidden, false),
+            ...(fileScope ? [fileScope] : []),
           ),
         )
         .orderBy(desc(chunkSim))
@@ -166,7 +218,9 @@ export function registerTools(server: McpServer): void {
       },
     },
     async ({ id }, extra) => {
-      const ownerAccountId = requireOwnerAccountId(extra as ToolExtra);
+      const { ownerAccountId, spaceScope } = requireAuth(extra as ToolExtra);
+      const noteScope = scopeCondition(notes.spaceId, spaceScope);
+      const fileScope = scopeCondition(files.spaceId, spaceScope);
 
       const [note] = await db
         .select()
@@ -176,6 +230,7 @@ export function registerTools(server: McpServer): void {
             eq(notes.id, id),
             eq(notes.ownerAccountId, ownerAccountId),
             eq(notes.mcpHidden, false),
+            ...(noteScope ? [noteScope] : []),
           ),
         )
         .limit(1);
@@ -212,6 +267,7 @@ export function registerTools(server: McpServer): void {
             eq(fileChunks.id, id),
             eq(files.ownerAccountId, ownerAccountId),
             eq(files.mcpHidden, false),
+            ...(fileScope ? [fileScope] : []),
           ),
         )
         .limit(1);
@@ -245,7 +301,8 @@ export function registerTools(server: McpServer): void {
       inputSchema: {},
     },
     async (_args, extra) => {
-      const ownerAccountId = requireOwnerAccountId(extra as ToolExtra);
+      const { ownerAccountId, spaceScope } = requireAuth(extra as ToolExtra);
+      const scopeCond = scopeCondition(spaces.id, spaceScope);
       const rows = await db
         .select({
           id: spaces.id,
@@ -255,7 +312,12 @@ export function registerTools(server: McpServer): void {
           updatedAt: spaces.updatedAt,
         })
         .from(spaces)
-        .where(eq(spaces.ownerAccountId, ownerAccountId))
+        .where(
+          and(
+            eq(spaces.ownerAccountId, ownerAccountId),
+            ...(scopeCond ? [scopeCond] : []),
+          ),
+        )
         .orderBy(desc(spaces.updatedAt));
       return ok({ spaces: rows });
     },
@@ -274,13 +336,18 @@ export function registerTools(server: McpServer): void {
       },
     },
     async ({ space_id, limit }, extra) => {
-      const ownerAccountId = requireOwnerAccountId(extra as ToolExtra);
+      const { ownerAccountId, spaceScope } = requireAuth(extra as ToolExtra);
+      if (space_id && !spaceInScope(spaceScope, space_id)) {
+        return toolError(`space_id ${space_id} is outside this token's scope.`);
+      }
       const n = limit ?? 50;
+      const scopeCond = scopeCondition(files.spaceId, spaceScope);
       const conds = [
         eq(files.ownerAccountId, ownerAccountId),
         eq(files.mcpHidden, false),
       ];
       if (space_id) conds.push(eq(files.spaceId, space_id));
+      if (scopeCond) conds.push(scopeCond);
       const rows = await db
         .select({
           id: files.id,
@@ -311,13 +378,18 @@ export function registerTools(server: McpServer): void {
       },
     },
     async ({ space_id, limit }, extra) => {
-      const ownerAccountId = requireOwnerAccountId(extra as ToolExtra);
+      const { ownerAccountId, spaceScope } = requireAuth(extra as ToolExtra);
+      if (space_id && !spaceInScope(spaceScope, space_id)) {
+        return toolError(`space_id ${space_id} is outside this token's scope.`);
+      }
       const n = limit ?? 50;
+      const scopeCond = scopeCondition(notes.spaceId, spaceScope);
       const conds = [
         eq(notes.ownerAccountId, ownerAccountId),
         eq(notes.mcpHidden, false),
       ];
       if (space_id) conds.push(eq(notes.spaceId, space_id));
+      if (scopeCond) conds.push(scopeCond);
       const rows = await db
         .select({
           id: notes.id,
@@ -347,7 +419,19 @@ export function registerTools(server: McpServer): void {
       },
     },
     async ({ title, content, space_id }, extra) => {
-      const ownerAccountId = requireOwnerAccountId(extra as ToolExtra);
+      const auth = requireAuth(extra as ToolExtra);
+      const ro = readOnlyGuard(auth);
+      if (ro) return ro;
+      const { ownerAccountId, spaceScope } = auth;
+      if (space_id && !spaceInScope(spaceScope, space_id)) {
+        return toolError(`space_id ${space_id} is outside this token's scope.`);
+      }
+      // Scoped tokens must target one of their spaces — no account-level notes.
+      if (!space_id && spaceScope && spaceScope.length > 0) {
+        return toolError(
+          "Scoped token requires `space_id` (account-level notes are outside scope).",
+        );
+      }
 
       if (space_id) {
         const [space] = await db
@@ -366,7 +450,10 @@ export function registerTools(server: McpServer): void {
       const quota = await checkQuota(ownerAccountId, { notes: 1 });
       if (!quota.ok) return toolError(`Quota exceeded: ${quota.reason}`);
 
-      const { embedding, model } = await embedText(`${title}\n\n${content}`);
+      const { embedding, model } = await embedText(
+        `${title}\n\n${content}`,
+        ownerAccountId,
+      );
       const [row] = await db
         .insert(notes)
         .values({
@@ -402,15 +489,25 @@ export function registerTools(server: McpServer): void {
       },
     },
     async ({ id, title, content }, extra) => {
-      const ownerAccountId = requireOwnerAccountId(extra as ToolExtra);
+      const auth = requireAuth(extra as ToolExtra);
+      const ro = readOnlyGuard(auth);
+      if (ro) return ro;
+      const { ownerAccountId, spaceScope } = auth;
       if (title === undefined && content === undefined) {
         return toolError("Provide at least one of: title, content.");
       }
 
+      const noteScope = scopeCondition(notes.spaceId, spaceScope);
       const [existing] = await db
         .select()
         .from(notes)
-        .where(and(eq(notes.id, id), eq(notes.ownerAccountId, ownerAccountId)))
+        .where(
+          and(
+            eq(notes.id, id),
+            eq(notes.ownerAccountId, ownerAccountId),
+            ...(noteScope ? [noteScope] : []),
+          ),
+        )
         .limit(1);
       if (!existing) return toolError(`Note not found: ${id}`);
 
@@ -418,6 +515,7 @@ export function registerTools(server: McpServer): void {
       const nextContent = content ?? existing.contentText;
       const { embedding, model } = await embedText(
         `${nextTitle}\n\n${nextContent}`,
+        ownerAccountId,
       );
 
       const [row] = await db
@@ -450,10 +548,20 @@ export function registerTools(server: McpServer): void {
       },
     },
     async ({ id }, extra) => {
-      const ownerAccountId = requireOwnerAccountId(extra as ToolExtra);
+      const auth = requireAuth(extra as ToolExtra);
+      const ro = readOnlyGuard(auth);
+      if (ro) return ro;
+      const { ownerAccountId, spaceScope } = auth;
+      const noteScope = scopeCondition(notes.spaceId, spaceScope);
       const [row] = await db
         .delete(notes)
-        .where(and(eq(notes.id, id), eq(notes.ownerAccountId, ownerAccountId)))
+        .where(
+          and(
+            eq(notes.id, id),
+            eq(notes.ownerAccountId, ownerAccountId),
+            ...(noteScope ? [noteScope] : []),
+          ),
+        )
         .returning({ id: notes.id });
       if (!row) return toolError(`Note not found: ${id}`);
       await applyQuotaDelta(ownerAccountId, { notes: -1 });
@@ -474,7 +582,8 @@ export function registerTools(server: McpServer): void {
       },
     },
     async ({ id }, extra) => {
-      const ownerAccountId = requireOwnerAccountId(extra as ToolExtra);
+      const { ownerAccountId, spaceScope } = requireAuth(extra as ToolExtra);
+      const fileScope = scopeCondition(files.spaceId, spaceScope);
       const [file] = await db
         .select({
           id: files.id,
@@ -486,7 +595,13 @@ export function registerTools(server: McpServer): void {
           mcpHidden: files.mcpHidden,
         })
         .from(files)
-        .where(and(eq(files.id, id), eq(files.ownerAccountId, ownerAccountId)))
+        .where(
+          and(
+            eq(files.id, id),
+            eq(files.ownerAccountId, ownerAccountId),
+            ...(fileScope ? [fileScope] : []),
+          ),
+        )
         .limit(1);
       if (!file || file.mcpHidden) return toolError(`File not found: ${id}`);
 
@@ -517,7 +632,18 @@ export function registerTools(server: McpServer): void {
       },
     },
     async ({ filename, content_base64, mime_type, space_id }, extra) => {
-      const ownerAccountId = requireOwnerAccountId(extra as ToolExtra);
+      const auth = requireAuth(extra as ToolExtra);
+      const ro = readOnlyGuard(auth);
+      if (ro) return ro;
+      const { ownerAccountId, spaceScope } = auth;
+      if (space_id && !spaceInScope(spaceScope, space_id)) {
+        return toolError(`space_id ${space_id} is outside this token's scope.`);
+      }
+      if (!space_id && spaceScope && spaceScope.length > 0) {
+        return toolError(
+          "Scoped token requires `space_id` (account-level uploads are outside scope).",
+        );
+      }
       let content: Buffer;
       try {
         content = Buffer.from(content_base64, "base64");
@@ -589,7 +715,7 @@ export function registerTools(server: McpServer): void {
           const text = content.toString("utf-8");
           const chunks = chunkText(text);
           if (chunks.length > 0) {
-            const { embeddings, model } = await embedTexts(chunks);
+            const { embeddings, model } = await embedTexts(chunks, ownerAccountId);
             await db.insert(fileChunks).values(
               chunks.map((c, i) => ({
                 fileId: row.id,
@@ -627,7 +753,11 @@ export function registerTools(server: McpServer): void {
       },
     },
     async ({ id }, extra) => {
-      const ownerAccountId = requireOwnerAccountId(extra as ToolExtra);
+      const auth = requireAuth(extra as ToolExtra);
+      const ro = readOnlyGuard(auth);
+      if (ro) return ro;
+      const { ownerAccountId, spaceScope } = auth;
+      const fileScope = scopeCondition(files.spaceId, spaceScope);
       const [existing] = await db
         .select({
           id: files.id,
@@ -636,7 +766,13 @@ export function registerTools(server: McpServer): void {
           storageProviderId: files.storageProviderId,
         })
         .from(files)
-        .where(and(eq(files.id, id), eq(files.ownerAccountId, ownerAccountId)))
+        .where(
+          and(
+            eq(files.id, id),
+            eq(files.ownerAccountId, ownerAccountId),
+            ...(fileScope ? [fileScope] : []),
+          ),
+        )
         .limit(1);
       if (!existing) return toolError(`File not found: ${id}`);
 
@@ -648,6 +784,351 @@ export function registerTools(server: McpServer): void {
         files: -1,
       });
       return ok({ deleted: existing.id });
+    },
+  );
+
+  // ----- reindex_file ------------------------------------------------------
+  server.registerTool(
+    "reindex_file",
+    {
+      title: "Re-index file",
+      description:
+        "Re-extract text and re-embed a file's chunks. Use when a source " +
+        "file changed but the underlying bytes are already stored, or after " +
+        "a text-extraction fix.",
+      inputSchema: {
+        id: z.string().uuid(),
+      },
+    },
+    async ({ id }, extra) => {
+      const auth = requireAuth(extra as ToolExtra);
+      const ro = readOnlyGuard(auth);
+      if (ro) return ro;
+      const { ownerAccountId, spaceScope } = auth;
+      const fileScope = scopeCondition(files.spaceId, spaceScope);
+      const [file] = await db
+        .select()
+        .from(files)
+        .where(
+          and(
+            eq(files.id, id),
+            eq(files.ownerAccountId, ownerAccountId),
+            ...(fileScope ? [fileScope] : []),
+          ),
+        )
+        .limit(1);
+      if (!file) return toolError(`File not found: ${id}`);
+      const result = await reindexFile(file);
+      if (result.status === "failed") {
+        return toolError(result.reason ?? "Reindex failed");
+      }
+      return ok({
+        id: result.fileId,
+        chunks: result.chunks,
+        noText: result.status === "no_text",
+        reason: result.reason,
+      });
+    },
+  );
+
+  // ----- update_file -------------------------------------------------------
+  server.registerTool(
+    "update_file",
+    {
+      title: "Update file contents",
+      description:
+        "Replace a file's bytes in-place. Keeps the same id + storage key — " +
+        "old chunks are deleted and new ones embedded. Useful for updating " +
+        "an MCP-accessible text document without creating a fresh id.",
+      inputSchema: {
+        id: z.string().uuid(),
+        content_base64: z.string().min(1),
+        mime_type: z.string().min(1).max(200).optional(),
+      },
+    },
+    async ({ id, content_base64, mime_type }, extra) => {
+      const auth = requireAuth(extra as ToolExtra);
+      const ro = readOnlyGuard(auth);
+      if (ro) return ro;
+      const { ownerAccountId, spaceScope } = auth;
+      const fileScope = scopeCondition(files.spaceId, spaceScope);
+      let content: Buffer;
+      try {
+        content = Buffer.from(content_base64, "base64");
+      } catch {
+        return toolError("content_base64 is not valid base64.");
+      }
+      if (content.byteLength === 0) return toolError("Empty file.");
+      if (content.byteLength > MAX_FILE_BYTES) {
+        return toolError(
+          `File exceeds per-file limit of ${MAX_FILE_BYTES} bytes.`,
+        );
+      }
+
+      const [existing] = await db
+        .select()
+        .from(files)
+        .where(
+          and(
+            eq(files.id, id),
+            eq(files.ownerAccountId, ownerAccountId),
+            ...(fileScope ? [fileScope] : []),
+          ),
+        )
+        .limit(1);
+      if (!existing) return toolError(`File not found: ${id}`);
+
+      // Read-only providers (GitHub) can't be written back to.
+      if (existing.storageProviderId) {
+        // Attempt a write via `put`; GitHubProvider.put will throw with a
+        // clear message. S3 is fine.
+      }
+
+      const nextMime = mime_type ?? existing.mimeType;
+      const sizeDelta = content.byteLength - existing.sizeBytes;
+      if (sizeDelta > 0) {
+        const quota = await checkQuota(ownerAccountId, { bytes: sizeDelta });
+        if (!quota.ok) return toolError(`Quota exceeded: ${quota.reason}`);
+      }
+
+      const provider = await getProviderForFile(existing.storageProviderId);
+      try {
+        // Re-put. For vercel-blob + S3 this writes at the same storage key.
+        // For GitHub (read-only) we bail out here with a clear error.
+        await provider.put({
+          ownerAccountId,
+          filename: existing.filename,
+          content,
+          mimeType: nextMime,
+        });
+      } catch (err) {
+        return toolError(
+          err instanceof Error ? err.message : "Upload failed.",
+        );
+      }
+
+      await db
+        .update(files)
+        .set({
+          sizeBytes: content.byteLength,
+          mimeType: nextMime,
+        })
+        .where(eq(files.id, id));
+
+      // Refresh chunks — same path as the REST reindex route.
+      await db.delete(fileChunks).where(eq(fileChunks.fileId, id));
+      const isTextual =
+        nextMime.startsWith("text/") || nextMime === "application/json";
+      if (isTextual) {
+        try {
+          const text = content.toString("utf-8");
+          const chunks = chunkText(text);
+          if (chunks.length > 0) {
+            const { embeddings, model } = await embedTexts(chunks, ownerAccountId);
+            await db.insert(fileChunks).values(
+              chunks.map((c, i) => ({
+                fileId: id,
+                chunkIndex: i,
+                contentText: c,
+                embedding: embeddings[i],
+                embeddingModel: model,
+              })),
+            );
+          }
+        } catch (err) {
+          console.error(`[mcp/update_file] reindex failed for ${id}:`, err);
+        }
+      }
+
+      if (sizeDelta !== 0) {
+        await applyQuotaDelta(ownerAccountId, { bytes: sizeDelta });
+      }
+      return ok({ id, sizeBytes: content.byteLength, mimeType: nextMime });
+    },
+  );
+
+  // ----- move_file ---------------------------------------------------------
+  server.registerTool(
+    "move_file",
+    {
+      title: "Move file to space",
+      description:
+        "Change which space a file belongs to. Pass `space_id: null` to " +
+        "detach (file becomes account-level). Bytes + chunks stay intact.",
+      inputSchema: {
+        id: z.string().uuid(),
+        space_id: z.string().uuid().nullable(),
+      },
+    },
+    async ({ id, space_id }, extra) => {
+      const auth = requireAuth(extra as ToolExtra);
+      const ro = readOnlyGuard(auth);
+      if (ro) return ro;
+      const { ownerAccountId, spaceScope } = auth;
+      const fileScope = scopeCondition(files.spaceId, spaceScope);
+      if (space_id && !spaceInScope(spaceScope, space_id)) {
+        return toolError(`space_id ${space_id} is outside this token's scope.`);
+      }
+      if (!space_id && spaceScope && spaceScope.length > 0) {
+        return toolError(
+          "Scoped token can't detach files to account-level — pass a `space_id` inside scope.",
+        );
+      }
+
+      if (space_id) {
+        const [space] = await db
+          .select({ id: spaces.id })
+          .from(spaces)
+          .where(
+            and(
+              eq(spaces.id, space_id),
+              eq(spaces.ownerAccountId, ownerAccountId),
+            ),
+          )
+          .limit(1);
+        if (!space) return toolError(`Space not found: ${space_id}`);
+      }
+
+      const [row] = await db
+        .update(files)
+        .set({ spaceId: space_id })
+        .where(
+          and(
+            eq(files.id, id),
+            eq(files.ownerAccountId, ownerAccountId),
+            ...(fileScope ? [fileScope] : []),
+          ),
+        )
+        .returning({
+          id: files.id,
+          filename: files.filename,
+          spaceId: files.spaceId,
+        });
+      if (!row) return toolError(`File not found: ${id}`);
+      return ok({ file: row });
+    },
+  );
+
+  // ----- summarize_space ---------------------------------------------------
+  server.registerTool(
+    "summarize_space",
+    {
+      title: "Summarize space",
+      description:
+        "Build a structured digest of everything in a space — recent notes " +
+        "+ file titles + file-chunk excerpts — suitable as a prompt context. " +
+        "Returns plain text you can feed straight back into a chat.",
+      inputSchema: {
+        space_id: z.string().uuid(),
+        max_notes: z
+          .number()
+          .int()
+          .positive()
+          .max(50)
+          .optional()
+          .describe("Default 15."),
+        max_files: z
+          .number()
+          .int()
+          .positive()
+          .max(50)
+          .optional()
+          .describe("Default 20."),
+      },
+    },
+    async ({ space_id, max_notes, max_files }, extra) => {
+      const { ownerAccountId, spaceScope } = requireAuth(extra as ToolExtra);
+      if (!spaceInScope(spaceScope, space_id)) {
+        return toolError(`space_id ${space_id} is outside this token's scope.`);
+      }
+      const [space] = await db
+        .select()
+        .from(spaces)
+        .where(
+          and(
+            eq(spaces.id, space_id),
+            eq(spaces.ownerAccountId, ownerAccountId),
+          ),
+        )
+        .limit(1);
+      if (!space) return toolError(`Space not found: ${space_id}`);
+
+      const nNotes = max_notes ?? 15;
+      const nFiles = max_files ?? 20;
+
+      const [noteRows, fileRows] = await Promise.all([
+        db
+          .select({
+            id: notes.id,
+            title: notes.title,
+            contentText: notes.contentText,
+            updatedAt: notes.updatedAt,
+          })
+          .from(notes)
+          .where(
+            and(
+              eq(notes.ownerAccountId, ownerAccountId),
+              eq(notes.spaceId, space_id),
+              eq(notes.mcpHidden, false),
+            ),
+          )
+          .orderBy(desc(notes.updatedAt))
+          .limit(nNotes),
+        db
+          .select({
+            id: files.id,
+            filename: files.filename,
+            mimeType: files.mimeType,
+            sizeBytes: files.sizeBytes,
+            createdAt: files.createdAt,
+          })
+          .from(files)
+          .where(
+            and(
+              eq(files.ownerAccountId, ownerAccountId),
+              eq(files.spaceId, space_id),
+              eq(files.mcpHidden, false),
+            ),
+          )
+          .orderBy(desc(files.createdAt))
+          .limit(nFiles),
+      ]);
+
+      const abbrev = (s: string, n = 280) => {
+        const t = s.trim().replace(/\s+/g, " ");
+        return t.length <= n ? t : `${t.slice(0, n)}…`;
+      };
+
+      const lines: string[] = [];
+      lines.push(`# Space: ${space.name}`);
+      if (space.description) lines.push(space.description);
+      lines.push("");
+      lines.push(`## Notes (${noteRows.length})`);
+      if (noteRows.length === 0) lines.push("— none —");
+      for (const n of noteRows) {
+        lines.push(`- **${n.title}** (note:${n.id})`);
+        lines.push(`  ${abbrev(n.contentText)}`);
+      }
+      lines.push("");
+      lines.push(`## Files (${fileRows.length})`);
+      if (fileRows.length === 0) lines.push("— none —");
+      for (const f of fileRows) {
+        lines.push(
+          `- **${f.filename}** · ${f.mimeType} · ${(f.sizeBytes / 1024).toFixed(1)} KB (file:${f.id})`,
+        );
+      }
+
+      const digest = lines.join("\n");
+      return {
+        content: [{ type: "text", text: digest }],
+        structuredContent: {
+          spaceId: space.id,
+          spaceName: space.name,
+          noteCount: noteRows.length,
+          fileCount: fileRows.length,
+          digest,
+        },
+      } as ToolResult;
     },
   );
 }

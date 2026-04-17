@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
     // Embed the full note body. For very long notes we could chunk here too,
     // but the spec models notes as single-embedding entities.
     const embedInput = `${parsed.data.title}\n\n${parsed.data.content}`;
-    const { embedding, model } = await embedText(embedInput);
+    const { embedding, model } = await embedText(embedInput, ownerAccountId);
 
     const [note] = await db
       .insert(notes)

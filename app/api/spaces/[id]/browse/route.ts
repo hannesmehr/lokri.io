@@ -1,16 +1,10 @@
 import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import { NextResponse, type NextRequest } from "next/server";
-import {
-  apiError,
-  notFound,
-  serverError,
-  unauthorized,
-} from "@/lib/api/errors";
+import { notFound, serverError, unauthorized } from "@/lib/api/errors";
 import { ApiAuthError, requireSessionWithAccount } from "@/lib/api/session";
 import { db } from "@/lib/db";
-import { files, spaces, storageProviders } from "@/lib/db/schema";
-import { decryptJson } from "@/lib/storage/encryption";
-import { S3Provider, type S3Config } from "@/lib/storage/s3";
+import { files, spaces } from "@/lib/db/schema";
+import { loadBrowsableProvider } from "@/lib/storage";
 
 export const runtime = "nodejs";
 
@@ -102,6 +96,8 @@ export async function GET(req: NextRequest, { params }: Params) {
       return NextResponse.json({
         source: "internal",
         providerName: "lokri-managed",
+        providerType: "internal" as const,
+        readOnly: false,
         prefix: "",
         directories: [] as DirEntry[],
         objects,
@@ -110,36 +106,20 @@ export async function GET(req: NextRequest, { params }: Params) {
       });
     }
 
-    // ── External path (S3) ─────────────────────────────────────────────
-    const [providerRow] = await db
-      .select({
-        configEncrypted: storageProviders.configEncrypted,
-        type: storageProviders.type,
-        name: storageProviders.name,
-      })
-      .from(storageProviders)
-      .where(
-        and(
-          eq(storageProviders.id, space.storageProviderId),
-          eq(storageProviders.ownerAccountId, ownerAccountId),
-        ),
-      )
-      .limit(1);
-    if (!providerRow) return apiError("Provider not found", 404);
-    if (providerRow.type !== "s3") {
-      return apiError("Browsing is only supported for S3 providers", 400);
-    }
+    // ── External path (S3 or GitHub) ───────────────────────────────────
+    const { provider, type, name } = await loadBrowsableProvider(
+      ownerAccountId,
+      space.storageProviderId,
+    );
 
     const prefixParam = req.nextUrl.searchParams.get("prefix") ?? "";
     const continuation = req.nextUrl.searchParams.get("cursor") ?? undefined;
 
-    const config = decryptJson<S3Config>(providerRow.configEncrypted);
-    const s3 = new S3Provider(config);
-    const result = await s3.listObjects(prefixParam, continuation);
+    const result = await provider.listObjects(prefixParam, continuation);
 
     // Enrich objects with imported/hidden flags.
     const relativeKeys = result.objects.map((o) => o.key);
-    const fullPrefix = (config.pathPrefix ?? "").replace(/^\/+|\/+$/g, "");
+    const fullPrefix = provider.rootPrefix;
     const fullKeys = relativeKeys.map((k) =>
       fullPrefix ? `${fullPrefix}/${k}` : k,
     );
@@ -177,7 +157,9 @@ export async function GET(req: NextRequest, { params }: Params) {
 
     return NextResponse.json({
       source: "external",
-      providerName: providerRow.name,
+      providerName: name,
+      providerType: type,
+      readOnly: provider.isReadOnly,
       prefix: prefixParam,
       directories,
       objects,

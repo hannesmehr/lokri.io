@@ -1,16 +1,10 @@
 import { and, eq } from "drizzle-orm";
 import { NextResponse, type NextRequest } from "next/server";
-import {
-  apiError,
-  notFound,
-  serverError,
-  unauthorized,
-} from "@/lib/api/errors";
+import { apiError, notFound, serverError, unauthorized } from "@/lib/api/errors";
 import { ApiAuthError, requireSessionWithAccount } from "@/lib/api/session";
 import { db } from "@/lib/db";
-import { spaces, storageProviders } from "@/lib/db/schema";
-import { decryptJson } from "@/lib/storage/encryption";
-import { S3Provider, type S3Config } from "@/lib/storage/s3";
+import { spaces } from "@/lib/db/schema";
+import { loadBrowsableProvider } from "@/lib/storage";
 
 export const runtime = "nodejs";
 
@@ -19,7 +13,7 @@ type Params = { params: Promise<{ id: string }> };
 /**
  * Stream an object from a space's external storage. The `key` query param is
  * RELATIVE to the provider's `pathPrefix` — callers can never break out into
- * a different part of the bucket.
+ * a different part of the bucket / repo.
  */
 export async function GET(req: NextRequest, { params }: Params) {
   try {
@@ -40,28 +34,12 @@ export async function GET(req: NextRequest, { params }: Params) {
       .limit(1);
     if (!space || !space.storageProviderId) return notFound();
 
-    const [providerRow] = await db
-      .select({
-        configEncrypted: storageProviders.configEncrypted,
-        type: storageProviders.type,
-      })
-      .from(storageProviders)
-      .where(
-        and(
-          eq(storageProviders.id, space.storageProviderId),
-          eq(storageProviders.ownerAccountId, ownerAccountId),
-        ),
-      )
-      .limit(1);
-    if (!providerRow || providerRow.type !== "s3") {
-      return apiError("Unsupported provider", 400);
-    }
+    const { provider } = await loadBrowsableProvider(
+      ownerAccountId,
+      space.storageProviderId,
+    );
+    const { content, mimeType } = await provider.getByRelativeKey(key);
 
-    const config = decryptJson<S3Config>(providerRow.configEncrypted);
-    const s3 = new S3Provider(config);
-    const { content, mimeType } = await s3.getByRelativeKey(key);
-
-    // Derive a reasonable filename for the Content-Disposition header.
     const filename = key.split("/").pop() || "file";
 
     const headers = new Headers({

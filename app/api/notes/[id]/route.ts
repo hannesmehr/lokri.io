@@ -79,7 +79,10 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     let embedding = existing.embedding;
     let embeddingModel = existing.embeddingModel;
     if (textChanged) {
-      const result = await embedText(`${nextTitle}\n\n${nextContent}`);
+      const result = await embedText(
+        `${nextTitle}\n\n${nextContent}`,
+        ownerAccountId,
+      );
       embedding = result.embedding;
       embeddingModel = result.model;
     }

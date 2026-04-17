@@ -8,7 +8,7 @@
  * ownership can be re-checked on each request.
  */
 
-export type StorageProviderName = "vercel_blob" | "s3";
+export type StorageProviderName = "vercel_blob" | "s3" | "github";
 
 export interface StoragePutInput {
   /** Owner account the file belongs to — used as a key prefix. */
@@ -19,6 +19,17 @@ export interface StoragePutInput {
   content: Uint8Array | Buffer | Blob;
   /** MIME type, e.g. "image/png". */
   mimeType: string;
+  /**
+   * Browse-oriented destination prefix (e.g. `"docs/2024/"`). When set,
+   * the S3 provider stores the object at `{rootPrefix}/{targetPrefix}/
+   * {slugifiedFilename}` — file lands where the user is looking, keeps
+   * its original name (no UUID prefix). Used by drag-&-drop in the
+   * space browser. Ignored by Vercel Blob (no browsable hierarchy).
+   *
+   * Omit for the "library" layout used by the Files page, where the
+   * provider picks a collision-free UUID-based key.
+   */
+  targetPrefix?: string;
 }
 
 export interface StoragePutResult {

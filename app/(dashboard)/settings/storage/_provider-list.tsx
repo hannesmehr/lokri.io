@@ -1,6 +1,6 @@
 "use client";
 
-import { CloudCog, HardDrive, Trash2 } from "lucide-react";
+import { CloudCog, FolderGit2, HardDrive, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -12,7 +12,7 @@ import { AddProviderDialog } from "./_add-provider-dialog";
 interface Provider {
   id: string;
   name: string;
-  type: "s3";
+  type: "s3" | "github";
   createdAt: Date | string;
 }
 
@@ -81,11 +81,28 @@ export function ProviderList({ initial }: { initial: Provider[] }) {
               className="flex items-center justify-between gap-3 px-4 py-3 text-sm"
             >
               <div className="flex items-center gap-3">
-                <div className="grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br from-emerald-500/15 to-teal-500/15 text-emerald-700 dark:text-emerald-400">
-                  <CloudCog className="h-4 w-4" />
+                <div
+                  className={
+                    p.type === "github"
+                      ? "grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br from-slate-600/20 to-slate-900/20 text-slate-700 dark:text-slate-200"
+                      : "grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br from-emerald-500/15 to-teal-500/15 text-emerald-700 dark:text-emerald-400"
+                  }
+                >
+                  {p.type === "github" ? (
+                    <FolderGit2 className="h-4 w-4" />
+                  ) : (
+                    <CloudCog className="h-4 w-4" />
+                  )}
                 </div>
                 <div>
-                  <div className="font-medium">{p.name}</div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{p.name}</span>
+                    {p.type === "github" ? (
+                      <Badge variant="secondary" className="text-[10px]">
+                        read-only
+                      </Badge>
+                    ) : null}
+                  </div>
                   <div className="text-xs text-muted-foreground">
                     {p.type.toUpperCase()} · angelegt{" "}
                     {formatDateTime(p.createdAt)}

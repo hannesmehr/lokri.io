@@ -2,7 +2,6 @@ import { and, eq } from "drizzle-orm";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import {
-  apiError,
   notFound,
   parseJsonBody,
   paymentRequired,
@@ -12,11 +11,10 @@ import {
 } from "@/lib/api/errors";
 import { ApiAuthError, requireSessionWithAccount } from "@/lib/api/session";
 import { db } from "@/lib/db";
-import { spaces, storageProviders } from "@/lib/db/schema";
+import { spaces } from "@/lib/db/schema";
 import { limit, rateLimitResponse } from "@/lib/rate-limit";
 import { importExternalKey } from "@/lib/space-import";
-import { decryptJson } from "@/lib/storage/encryption";
-import { S3Provider, type S3Config } from "@/lib/storage/s3";
+import { loadBrowsableProvider } from "@/lib/storage";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -50,34 +48,18 @@ export async function POST(req: NextRequest, { params }: Params) {
       .limit(1);
     if (!space || !space.storageProviderId) return notFound();
 
-    const [providerRow] = await db
-      .select({
-        id: storageProviders.id,
-        configEncrypted: storageProviders.configEncrypted,
-        type: storageProviders.type,
-      })
-      .from(storageProviders)
-      .where(
-        and(
-          eq(storageProviders.id, space.storageProviderId),
-          eq(storageProviders.ownerAccountId, ownerAccountId),
-        ),
-      )
-      .limit(1);
-    if (!providerRow || providerRow.type !== "s3") {
-      return apiError("Unsupported provider", 400);
-    }
-
-    const config = decryptJson<S3Config>(providerRow.configEncrypted);
-    const s3 = new S3Provider(config);
+    const { provider } = await loadBrowsableProvider(
+      ownerAccountId,
+      space.storageProviderId,
+    );
 
     const result = await importExternalKey(
       {
         ownerAccountId,
         spaceId: space.id,
-        providerId: providerRow.id,
-        s3,
-        rootPrefix: config.pathPrefix ?? "",
+        providerId: space.storageProviderId,
+        provider,
+        rootPrefix: provider.rootPrefix,
       },
       parsed.data.key,
     );

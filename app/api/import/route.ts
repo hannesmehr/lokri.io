@@ -154,6 +154,7 @@ async function importLokriExport(
     try {
       const { embedding, model } = await embedText(
         `${n.title}\n\n${n.contentText}`,
+        ownerAccountId,
       );
       await db.insert(notesTable).values({
         ownerAccountId,
@@ -262,7 +263,10 @@ async function importMarkdownVault(
     }
     const spaceId = topFolder ? await getSpaceId(topFolder) : null;
     try {
-      const { embedding, model } = await embedText(`${title}\n\n${clean}`);
+      const { embedding, model } = await embedText(
+        `${title}\n\n${clean}`,
+        ownerAccountId,
+      );
       await db.insert(notesTable).values({
         ownerAccountId,
         spaceId,
@@ -347,7 +351,7 @@ async function importFiles(
         if (text && text.length > 0) {
           const chunks = chunkText(text);
           if (chunks.length > 0) {
-            const { embeddings, model } = await embedTexts(chunks);
+            const { embeddings, model } = await embedTexts(chunks, ownerAccountId);
             await db.insert(fileChunks).values(
               chunks.map((c, i) => ({
                 fileId: row.id,

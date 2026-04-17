@@ -16,6 +16,7 @@ import {
   Music,
   Sparkles,
   Trash2,
+  Upload,
   Video,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -55,6 +56,8 @@ interface DirEntry {
 interface BrowseResult {
   source: "internal" | "external";
   providerName: string;
+  providerType?: "internal" | "s3" | "github";
+  readOnly?: boolean;
   prefix: string;
   directories: DirEntry[];
   objects: ObjectEntry[];
@@ -82,9 +85,14 @@ export function BucketBrowser({ spaceId, defaultProviderName }: Props) {
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkRunning, setBulkRunning] = useState(false);
+  // Counter-based drag tracking — `dragleave` fires when moving over child
+  // elements too, so a boolean flicker. We enter/leave by depth.
+  const [dragDepth, setDragDepth] = useState(0);
+  const [uploading, setUploading] = useState(false);
 
   const source = data?.source ?? "external";
   const supportsDirectories = source === "external";
+  const readOnly = data?.readOnly ?? false;
 
   const load = useCallback(
     async (p: string) => {
@@ -279,6 +287,97 @@ export function BucketBrowser({ spaceId, defaultProviderName }: Props) {
     void load(prefix);
   }
 
+  /**
+   * Upload one or more files into this space via the regular `/api/files`
+   * endpoint. For external-storage spaces, this writes through to S3 via
+   * `getProviderForNewUpload`; for internal, it hits Vercel Blob. After
+   * all uploads finish, we refresh the browse listing.
+   *
+   * Sequential upload keeps quota accounting + rate-limit predictable.
+   */
+  async function uploadFiles(fileList: FileList | File[]) {
+    const files = Array.from(fileList).filter((f) => f.size > 0);
+    if (files.length === 0) {
+      toast.error("Keine gültigen Dateien (Ordner werden nicht unterstützt).");
+      return;
+    }
+    setUploading(true);
+    const toastId = toast.loading(`Lade 0/${files.length} hoch…`);
+    let ok = 0;
+    let failed = 0;
+    const errors: string[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const f = files[i];
+      toast.loading(`${i + 1}/${files.length} · ${f.name}`, { id: toastId });
+      const fd = new FormData();
+      fd.set("file", f);
+      fd.set("space_id", spaceId);
+      // External (S3) spaces: land the file at the currently-browsed
+      // sub-prefix with its original name. Internal spaces ignore this
+      // — Vercel Blob has no user-visible key hierarchy.
+      if (source === "external") {
+        fd.set("target_prefix", prefix);
+      }
+      try {
+        const res = await fetch("/api/files", { method: "POST", body: fd });
+        if (res.ok) {
+          ok++;
+        } else {
+          failed++;
+          const body = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+          errors.push(`${f.name}: ${body.error ?? `HTTP ${res.status}`}`);
+        }
+      } catch (err) {
+        failed++;
+        errors.push(`${f.name}: ${err instanceof Error ? err.message : "Netzwerkfehler"}`);
+      }
+    }
+    setUploading(false);
+    if (failed === 0) {
+      toast.success(`${ok} Datei(en) hochgeladen.`, { id: toastId });
+    } else if (ok === 0) {
+      toast.error(`Upload fehlgeschlagen.`, {
+        id: toastId,
+        description: errors.slice(0, 2).join(" · "),
+      });
+    } else {
+      toast.warning(`${ok} hochgeladen, ${failed} fehlgeschlagen.`, {
+        id: toastId,
+        description: errors.slice(0, 2).join(" · "),
+      });
+    }
+    void load(prefix);
+  }
+
+  function onDragEnter(e: React.DragEvent) {
+    if (readOnly) return;
+    if (!e.dataTransfer.types.includes("Files")) return;
+    e.preventDefault();
+    setDragDepth((d) => d + 1);
+  }
+  function onDragOver(e: React.DragEvent) {
+    if (readOnly) return;
+    if (!e.dataTransfer.types.includes("Files")) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+  }
+  function onDragLeave(e: React.DragEvent) {
+    if (readOnly) return;
+    if (!e.dataTransfer.types.includes("Files")) return;
+    setDragDepth((d) => Math.max(0, d - 1));
+  }
+  function onDrop(e: React.DragEvent) {
+    if (readOnly) return;
+    if (!e.dataTransfer.types.includes("Files")) return;
+    e.preventDefault();
+    setDragDepth(0);
+    if (uploading) {
+      toast.error("Warte bis der laufende Upload fertig ist.");
+      return;
+    }
+    void uploadFiles(e.dataTransfer.files);
+  }
+
   async function bulkHide(hidden: boolean) {
     const keys = [...selected];
     if (keys.length === 0) return;
@@ -360,8 +459,38 @@ export function BucketBrowser({ spaceId, defaultProviderName }: Props) {
     return count;
   }, [selected, source, data?.objects]);
 
+  const dragActive = dragDepth > 0;
+
   return (
-    <div className="space-y-3">
+    <div
+      className={cn(
+        "relative space-y-3 rounded-lg transition-colors",
+        dragActive && "ring-2 ring-indigo-500 ring-offset-2 ring-offset-background",
+      )}
+      onDragEnter={onDragEnter}
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
+    >
+      {dragActive ? (
+        <div className="pointer-events-none absolute inset-0 z-20 grid place-items-center rounded-lg bg-indigo-500/10 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-2 rounded-xl border border-indigo-500/40 bg-background/95 px-6 py-4 shadow-lg">
+            <Upload className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
+            <div className="text-sm font-medium">Dateien ablegen zum Hochladen</div>
+            <div className="text-xs text-muted-foreground">
+              {source === "external"
+                ? "Landen im verbundenen Bucket und werden sofort indiziert."
+                : "Werden in diesem Space gespeichert und sofort indiziert."}
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {uploading ? (
+        <div className="pointer-events-none absolute right-2 top-2 z-20 flex items-center gap-1.5 rounded-md border bg-background/95 px-2 py-1 text-xs text-muted-foreground shadow-sm">
+          <Loader2 className="h-3 w-3 animate-spin" />
+          Upload läuft…
+        </div>
+      ) : null}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-1 overflow-x-auto text-sm">
           <button
@@ -372,6 +501,14 @@ export function BucketBrowser({ spaceId, defaultProviderName }: Props) {
             <Folder className="h-3.5 w-3.5" />
             {data?.providerName ?? defaultProviderName}
           </button>
+          {readOnly ? (
+            <span
+              className="ml-2 inline-flex items-center rounded border border-slate-500/30 bg-slate-500/10 px-1.5 py-0.5 text-[10px] font-medium text-slate-700 dark:text-slate-300"
+              title="Quelle ist read-only — nur Import in lokri, keine Uploads/Löschungen."
+            >
+              read-only
+            </span>
+          ) : null}
           {segments.map((seg, i) => (
             <span key={i} className="inline-flex items-center gap-1">
               <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
@@ -466,10 +603,15 @@ export function BucketBrowser({ spaceId, defaultProviderName }: Props) {
         </div>
       ) : !data ||
         (visibleDirectories.length === 0 && visibleObjects.length === 0) ? (
-        <div className="rounded-md border border-dashed bg-muted/20 p-6 text-sm text-muted-foreground">
-          {source === "internal"
-            ? "Noch keine Dateien in diesem Space — lade welche über die Files-Seite hoch."
-            : "Dieser Pfad enthält keine sichtbaren Objekte."}
+        <div className="rounded-md border border-dashed bg-muted/20 p-8 text-center text-sm text-muted-foreground">
+          {!readOnly ? (
+            <Upload className="mx-auto mb-2 h-6 w-6 opacity-50" />
+          ) : null}
+          {readOnly
+            ? "Dieser Pfad enthält keine sichtbaren Objekte (Quelle ist read-only)."
+            : source === "internal"
+              ? "Noch keine Dateien — zieh sie hier rein oder lade sie über die Files-Seite hoch."
+              : "Dieser Pfad enthält keine sichtbaren Objekte — Dateien hier ablegen, um sie in den Bucket hochzuladen."}
         </div>
       ) : (
         <div className="divide-y rounded-md border">

@@ -70,6 +70,7 @@ export function NoteEditorForm({
           required
           value={title}
           onChange={(e) => setTitle(e.target.value)}
+          autoComplete="off"
         />
       </div>
       <div className="space-y-2">
