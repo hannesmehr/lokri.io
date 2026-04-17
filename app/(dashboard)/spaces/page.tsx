@@ -81,7 +81,7 @@ export default async function SpacesPage() {
                   </div>
                   <CardTitle className="line-clamp-1">
                     <Link
-                      href={`/notes?spaceId=${s.id}`}
+                      href={`/spaces/${s.id}`}
                       className="hover:underline"
                     >
                       {s.name}
@@ -96,16 +96,22 @@ export default async function SpacesPage() {
                 <CardContent className="flex items-center justify-between gap-2 pb-4 text-sm text-muted-foreground">
                   <div className="flex gap-3">
                     <Link
+                      href={`/spaces/${s.id}`}
+                      className="font-medium text-foreground hover:underline"
+                    >
+                      Öffnen →
+                    </Link>
+                    <Link
                       href={`/notes?spaceId=${s.id}`}
                       className="hover:text-foreground"
                     >
-                      Notes →
+                      Notes
                     </Link>
                     <Link
                       href={`/files?spaceId=${s.id}`}
                       className="hover:text-foreground"
                     >
-                      Files →
+                      Files
                     </Link>
                   </div>
                   <SpaceDeleteButton id={s.id} name={s.name} />
