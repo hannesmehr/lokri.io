@@ -13,6 +13,7 @@ export default function SettingsLayout({ children }: { children: ReactNode }) {
       <SectionNav
         items={[
           { href: "/settings", label: "Allgemein" },
+          { href: "/settings/mcp", label: "MCP" },
           { href: "/settings/storage", label: "Storage" },
         ]}
       />

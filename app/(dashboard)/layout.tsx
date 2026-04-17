@@ -13,7 +13,6 @@ const NAV = [
   { href: "/spaces", label: "Spaces" },
   { href: "/notes", label: "Notes" },
   { href: "/files", label: "Files" },
-  { href: "/mcp", label: "MCP" },
 ];
 
 export default async function DashboardLayout({

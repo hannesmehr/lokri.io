@@ -2,6 +2,7 @@ import {
   DeleteObjectCommand,
   GetObjectCommand,
   HeadBucketCommand,
+  ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
@@ -174,5 +175,97 @@ export class S3Provider implements StorageProvider {
    */
   async testConnection(): Promise<void> {
     await this.client.send(new HeadBucketCommand({ Bucket: this.bucket }));
+  }
+
+  /** The configured path-prefix, safe for external callers. */
+  get rootPrefix(): string {
+    return this.prefix;
+  }
+
+  /**
+   * Directory-style listing at `prefix`. `prefix` is relative to
+   * `rootPrefix` — the UI works in a user-relative namespace so it can
+   * never escape the configured path scope.
+   *
+   * Returns common-prefixes (sub-"directories") + object keys at this
+   * level. Paginated via `continuationToken`.
+   */
+  async listObjects(
+    relativePrefix: string,
+    continuationToken?: string,
+  ): Promise<{
+    /** Sub-directories at this level (e.g. `"photos/"`). Relative to the
+     *  requested `relativePrefix`. */
+    directories: string[];
+    /** Objects at this level (flat — not recursing into subdirs). */
+    objects: Array<{
+      key: string; // relative to rootPrefix — what callers pass to downloads
+      size: number;
+      lastModified: string | null;
+    }>;
+    isTruncated: boolean;
+    nextContinuationToken: string | null;
+  }> {
+    // Normalise: drop leading slashes + ensure trailing "/" if non-empty
+    const cleanRel = relativePrefix.replace(/^\/+/, "");
+    const normalized = cleanRel && !cleanRel.endsWith("/") ? `${cleanRel}/` : cleanRel;
+    const fullPrefix = this.prefix
+      ? `${this.prefix}/${normalized}`
+      : normalized;
+
+    const res = await this.client.send(
+      new ListObjectsV2Command({
+        Bucket: this.bucket,
+        Prefix: fullPrefix,
+        Delimiter: "/",
+        ContinuationToken: continuationToken,
+        MaxKeys: 1000,
+      }),
+    );
+
+    const stripRoot = (k: string) => {
+      if (!this.prefix) return k;
+      const p = `${this.prefix}/`;
+      return k.startsWith(p) ? k.slice(p.length) : k;
+    };
+
+    const directories = (res.CommonPrefixes ?? [])
+      .map((c) => (c.Prefix ? stripRoot(c.Prefix) : null))
+      .filter((p): p is string => !!p);
+
+    const objects = (res.Contents ?? [])
+      // S3 echoes the prefix itself as an object sometimes; skip zero-byte "dir markers"
+      .filter((o) => o.Key && o.Key !== fullPrefix)
+      .map((o) => ({
+        key: stripRoot(o.Key!),
+        size: Number(o.Size ?? 0),
+        lastModified: o.LastModified
+          ? o.LastModified.toISOString()
+          : null,
+      }));
+
+    return {
+      directories,
+      objects,
+      isTruncated: Boolean(res.IsTruncated),
+      nextContinuationToken: res.NextContinuationToken ?? null,
+    };
+  }
+
+  /**
+   * Fetch an object by key relative to `rootPrefix`. Throws if the caller's
+   * `relativeKey` tries to escape the root (defence against path-prefix
+   * bypass).
+   */
+  async getByRelativeKey(relativeKey: string): Promise<{
+    content: Uint8Array;
+    mimeType?: string;
+  }> {
+    if (relativeKey.includes("..")) {
+      throw new Error("Relative keys may not contain '..'.");
+    }
+    const cleanRel = relativeKey.replace(/^\/+/, "");
+    const fullKey = this.prefix ? `${this.prefix}/${cleanRel}` : cleanRel;
+    return this.get(fullKey);
   }
 }
