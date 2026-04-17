@@ -7,7 +7,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -43,12 +42,12 @@ export function UserMenu({ user }: Props) {
         }
       />
       <DropdownMenuContent align="end" className="min-w-56">
-        <DropdownMenuLabel>
+        <div className="px-2 py-1.5">
           <div className="truncate text-sm font-medium">{user.name}</div>
-          <div className="truncate text-xs font-normal text-muted-foreground">
+          <div className="truncate text-xs text-muted-foreground">
             {user.email}
           </div>
-        </DropdownMenuLabel>
+        </div>
         <DropdownMenuSeparator />
         <DropdownMenuItem render={<Link href="/profile" />}>
           <User className="h-4 w-4" />
