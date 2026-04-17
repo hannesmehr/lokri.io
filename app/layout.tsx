@@ -33,11 +33,10 @@ export const metadata: Metadata = {
         : "http://localhost:3000"),
   ),
   title: {
-    default: "lokri.io — DSGVO-konformer MCP-Gateway",
+    default: "lokri.io",
     template: "%s · lokri.io",
   },
-  description:
-    "Ein gemeinsames Gedächtnis für Claude Desktop, ChatGPT und Cursor. EU-hosted, DSGVO-konform, dir gehörend.",
+  description: "lokri.io ist bald verfügbar.",
   applicationName: "lokri.io",
   keywords: [
     "MCP",

@@ -15,18 +15,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "weekly",
       priority: 1,
     },
-    {
-      url: `${BASE}/login`,
-      lastModified: now,
-      changeFrequency: "yearly",
-      priority: 0.3,
-    },
-    {
-      url: `${BASE}/register`,
-      lastModified: now,
-      changeFrequency: "yearly",
-      priority: 0.5,
-    },
+    // Login + Register deliberately excluded while the site is in coming-soon
+    // mode — we don't want search engines directing public traffic there.
     {
       url: `${BASE}/impressum`,
       lastModified: now,
