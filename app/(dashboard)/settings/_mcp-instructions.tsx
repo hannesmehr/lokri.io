@@ -45,11 +45,7 @@ function CopyBlock({ label, snippet }: { label: string; snippet: string }) {
   );
 }
 
-export function McpInstructions() {
-  const origin =
-    typeof window !== "undefined"
-      ? window.location.origin
-      : "https://your-domain";
+export function McpInstructions({ origin }: { origin: string }) {
   const mcpUrl = `${origin}/api/mcp`;
 
   // Claude Desktop's config-file schema still requires a stdio subprocess

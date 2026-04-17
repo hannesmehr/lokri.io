@@ -1,5 +1,6 @@
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { Key, Plug } from "lucide-react";
+import { headers } from "next/headers";
 import {
   Card,
   CardContent,
@@ -14,8 +15,21 @@ import { McpInstructions } from "./_mcp-instructions";
 import { TokenList } from "./_token-list";
 import { TokenCreateDialog } from "./_token-create-dialog";
 
+/**
+ * Resolve the current origin server-side from forwarded headers. Pre-filling
+ * the client component's `origin` prop avoids a hydration mismatch on the
+ * MCP config snippets (which embed the absolute URL).
+ */
+async function resolveOrigin(): Promise<string> {
+  const h = await headers();
+  const proto = h.get("x-forwarded-proto") ?? "http";
+  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
+  return `${proto}://${host}`;
+}
+
 export default async function SettingsPage() {
   const { ownerAccountId } = await requireSessionWithAccount();
+  const origin = await resolveOrigin();
   const tokens = await db
     .select({
       id: apiTokens.id,
@@ -81,7 +95,7 @@ export default async function SettingsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <McpInstructions />
+          <McpInstructions origin={origin} />
         </CardContent>
       </Card>
     </div>
