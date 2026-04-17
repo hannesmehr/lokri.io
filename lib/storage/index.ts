@@ -1,25 +1,26 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { ownerAccounts } from "@/lib/db/schema";
+import { spaces, storageProviders } from "@/lib/db/schema";
 import { decryptJson } from "./encryption";
 import { S3Provider, type S3Config } from "./s3";
-import type { StorageProvider, StorageProviderName } from "./types";
+import type { StorageProvider } from "./types";
 import { VercelBlobProvider } from "./vercel-blob";
 
 /**
- * Per-account storage routing.
+ * Storage provider routing with the new per-account, named-providers model.
  *
- * Two lookup modes:
- *  - `getCurrentStorageProvider(account)` — used on WRITE paths (uploads).
- *    Returns the provider the account is currently configured to write to.
- *  - `getStorageProviderForName(name, account)` — used on READ/DELETE paths
- *    keyed by `files.storage_provider`. An old file might be on Vercel Blob
- *    even though the account has since switched to S3 — we honor that.
+ * Rules:
+ *   - Internal Vercel Blob is implicit — no row in `storage_providers`, no
+ *     id on the file, just the absence of one.
+ *   - Users add 0..N named external providers (S3-compatible only for now).
+ *   - Each Space can point at a provider; uploads into that space honour it.
+ *   - Each File records the provider it was stored with (null = internal);
+ *     reads/deletes must go to the original, otherwise old files vanish.
  *
- * S3 configs are decrypted lazily per call. With realistic traffic a small
- * in-memory LRU would help; for now every op pays a scrypt+decrypt tax.
- * Cache invalidation gets tricky (updates must evict), so we skip until
- * it matters.
+ * API:
+ *   - `getProviderForNewUpload(accountId, spaceId?)` — picks the right
+ *     provider for a fresh file. Returns `{ provider, providerId }`.
+ *   - `getProviderForFile(providerId)` — lookup by a stored file's FK.
  */
 
 let cachedVercel: VercelBlobProvider | null = null;
@@ -28,78 +29,93 @@ function vercelBlob(): VercelBlobProvider {
   return cachedVercel;
 }
 
-export interface StorageAccountContext {
-  id: string;
-  storageProvider: StorageProviderName;
-  storageConfigEncrypted: string | null;
+export interface ResolvedProvider {
+  provider: StorageProvider;
+  /** Null means internal Vercel Blob; persist as such on the file row. */
+  providerId: string | null;
 }
 
 /**
- * Load the account's storage context from the DB. Small enough to inline
- * everywhere instead of making callers pass it explicitly.
+ * Pick the storage provider for a brand-new upload. Priority:
+ *   1. Space-level override (`spaces.storage_provider_id`)
+ *   2. Internal Vercel Blob (always-on)
  */
-export async function loadStorageContext(
+export async function getProviderForNewUpload(
   ownerAccountId: string,
-): Promise<StorageAccountContext> {
+  spaceId: string | null,
+): Promise<ResolvedProvider> {
+  if (spaceId) {
+    const [space] = await db
+      .select({ storageProviderId: spaces.storageProviderId })
+      .from(spaces)
+      .where(
+        and(
+          eq(spaces.id, spaceId),
+          eq(spaces.ownerAccountId, ownerAccountId),
+        ),
+      )
+      .limit(1);
+    if (space?.storageProviderId) {
+      const provider = await loadProvider(space.storageProviderId);
+      return { provider, providerId: space.storageProviderId };
+    }
+  }
+  return { provider: vercelBlob(), providerId: null };
+}
+
+/**
+ * Pick the storage provider that handled an existing file. Called by read
+ * + delete paths. `providerId` null ⇒ internal Vercel Blob.
+ */
+export async function getProviderForFile(
+  providerId: string | null,
+): Promise<StorageProvider> {
+  if (!providerId) return vercelBlob();
+  return loadProvider(providerId);
+}
+
+async function loadProvider(providerId: string): Promise<StorageProvider> {
   const [row] = await db
     .select({
-      id: ownerAccounts.id,
-      storageProvider: ownerAccounts.storageProvider,
-      storageConfigEncrypted: ownerAccounts.storageConfigEncrypted,
+      type: storageProviders.type,
+      configEncrypted: storageProviders.configEncrypted,
     })
-    .from(ownerAccounts)
-    .where(eq(ownerAccounts.id, ownerAccountId))
+    .from(storageProviders)
+    .where(eq(storageProviders.id, providerId))
     .limit(1);
   if (!row) {
-    throw new Error(`Owner account not found: ${ownerAccountId}`);
+    throw new Error(`Storage provider not found: ${providerId}`);
   }
-  return {
-    id: row.id,
-    storageProvider: row.storageProvider as StorageProviderName,
-    storageConfigEncrypted: row.storageConfigEncrypted,
-  };
-}
-
-/**
- * Build the provider the account is configured for _right now_. Use this on
- * the upload path.
- */
-export function getCurrentStorageProvider(
-  ctx: StorageAccountContext,
-): StorageProvider {
-  if (ctx.storageProvider === "s3") return buildS3(ctx);
-  return vercelBlob();
-}
-
-/**
- * Build the provider that was used when a specific file was uploaded. Use
- * this on read/delete paths. Only S3 needs the account context; Vercel Blob
- * is env-keyed.
- */
-export function getStorageProviderForFile(
-  fileProviderName: StorageProviderName,
-  ctx: StorageAccountContext,
-): StorageProvider {
-  if (fileProviderName === "s3") return buildS3(ctx);
-  return vercelBlob();
-}
-
-function buildS3(ctx: StorageAccountContext): S3Provider {
-  if (!ctx.storageConfigEncrypted) {
-    throw new Error(
-      `Account ${ctx.id} is configured for S3 but has no storage_config.`,
-    );
+  if (row.type === "s3") {
+    const config = decryptJson<S3Config>(row.configEncrypted);
+    return new S3Provider(config);
   }
-  const config = decryptJson<S3Config>(ctx.storageConfigEncrypted);
-  return new S3Provider(config);
+  throw new Error(`Unsupported storage provider type: ${row.type}`);
 }
 
-/**
- * Backwards-compatible shim. Old call sites that don't have the account
- * context yet still work against Vercel Blob. New code paths should prefer
- * `getCurrentStorageProvider` / `getStorageProviderForFile`.
- */
+// ── Backwards-compat shims for call sites not yet migrated ──────────────────
+
+/** @deprecated Use `getProviderForNewUpload` or `getProviderForFile`. */
 export function getStorageProvider(): StorageProvider {
+  return vercelBlob();
+}
+
+/** @deprecated — old single-provider API. Kept so old callers still build. */
+export async function loadStorageContext(
+  _ownerAccountId: string,
+): Promise<never> {
+  throw new Error(
+    "loadStorageContext is deprecated — switch to getProviderForNewUpload / getProviderForFile.",
+  );
+}
+
+/** @deprecated. */
+export function getCurrentStorageProvider(): StorageProvider {
+  return vercelBlob();
+}
+
+/** @deprecated. */
+export function getStorageProviderForFile(): StorageProvider {
   return vercelBlob();
 }
 

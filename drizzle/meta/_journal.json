@@ -43,6 +43,13 @@
       "when": 1776453732040,
       "tag": "0005_cultured_starjammers",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1776455093102,
+      "tag": "0006_lying_riptide",
+      "breakpoints": true
     }
   ]
 }

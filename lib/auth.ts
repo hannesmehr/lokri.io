@@ -18,15 +18,12 @@ import {
 } from "./db/schema";
 import { sendMail } from "./mailer";
 import {
+  changeEmailTemplate,
   deleteAccountTemplate,
   resetPasswordTemplate,
   verifyEmailTemplate,
 } from "./mailer/templates";
-import {
-  getStorageProviderForFile,
-  loadStorageContext,
-} from "./storage";
-import type { StorageProviderName } from "./storage/types";
+import { getProviderForFile } from "./storage";
 
 const FREE_PLAN_ID = "free";
 
@@ -142,6 +139,27 @@ export const auth = betterAuth({
   },
 
   user: {
+    // Email-Change: Verification-Mail an die NEUE Adresse, erst nach Klick
+    // wird umgestellt. Die alte Adresse bleibt gültig bis dahin.
+    changeEmail: {
+      enabled: true,
+      sendChangeEmailVerification: async ({
+        user,
+        newEmail,
+        url,
+      }: {
+        user: { email: string; name?: string | null };
+        newEmail: string;
+        url: string;
+      }) => {
+        const tpl = changeEmailTemplate({
+          name: user.name ?? null,
+          newEmail,
+          url,
+        });
+        await sendMail({ to: newEmail, ...tpl });
+      },
+    },
     // GDPR Artikel 17 — self-service account deletion. Verification email
     // + best-effort cleanup of owner-scoped resources (handled via
     // beforeDelete below).
@@ -171,20 +189,16 @@ export const auth = betterAuth({
             .select({
               id: filesTable.id,
               storageKey: filesTable.storageKey,
-              storageProvider: filesTable.storageProvider,
+              storageProviderId: filesTable.storageProviderId,
             })
             .from(filesTable)
             .where(eq(filesTable.ownerAccountId, m.accountId));
           if (fileRows.length === 0) continue;
-          // Load the account's storage context ONCE per account — S3 decrypt
-          // is scrypt-heavy, we don't want that per file.
-          const storageCtx = await loadStorageContext(m.accountId);
           await Promise.all(
             fileRows.map(async (f) => {
               try {
-                const provider = getStorageProviderForFile(
-                  f.storageProvider as StorageProviderName,
-                  storageCtx,
+                const provider = await getProviderForFile(
+                  f.storageProviderId,
                 );
                 await provider.delete(f.storageKey);
               } catch (err) {

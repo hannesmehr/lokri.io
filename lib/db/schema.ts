@@ -271,19 +271,13 @@ export const ownerAccounts = pgTable(
       .notNull()
       .references(() => plans.id),
     /**
-     * Currently configured storage backend for NEW file uploads. Existing
-     * files keep their original `files.storage_provider` value — switching
-     * doesn't migrate old data, it just routes future writes.
-     * Defaults to `vercel_blob`; BYO-S3 is an upgrade users opt into.
+     * @deprecated — kept on the row for legacy reads; new code picks the
+     * active provider via the `storage_providers` table + optional
+     * `spaces.storage_provider_id` override. Will be dropped in a later
+     * cleanup migration once all older files are re-linked.
      */
     storageProvider: text("storage_provider").notNull().default("vercel_blob"),
-    /**
-     * Encrypted JSON bundle for `storage_provider = "s3"`. Plaintext:
-     * `{ endpoint, region, bucket, accessKeyId, secretAccessKey, pathPrefix? }`.
-     * AES-256-GCM with a key derived from `STORAGE_CONFIG_KEY` (fallback
-     * `BETTER_AUTH_SECRET`). Stored here to avoid a second table round-trip
-     * on every file op — account rows are small + cached.
-     */
+    /** @deprecated — superseded by `storage_providers`. */
     storageConfigEncrypted: text("storage_config_encrypted"),
     /**
      * When the current paid plan expires. NULL means free plan (no expiry).
@@ -301,6 +295,56 @@ export const ownerAccounts = pgTable(
       .defaultNow(),
   },
   (t) => [index("owner_accounts_plan_id_idx").on(t.planId)],
+);
+
+/**
+ * Per-account named storage providers. The internal Vercel Blob backend is
+ * implicit (no row) and always available; rows here describe BYO-S3
+ * endpoints the user added. Mapping semantics:
+ *
+ *   - `spaces.storage_provider_id` set → that provider is used for uploads
+ *     into this space (regardless of account default).
+ *   - else, `files` default to the internal Vercel Blob.
+ *   - `files.storage_provider_id` records which row a specific file was
+ *     stored with; reads/deletes honour that, so existing files remain
+ *     reachable even after a provider is deleted (we lock deletion if any
+ *     file still references it).
+ */
+export const storageProviderTypeEnum = pgEnum("storage_provider_type", [
+  "s3",
+]);
+
+export const storageProviders = pgTable(
+  "storage_providers",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    ownerAccountId: uuid("owner_account_id")
+      .notNull()
+      .references(() => ownerAccounts.id, { onDelete: "cascade" }),
+    /** User-visible label — e.g. "Mein R2 Bucket". Unique per account. */
+    name: text("name").notNull(),
+    type: storageProviderTypeEnum("type").notNull(),
+    /**
+     * AES-256-GCM-encrypted JSON for the provider. Schema depends on `type`:
+     *  - s3: `{ endpoint?, region, bucket, accessKeyId, secretAccessKey, pathPrefix?, forcePathStyle? }`
+     * Decryption key from `STORAGE_CONFIG_KEY` (fallback `BETTER_AUTH_SECRET`).
+     */
+    configEncrypted: text("config_encrypted").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdateFn(() => new Date()),
+  },
+  (t) => [
+    index("storage_providers_owner_account_id_idx").on(t.ownerAccountId),
+    uniqueIndex("storage_providers_owner_account_name_idx").on(
+      t.ownerAccountId,
+      t.name,
+    ),
+  ],
 );
 
 export const ownerAccountMembers = pgTable(
@@ -364,6 +408,16 @@ export const spaces = pgTable(
       .references(() => ownerAccounts.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     description: text("description"),
+    /**
+     * Space-scoped storage override. When set, uploads into this space land
+     * on this provider instead of the internal Vercel Blob. Delete
+     * cascades to `set null` so removing a provider doesn't orphan the
+     * space, just reverts it to the internal default.
+     */
+    storageProviderId: uuid("storage_provider_id").references(
+      () => storageProviders.id,
+      { onDelete: "set null" },
+    ),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -372,7 +426,10 @@ export const spaces = pgTable(
       .defaultNow()
       .$onUpdateFn(() => new Date()),
   },
-  (t) => [index("spaces_account_id_idx").on(t.ownerAccountId)],
+  (t) => [
+    index("spaces_account_id_idx").on(t.ownerAccountId),
+    index("spaces_storage_provider_id_idx").on(t.storageProviderId),
+  ],
 );
 
 // Prep for V1.3 sharing. In MVP, exactly one row per space with role="owner"
@@ -416,8 +473,30 @@ export const files = pgTable(
     filename: text("filename").notNull(),
     mimeType: text("mime_type").notNull(),
     sizeBytes: bigint("size_bytes", { mode: "number" }).notNull(),
+    /**
+     * Legacy discriminator — kept in sync with `storage_provider_id`:
+     * null → "vercel_blob", set → "s3". New code reads
+     * `storage_provider_id` directly; this column will be dropped once the
+     * admin tooling can be sure no caller still reads it.
+     */
     storageProvider: text("storage_provider").notNull().default("vercel_blob"),
+    /**
+     * Points at the row in `storage_providers` for S3-backed files. Null for
+     * files on the internal Vercel Blob — the absence of a row discriminates.
+     * `on delete restrict` so users can't delete a provider while files
+     * still reference it; the UI forces a migrate-or-delete-files step.
+     */
+    storageProviderId: uuid("storage_provider_id").references(
+      () => storageProviders.id,
+      { onDelete: "restrict" },
+    ),
     storageKey: text("storage_key").notNull(),
+    /**
+     * When `true`, MCP tools (`search`, `fetch`, `list_files`,
+     * `get_file_content`) skip this file. The file is still visible in the
+     * web UI — this is explicit "don't show to AI" marking.
+     */
+    mcpHidden: boolean("mcp_hidden").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -425,6 +504,7 @@ export const files = pgTable(
   (t) => [
     index("files_account_id_idx").on(t.ownerAccountId),
     index("files_space_id_idx").on(t.spaceId),
+    index("files_storage_provider_id_idx").on(t.storageProviderId),
   ],
 );
 
@@ -467,6 +547,8 @@ export const notes = pgTable(
     contentText: text("content_text").notNull(),
     embedding: vector("embedding", { dimensions: 1536 }),
     embeddingModel: text("embedding_model").notNull(),
+    /** See `files.mcp_hidden` — same semantics. */
+    mcpHidden: boolean("mcp_hidden").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

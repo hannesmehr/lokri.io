@@ -1,16 +1,23 @@
 import { eq } from "drizzle-orm";
 import { NextResponse, type NextRequest } from "next/server";
-import { notFound, serverError, unauthorized } from "@/lib/api/errors";
+import { z } from "zod";
+import {
+  notFound,
+  parseJsonBody,
+  serverError,
+  unauthorized,
+  zodError,
+} from "@/lib/api/errors";
 import { findOwnedFile } from "@/lib/api/ownership";
 import { ApiAuthError, requireSessionWithAccount } from "@/lib/api/session";
 import { db } from "@/lib/db";
 import { files } from "@/lib/db/schema";
 import { applyQuotaDelta } from "@/lib/quota";
-import {
-  getStorageProviderForFile,
-  loadStorageContext,
-} from "@/lib/storage";
-import type { StorageProviderName } from "@/lib/storage/types";
+import { getProviderForFile } from "@/lib/storage";
+
+const patchSchema = z.object({
+  mcpHidden: z.boolean().optional(),
+});
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -31,6 +38,33 @@ export async function GET(_req: NextRequest, { params }: Params) {
   }
 }
 
+export async function PATCH(req: NextRequest, { params }: Params) {
+  try {
+    const { ownerAccountId } = await requireSessionWithAccount();
+    const { id } = await params;
+    const existing = await findOwnedFile(ownerAccountId, id);
+    if (!existing) return notFound();
+
+    const body = await parseJsonBody(req, 4 * 1024);
+    const parsed = patchSchema.safeParse(body);
+    if (!parsed.success) return zodError(parsed.error);
+
+    await db
+      .update(files)
+      .set({
+        ...(parsed.data.mcpHidden !== undefined
+          ? { mcpHidden: parsed.data.mcpHidden }
+          : {}),
+      })
+      .where(eq(files.id, id));
+
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    if (err instanceof ApiAuthError) return unauthorized(err.message);
+    return serverError(err);
+  }
+}
+
 export async function DELETE(_req: NextRequest, { params }: Params) {
   try {
     const { ownerAccountId } = await requireSessionWithAccount();
@@ -40,11 +74,7 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
 
     // Delete from object storage first. If that 404s it's fine (idempotent);
     // any other failure aborts so we don't get orphaned DB rows.
-    const storageCtx = await loadStorageContext(ownerAccountId);
-    const provider = getStorageProviderForFile(
-      existing.storageProvider as StorageProviderName,
-      storageCtx,
-    );
+    const provider = await getProviderForFile(existing.storageProviderId);
     await provider.delete(existing.storageKey);
 
     // DB cascades file_chunks.

@@ -138,6 +138,38 @@ Der Link ist 1 Stunde gültig. Wenn du das nicht warst, ignoriere diese Mail —
   };
 }
 
+export function changeEmailTemplate({
+  name,
+  newEmail,
+  url,
+}: {
+  name: string | null;
+  newEmail: string;
+  url: string;
+}) {
+  const greeting = name ? `Hallo ${name},` : "Hallo,";
+  return {
+    subject: "Bestätige deine neue Email-Adresse",
+    text: `${greeting}
+
+du hast deine Email-Adresse auf ${newEmail} geändert. Klick zur Bestätigung:
+
+${url}
+
+Der Link ist 1 Stunde gültig. Wenn du das nicht warst, ignoriere diese Mail.`,
+    html: wrap(
+      `<p>${greeting}</p>
+       <p>du hast deine Email-Adresse auf{" "}
+       <strong>${newEmail}</strong> geändert. Klick den Button, um die
+       neue Adresse zu bestätigen.</p>
+       ${button(url, "Neue Email bestätigen")}
+       <p style="color:#555;font-size:13px">Der Link ist 1 Stunde gültig.
+       Wenn du das nicht warst, ignoriere diese Mail — deine alte Adresse
+       bleibt aktiv.</p>`,
+    ),
+  };
+}
+
 export function twoFactorOtpTemplate({
   name,
   code,

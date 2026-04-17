@@ -14,6 +14,7 @@ import { spaceMembers, spaces } from "@/lib/db/schema";
 const createBodySchema = z.object({
   name: z.string().trim().min(1).max(200),
   description: z.string().trim().max(2000).optional(),
+  storageProviderId: z.string().uuid().nullable().optional(),
 });
 
 export async function GET() {
@@ -44,6 +45,7 @@ export async function POST(req: NextRequest) {
         ownerAccountId,
         name: parsed.data.name,
         description: parsed.data.description ?? null,
+        storageProviderId: parsed.data.storageProviderId ?? null,
       })
       .returning();
 

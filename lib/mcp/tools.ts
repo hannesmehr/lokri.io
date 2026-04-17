@@ -15,11 +15,9 @@ import { fileChunks, files, notes, spaces } from "@/lib/db/schema";
 import { chunkText, embedText, embedTexts } from "@/lib/embeddings";
 import { applyQuotaDelta, checkQuota } from "@/lib/quota";
 import {
-  getCurrentStorageProvider,
-  getStorageProviderForFile,
-  loadStorageContext,
+  getProviderForFile,
+  getProviderForNewUpload,
 } from "@/lib/storage";
-import type { StorageProviderName } from "@/lib/storage/types";
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 
@@ -97,7 +95,12 @@ export function registerTools(server: McpServer): void {
           similarity: noteSim,
         })
         .from(notes)
-        .where(eq(notes.ownerAccountId, ownerAccountId))
+        .where(
+          and(
+            eq(notes.ownerAccountId, ownerAccountId),
+            eq(notes.mcpHidden, false),
+          ),
+        )
         .orderBy(desc(noteSim))
         .limit(n);
 
@@ -111,7 +114,12 @@ export function registerTools(server: McpServer): void {
         })
         .from(fileChunks)
         .innerJoin(files, eq(files.id, fileChunks.fileId))
-        .where(eq(files.ownerAccountId, ownerAccountId))
+        .where(
+          and(
+            eq(files.ownerAccountId, ownerAccountId),
+            eq(files.mcpHidden, false),
+          ),
+        )
         .orderBy(desc(chunkSim))
         .limit(n);
 
@@ -163,7 +171,13 @@ export function registerTools(server: McpServer): void {
       const [note] = await db
         .select()
         .from(notes)
-        .where(and(eq(notes.id, id), eq(notes.ownerAccountId, ownerAccountId)))
+        .where(
+          and(
+            eq(notes.id, id),
+            eq(notes.ownerAccountId, ownerAccountId),
+            eq(notes.mcpHidden, false),
+          ),
+        )
         .limit(1);
 
       if (note) {
@@ -194,7 +208,11 @@ export function registerTools(server: McpServer): void {
         .from(fileChunks)
         .innerJoin(files, eq(files.id, fileChunks.fileId))
         .where(
-          and(eq(fileChunks.id, id), eq(files.ownerAccountId, ownerAccountId)),
+          and(
+            eq(fileChunks.id, id),
+            eq(files.ownerAccountId, ownerAccountId),
+            eq(files.mcpHidden, false),
+          ),
         )
         .limit(1);
 
@@ -258,7 +276,10 @@ export function registerTools(server: McpServer): void {
     async ({ space_id, limit }, extra) => {
       const ownerAccountId = requireOwnerAccountId(extra as ToolExtra);
       const n = limit ?? 50;
-      const conds = [eq(files.ownerAccountId, ownerAccountId)];
+      const conds = [
+        eq(files.ownerAccountId, ownerAccountId),
+        eq(files.mcpHidden, false),
+      ];
       if (space_id) conds.push(eq(files.spaceId, space_id));
       const rows = await db
         .select({
@@ -292,7 +313,10 @@ export function registerTools(server: McpServer): void {
     async ({ space_id, limit }, extra) => {
       const ownerAccountId = requireOwnerAccountId(extra as ToolExtra);
       const n = limit ?? 50;
-      const conds = [eq(notes.ownerAccountId, ownerAccountId)];
+      const conds = [
+        eq(notes.ownerAccountId, ownerAccountId),
+        eq(notes.mcpHidden, false),
+      ];
       if (space_id) conds.push(eq(notes.spaceId, space_id));
       const rows = await db
         .select({
@@ -458,18 +482,15 @@ export function registerTools(server: McpServer): void {
           mimeType: files.mimeType,
           sizeBytes: files.sizeBytes,
           storageKey: files.storageKey,
-          storageProvider: files.storageProvider,
+          storageProviderId: files.storageProviderId,
+          mcpHidden: files.mcpHidden,
         })
         .from(files)
         .where(and(eq(files.id, id), eq(files.ownerAccountId, ownerAccountId)))
         .limit(1);
-      if (!file) return toolError(`File not found: ${id}`);
+      if (!file || file.mcpHidden) return toolError(`File not found: ${id}`);
 
-      const storageCtx = await loadStorageContext(ownerAccountId);
-      const provider = getStorageProviderForFile(
-        file.storageProvider as StorageProviderName,
-        storageCtx,
-      );
+      const provider = await getProviderForFile(file.storageProviderId);
       const { content } = await provider.get(file.storageKey);
       return ok({
         id: file.id,
@@ -530,8 +551,10 @@ export function registerTools(server: McpServer): void {
       });
       if (!quota.ok) return toolError(`Quota exceeded: ${quota.reason}`);
 
-      const storageCtx = await loadStorageContext(ownerAccountId);
-      const provider = getCurrentStorageProvider(storageCtx);
+      const { provider, providerId } = await getProviderForNewUpload(
+        ownerAccountId,
+        space_id ?? null,
+      );
       const putResult = await provider.put({
         ownerAccountId,
         filename,
@@ -548,6 +571,7 @@ export function registerTools(server: McpServer): void {
           mimeType: mime_type,
           sizeBytes: putResult.sizeBytes,
           storageProvider: provider.name,
+          storageProviderId: providerId,
           storageKey: putResult.storageKey,
         })
         .returning({
@@ -610,18 +634,14 @@ export function registerTools(server: McpServer): void {
           id: files.id,
           storageKey: files.storageKey,
           sizeBytes: files.sizeBytes,
-          storageProvider: files.storageProvider,
+          storageProviderId: files.storageProviderId,
         })
         .from(files)
         .where(and(eq(files.id, id), eq(files.ownerAccountId, ownerAccountId)))
         .limit(1);
       if (!existing) return toolError(`File not found: ${id}`);
 
-      const storageCtx = await loadStorageContext(ownerAccountId);
-      const provider = getStorageProviderForFile(
-        existing.storageProvider as StorageProviderName,
-        storageCtx,
-      );
+      const provider = await getProviderForFile(existing.storageProviderId);
       await provider.delete(existing.storageKey);
       await db.delete(files).where(eq(files.id, id));
       await applyQuotaDelta(ownerAccountId, {

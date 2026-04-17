@@ -17,10 +17,7 @@ import {
 import { chunkText, embedText, embedTexts } from "@/lib/embeddings";
 import { applyQuotaDelta, checkQuota } from "@/lib/quota";
 import { limit, rateLimitResponse } from "@/lib/rate-limit";
-import {
-  getCurrentStorageProvider,
-  loadStorageContext,
-} from "@/lib/storage";
+import { getProviderForNewUpload } from "@/lib/storage";
 
 /**
  * Import endpoint.
@@ -295,9 +292,12 @@ async function importFiles(
   }>,
   summary: ImportSummary,
 ) {
-  const storageCtx = await loadStorageContext(ownerAccountId);
-  const provider = getCurrentStorageProvider(storageCtx);
   for (const entry of entries) {
+    // Pick provider per file — space-override may route to different buckets.
+    const { provider, providerId } = await getProviderForNewUpload(
+      ownerAccountId,
+      entry.spaceId,
+    );
     const zipped = zip.file(entry.archivePath);
     if (!zipped) {
       summary.skipped.push({
@@ -335,6 +335,7 @@ async function importFiles(
           mimeType: entry.mimeType,
           sizeBytes: put.sizeBytes,
           storageProvider: provider.name,
+          storageProviderId: providerId,
           storageKey: put.storageKey,
         })
         .returning({ id: filesTable.id });

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { McpHiddenToggle } from "../_mcp-hidden-toggle";
 import { requireSessionWithAccount } from "@/lib/api/session";
 import { db } from "@/lib/db";
 import { notes, spaces } from "@/lib/db/schema";
@@ -26,6 +27,7 @@ export default async function NotesPage({
       title: notes.title,
       contentText: notes.contentText,
       spaceId: notes.spaceId,
+      mcpHidden: notes.mcpHidden,
       createdAt: notes.createdAt,
       updatedAt: notes.updatedAt,
     })
@@ -100,25 +102,42 @@ export default async function NotesPage({
       ) : (
         <div className="divide-y rounded-xl border bg-card">
           {rows.map((n) => (
-            <Link
+            <div
               key={n.id}
-              href={`/notes/${n.id}`}
               className="group flex items-center gap-4 px-4 py-3 transition-colors hover:bg-muted/50"
             >
-              <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-indigo-500/15 to-fuchsia-500/15 text-indigo-700 dark:text-indigo-300">
-                <StickyNote className="h-4 w-4" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="truncate font-medium">{n.title}</div>
-                <div className="line-clamp-1 text-xs text-muted-foreground">
-                  {n.contentText.replace(/\s+/g, " ").slice(0, 140)}
+              <Link
+                href={`/notes/${n.id}`}
+                className="flex min-w-0 flex-1 items-center gap-4"
+              >
+                <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-indigo-500/15 to-fuchsia-500/15 text-indigo-700 dark:text-indigo-300">
+                  <StickyNote className="h-4 w-4" />
                 </div>
-              </div>
-              <div className="shrink-0 text-xs text-muted-foreground">
-                {formatRelative(n.updatedAt)}
-              </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="truncate font-medium">{n.title}</span>
+                    {n.mcpHidden ? (
+                      <span className="shrink-0 rounded border bg-muted/50 px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                        für MCP ausgeblendet
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="line-clamp-1 text-xs text-muted-foreground">
+                    {n.contentText.replace(/\s+/g, " ").slice(0, 140)}
+                  </div>
+                </div>
+                <div className="shrink-0 text-xs text-muted-foreground">
+                  {formatRelative(n.updatedAt)}
+                </div>
+              </Link>
+              <McpHiddenToggle
+                kind="notes"
+                id={n.id}
+                hidden={n.mcpHidden}
+                compact
+              />
               <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-            </Link>
+            </div>
           ))}
         </div>
       )}

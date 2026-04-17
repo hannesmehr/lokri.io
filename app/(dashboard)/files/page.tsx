@@ -7,6 +7,7 @@ import { requireSessionWithAccount } from "@/lib/api/session";
 import { db } from "@/lib/db";
 import { files, spaces } from "@/lib/db/schema";
 import { formatBytes, formatRelative } from "@/lib/format";
+import { McpHiddenToggle } from "../_mcp-hidden-toggle";
 import { FileDeleteButton } from "./_file-delete-button";
 import { FileUploader } from "./_file-uploader";
 
@@ -103,12 +104,25 @@ export default async function FilesPage({
                   <Icon className="h-4 w-4" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="truncate font-medium">{f.filename}</div>
+                  <div className="flex items-center gap-2">
+                    <span className="truncate font-medium">{f.filename}</span>
+                    {f.mcpHidden ? (
+                      <span className="shrink-0 rounded border bg-muted/50 px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                        für MCP ausgeblendet
+                      </span>
+                    ) : null}
+                  </div>
                   <div className="text-xs text-muted-foreground">
                     {f.mimeType} · {formatBytes(f.sizeBytes)} ·{" "}
                     {formatRelative(f.createdAt)}
                   </div>
                 </div>
+                <McpHiddenToggle
+                  kind="files"
+                  id={f.id}
+                  hidden={f.mcpHidden}
+                  compact
+                />
                 <a
                   href={`/api/files/${f.id}/content`}
                   target="_blank"

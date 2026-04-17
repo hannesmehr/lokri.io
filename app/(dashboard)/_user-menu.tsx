@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, CreditCard, LogOut, User } from "lucide-react";
+import { ChevronDown, CreditCard, LogOut, Settings, User } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -56,6 +56,10 @@ export function UserMenu({ user }: Props) {
         <DropdownMenuItem render={<Link href="/billing" />}>
           <CreditCard className="h-4 w-4" />
           Billing
+        </DropdownMenuItem>
+        <DropdownMenuItem render={<Link href="/settings" />}>
+          <Settings className="h-4 w-4" />
+          Einstellungen
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem

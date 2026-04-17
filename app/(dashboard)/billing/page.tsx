@@ -1,8 +1,9 @@
-import { asc, desc, eq } from "drizzle-orm";
-import { Check, Download, FileText, Sparkles } from "lucide-react";
+import { eq } from "drizzle-orm";
+import { Calendar, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -12,21 +13,22 @@ import {
 } from "@/components/ui/card";
 import { requireSessionWithAccount } from "@/lib/api/session";
 import { db } from "@/lib/db";
-import { invoices, ownerAccounts, plans } from "@/lib/db/schema";
-import { UpgradeButton } from "./_upgrade-button";
+import { ownerAccounts, plans } from "@/lib/db/schema";
+import { formatBytes, formatDateTime } from "@/lib/format";
 
-function formatCents(cents: number): string {
-  return (cents / 100).toFixed(2).replace(".", ",") + " €";
+function formatCents(c: number): string {
+  return (c / 100).toFixed(2).replace(".", ",") + " €";
 }
 
-function formatBytes(n: number): string {
-  if (n >= 1024 * 1024 * 1024)
-    return `${(n / 1024 / 1024 / 1024).toFixed(0)} GB`;
-  if (n >= 1024 * 1024) return `${(n / 1024 / 1024).toFixed(0)} MB`;
-  return `${(n / 1024).toFixed(0)} KB`;
+function daysUntil(d: Date): number {
+  return Math.ceil((d.getTime() - Date.now()) / (24 * 60 * 60 * 1000));
 }
 
-export default async function BillingPage({
+/**
+ * Overview tab — shows effective plan, expiry, next steps.
+ * Purchase table lives on /billing/plans.
+ */
+export default async function BillingOverviewPage({
   searchParams,
 }: {
   searchParams: Promise<{ cancelled?: string }>;
@@ -34,46 +36,42 @@ export default async function BillingPage({
   const { ownerAccountId } = await requireSessionWithAccount();
   const { cancelled } = await searchParams;
 
-  const [account, allPlans, invoiceRows] = await Promise.all([
+  const [account, currentPlanRow] = await Promise.all([
     db
       .select()
       .from(ownerAccounts)
       .where(eq(ownerAccounts.id, ownerAccountId))
       .limit(1)
       .then((r) => r[0]),
-    db.select().from(plans).orderBy(asc(plans.sortOrder)),
+    // Effective plan: paid plan while not expired, otherwise free.
     db
-      .select({
-        id: invoices.id,
-        invoiceNumber: invoices.invoiceNumber,
-        description: invoices.description,
-        grossCents: invoices.grossCents,
-        issuedAt: invoices.issuedAt,
-        status: invoices.status,
-      })
-      .from(invoices)
-      .where(eq(invoices.ownerAccountId, ownerAccountId))
-      .orderBy(desc(invoices.issuedAt))
-      .limit(50),
+      .select()
+      .from(plans)
+      .where(eq(plans.id, "free"))
+      .limit(1)
+      .then((r) => r[0]),
   ]);
 
   const now = new Date();
-  const expired = account?.planExpiresAt && account.planExpiresAt < now;
-  const currentPlanId = expired ? "free" : (account?.planId ?? "free");
-  const currentPlan = allPlans.find((p) => p.id === currentPlanId);
+  const expired =
+    account?.planExpiresAt && account.planExpiresAt < now ? true : false;
+  const effectivePlanId = expired ? "free" : (account?.planId ?? "free");
 
-  const purchasable = allPlans.filter((p) => p.isPurchasable);
+  let effectivePlan = currentPlanRow;
+  if (effectivePlanId !== "free") {
+    const [row] = await db
+      .select()
+      .from(plans)
+      .where(eq(plans.id, effectivePlanId))
+      .limit(1);
+    if (row) effectivePlan = row;
+  }
+
+  const daysLeft =
+    account?.planExpiresAt && !expired ? daysUntil(account.planExpiresAt) : null;
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="font-display text-4xl leading-tight">Billing</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Upgrade auf mehr Speicher. Jahres-Abos ~2 Monate günstiger als
-          monatliche Buchung.
-        </p>
-      </div>
-
+    <div className="space-y-6">
       {cancelled ? (
         <Alert>
           <AlertTitle>Bestellung abgebrochen</AlertTitle>
@@ -84,200 +82,140 @@ export default async function BillingPage({
         </Alert>
       ) : null}
 
-      {/* Current plan banner */}
       <Card className="overflow-hidden border-indigo-500/20 bg-gradient-to-br from-indigo-500/5 via-background to-fuchsia-500/5">
         <CardHeader>
-          <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br from-indigo-500/15 to-fuchsia-500/15 text-indigo-700 dark:text-indigo-300">
+              <div className="grid h-10 w-10 place-items-center rounded-lg bg-gradient-to-br from-indigo-500/15 to-fuchsia-500/15 text-indigo-700 dark:text-indigo-300">
                 <Sparkles className="h-4 w-4" />
               </div>
               <div>
-                <CardTitle>
+                <CardTitle className="font-display text-2xl font-normal">
                   Aktueller Plan:{" "}
-                  <span className="font-display italic text-brand">
-                    {currentPlan?.name ?? "Free"}
+                  <span className="italic text-brand">
+                    {effectivePlan?.name ?? "Free"}
                   </span>
                 </CardTitle>
                 <CardDescription>
-                  {currentPlan
-                    ? `${formatBytes(currentPlan.maxBytes)} Speicher · ${currentPlan.maxFiles.toLocaleString("de-DE")} Files · ${currentPlan.maxNotes.toLocaleString("de-DE")} Notes`
+                  {effectivePlan
+                    ? `${formatBytes(effectivePlan.maxBytes)} Speicher · ${effectivePlan.maxFiles.toLocaleString("de-DE")} Files · ${effectivePlan.maxNotes.toLocaleString("de-DE")} Notes`
                     : null}
                 </CardDescription>
               </div>
             </div>
-            {account?.planExpiresAt ? (
-              <Badge variant="secondary" className={expired ? "bg-red-500/10 text-red-700 dark:text-red-300" : ""}>
-                {expired ? "abgelaufen am " : "gültig bis "}
-                {new Date(account.planExpiresAt).toLocaleDateString("de-DE")}
-              </Badge>
-            ) : null}
-          </div>
-        </CardHeader>
-      </Card>
-
-      {/* Plan grid */}
-      <div className="grid gap-4 md:grid-cols-3">
-        {purchasable.map((plan) => {
-          const isCurrent = plan.id === currentPlanId;
-          const yearlyMonthly = plan.priceYearlyCents / 12;
-          const yearlySavingsPct = Math.round(
-            (1 - plan.priceYearlyCents / 12 / plan.priceMonthlyCents) * 100,
-          );
-          return (
-            <Card
-              key={plan.id}
-              className={
-                plan.id === "pro"
-                  ? "relative overflow-hidden border-indigo-500/30 shadow-lg"
-                  : "relative overflow-hidden"
-              }
-            >
-              {plan.id === "pro" ? (
-                <div className="absolute right-3 top-3">
-                  <Badge>Empfohlen</Badge>
-                </div>
-              ) : null}
-              <CardHeader>
-                <CardTitle className="font-display text-2xl font-normal">
-                  {plan.name}
-                </CardTitle>
-                <CardDescription className="min-h-[2.5rem]">
-                  {plan.description}
-                </CardDescription>
-                <div className="pt-3">
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-3xl font-semibold tabular-nums">
-                      {formatCents(plan.priceMonthlyCents)}
-                    </span>
-                    <span className="text-sm text-muted-foreground">/Monat</span>
-                  </div>
-                  {plan.priceYearlyCents > 0 ? (
-                    <div className="mt-1 text-xs text-muted-foreground">
-                      oder{" "}
-                      <strong className="text-foreground tabular-nums">
-                        {formatCents(plan.priceYearlyCents)}
-                      </strong>
-                      /Jahr ({formatCents(Math.round(yearlyMonthly))}
-                      /Monat, {yearlySavingsPct}% gespart)
-                    </div>
-                  ) : null}
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <ul className="space-y-1.5 text-sm">
-                  <Feature>
-                    <strong className="tabular-nums">
-                      {formatBytes(plan.maxBytes)}
-                    </strong>{" "}
-                    Speicher
-                  </Feature>
-                  <Feature>
-                    {plan.maxFiles.toLocaleString("de-DE")} Files
-                  </Feature>
-                  <Feature>
-                    {plan.maxNotes.toLocaleString("de-DE")} Notes
-                  </Feature>
-                  <Feature>Semantische Suche &amp; MCP-Zugriff</Feature>
-                  <Feature>Keine Werbung, keine Trainingsnutzung</Feature>
-                </ul>
-                {isCurrent ? (
-                  <div className="rounded-md border bg-muted/40 p-2 text-center text-xs text-muted-foreground">
-                    Dein aktueller Plan
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-2 pt-2">
-                    <UpgradeButton
-                      planId={plan.id}
-                      period="yearly"
-                      label={`Jährlich buchen · ${formatCents(plan.priceYearlyCents)}`}
-                      className="w-full"
-                    />
-                    <UpgradeButton
-                      planId={plan.id}
-                      period="monthly"
-                      label={`Monatlich · ${formatCents(plan.priceMonthlyCents)}`}
-                      className="w-full"
-                    />
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-
-      {/* Rechnungen */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <div className="grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br from-emerald-500/15 to-teal-500/15 text-emerald-700 dark:text-emerald-400">
-              <FileText className="h-4 w-4" />
-            </div>
-            <div>
-              <CardTitle>Rechnungen</CardTitle>
-              <CardDescription>
-                PDF-Download aller bisherigen Zahlungen.
-              </CardDescription>
-            </div>
+            <Button
+              nativeButton={false}
+              render={<Link href="/billing/plans">Plan ändern →</Link>}
+            />
           </div>
         </CardHeader>
         <CardContent>
-          {invoiceRows.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Noch keine Rechnungen — du bist auf dem Free-Plan.
-            </p>
-          ) : (
-            <div className="divide-y rounded-md border">
-              {invoiceRows.map((inv) => (
-                <div
-                  key={inv.id}
-                  className="flex items-center justify-between gap-4 px-4 py-3 text-sm"
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-baseline gap-2">
-                      <code className="font-mono text-xs">
-                        {inv.invoiceNumber}
-                      </code>
-                      <span className="truncate">{inv.description}</span>
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {new Date(inv.issuedAt).toLocaleDateString("de-DE")} ·{" "}
-                      <span className="tabular-nums">
-                        {formatCents(inv.grossCents)}
-                      </span>{" "}
-                      · {inv.status}
-                    </div>
-                  </div>
-                  <a
-                    href={`/api/invoices/${inv.id}/pdf`}
-                    target="_blank"
-                    rel="noopener"
-                    className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Stat
+              label="Status"
+              value={
+                expired ? (
+                  <Badge
+                    variant="secondary"
+                    className="bg-red-500/10 text-red-700 dark:text-red-300"
                   >
-                    <Download className="h-3.5 w-3.5" />
-                    PDF
-                  </a>
-                </div>
-              ))}
-            </div>
-          )}
+                    abgelaufen
+                  </Badge>
+                ) : account?.planExpiresAt ? (
+                  <Badge variant="secondary">aktiv</Badge>
+                ) : (
+                  <Badge variant="secondary">Free</Badge>
+                )
+              }
+            />
+            <Stat
+              label="Läuft bis"
+              value={
+                account?.planExpiresAt ? (
+                  <span>
+                    {formatDateTime(account.planExpiresAt)}
+                    {daysLeft !== null && !expired ? (
+                      <span className="ml-1 text-xs text-muted-foreground">
+                        ({daysLeft} Tage)
+                      </span>
+                    ) : null}
+                  </span>
+                ) : (
+                  <span className="text-muted-foreground">
+                    Keine Ablaufzeit
+                  </span>
+                )
+              }
+            />
+            <Stat
+              label="Zuletzt verlängert"
+              value={
+                account?.planRenewedAt ? (
+                  formatDateTime(account.planRenewedAt)
+                ) : (
+                  <span className="text-muted-foreground">—</span>
+                )
+              }
+            />
+          </div>
         </CardContent>
       </Card>
 
-      <p className="text-xs text-muted-foreground">
-        Zahlungsabwicklung über PayPal. One-time-Captures, kein Auto-Renewal
-        — du musst vor Ablauf aktiv verlängern.
-      </p>
+      {/* CTA card */}
+      {effectivePlanId === "free" ? (
+        <Card>
+          <CardContent className="flex flex-wrap items-center justify-between gap-4 py-5">
+            <div>
+              <div className="font-medium">Mehr Speicher gefällig?</div>
+              <p className="text-sm text-muted-foreground">
+                Starter ab <span className="tabular-nums">4,90 €</span>/Monat
+                oder <span className="tabular-nums">49 €</span>/Jahr.
+              </p>
+            </div>
+            <Button
+              nativeButton={false}
+              render={<Link href="/billing/plans">Plans ansehen</Link>}
+            />
+          </CardContent>
+        </Card>
+      ) : expired ? (
+        <Card className="border-amber-500/30 bg-amber-500/5">
+          <CardContent className="flex flex-wrap items-center justify-between gap-4 py-5">
+            <div className="flex items-start gap-3">
+              <Calendar className="mt-0.5 h-5 w-5 text-amber-600" />
+              <div>
+                <div className="font-medium">Dein Plan ist abgelaufen</div>
+                <p className="text-sm text-muted-foreground">
+                  Du nutzt aktuell nur Free-Limits. Bestehende Daten bleiben
+                  erhalten — verlängere, um wieder das volle Kontingent zu
+                  bekommen.
+                </p>
+              </div>
+            </div>
+            <Button
+              nativeButton={false}
+              render={<Link href="/billing/plans">Verlängern</Link>}
+            />
+          </CardContent>
+        </Card>
+      ) : null}
     </div>
   );
 }
 
-function Feature({ children }: { children: React.ReactNode }) {
+function Stat({
+  label,
+  value,
+}: {
+  label: string;
+  value: React.ReactNode;
+}) {
   return (
-    <li className="flex items-start gap-2">
-      <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-500" />
-      <span>{children}</span>
-    </li>
+    <div className="rounded-xl border bg-card/60 p-4">
+      <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        {label}
+      </div>
+      <div className="mt-1 text-sm">{value}</div>
+    </div>
   );
 }

@@ -9,11 +9,7 @@ import {
   notes as notesTable,
   spaces as spacesTable,
 } from "@/lib/db/schema";
-import {
-  getStorageProviderForFile,
-  loadStorageContext,
-} from "@/lib/storage";
-import type { StorageProviderName } from "@/lib/storage/types";
+import { getProviderForFile } from "@/lib/storage";
 
 /**
  * GDPR Article 20 — Right to Data Portability.
@@ -120,15 +116,12 @@ export async function GET(_req: NextRequest) {
     }
 
     // File blobs — per-file provider routing honors each file's original
-    // storage_provider (Vercel Blob + S3 can coexist in one account).
+    // storageProviderId (Vercel Blob + N named S3s can coexist in one
+    // account).
     const filesFolder = zip.folder("files");
-    const storageCtx = await loadStorageContext(ownerAccountId);
     for (const f of files) {
       try {
-        const provider = getStorageProviderForFile(
-          f.storageProvider as StorageProviderName,
-          storageCtx,
-        );
+        const provider = await getProviderForFile(f.storageProviderId);
         const { content } = await provider.get(f.storageKey);
         filesFolder?.file(`${f.id}-${f.filename}`, Buffer.from(content));
       } catch (err) {

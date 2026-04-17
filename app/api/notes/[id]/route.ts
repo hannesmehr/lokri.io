@@ -22,12 +22,14 @@ const patchBodySchema = z
     title: z.string().trim().min(1).max(300).optional(),
     content: z.string().min(1).max(1_000_000).optional(),
     spaceId: z.uuid().nullable().optional(),
+    mcpHidden: z.boolean().optional(),
   })
   .refine(
     (v) =>
       v.title !== undefined ||
       v.content !== undefined ||
-      v.spaceId !== undefined,
+      v.spaceId !== undefined ||
+      v.mcpHidden !== undefined,
     { message: "At least one field must be provided." },
   );
 
@@ -93,6 +95,9 @@ export async function PATCH(req: NextRequest, { params }: Params) {
             : parsed.data.spaceId,
         embedding,
         embeddingModel,
+        ...(parsed.data.mcpHidden !== undefined
+          ? { mcpHidden: parsed.data.mcpHidden }
+          : {}),
       })
       .where(eq(notes.id, id))
       .returning();
