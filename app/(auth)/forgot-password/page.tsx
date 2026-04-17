@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,40 +13,66 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { signIn } from "@/lib/auth-client";
+import { authClient } from "@/lib/auth-client";
 
-export default function LoginPage() {
-  const router = useRouter();
+export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [done, setDone] = useState(false);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    const { error: signInError } = await signIn.email({
+    const { error: fpError } = await authClient.requestPasswordReset({
       email,
-      password,
-      callbackURL: "/dashboard",
+      redirectTo: "/reset-password",
     });
     setLoading(false);
-    if (signInError) {
-      setError(signInError.message ?? "Login fehlgeschlagen.");
+    if (fpError) {
+      setError(fpError.message ?? "Konnte Reset-Link nicht senden.");
       return;
     }
-    router.push("/dashboard");
+    // Immer "Done" anzeigen, auch wenn die Email nicht existiert — verhindert
+    // User-Enumeration.
+    setDone(true);
+  }
+
+  if (done) {
+    return (
+      <Card className="backdrop-blur-sm">
+        <CardHeader>
+          <CardTitle className="font-display text-3xl leading-tight">
+            Check deine Mails
+          </CardTitle>
+          <CardDescription>
+            Falls ein Account mit <span className="font-medium text-foreground">{email}</span>{" "}
+            existiert, haben wir einen Reset-Link geschickt. Der Link ist 1 Stunde
+            gültig.
+          </CardDescription>
+        </CardHeader>
+        <CardFooter>
+          <Link
+            href="/login"
+            className="text-sm text-muted-foreground underline-offset-4 hover:underline"
+          >
+            ← Zurück zur Anmeldung
+          </Link>
+        </CardFooter>
+      </Card>
+    );
   }
 
   return (
     <Card className="backdrop-blur-sm">
       <CardHeader>
         <CardTitle className="font-display text-3xl leading-tight">
-          Anmelden
+          Passwort vergessen
         </CardTitle>
         <CardDescription>
-          Melde dich mit deiner Email und deinem Passwort an.
+          Wir schicken dir einen Link, mit dem du ein neues Passwort setzen
+          kannst.
         </CardDescription>
       </CardHeader>
       <form onSubmit={onSubmit}>
@@ -63,26 +88,6 @@ export default function LoginPage() {
               onChange={(e) => setEmail(e.target.value)}
             />
           </div>
-          <div className="flex flex-col gap-2">
-            <div className="flex items-baseline justify-between">
-              <Label htmlFor="password">Passwort</Label>
-              <Link
-                href="/forgot-password"
-                className="text-xs text-muted-foreground underline-offset-4 hover:underline"
-              >
-                Vergessen?
-              </Link>
-            </div>
-            <Input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              required
-              minLength={8}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
           {error ? (
             <p className="text-sm text-destructive" role="alert">
               {error}
@@ -91,17 +96,14 @@ export default function LoginPage() {
         </CardContent>
         <CardFooter className="flex flex-col gap-3">
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Anmelden…" : "Anmelden"}
+            {loading ? "Sende…" : "Reset-Link schicken"}
           </Button>
-          <p className="text-sm text-muted-foreground">
-            Noch kein Account?{" "}
-            <Link
-              href="/register"
-              className="font-medium text-foreground underline-offset-4 hover:underline"
-            >
-              Registrieren
-            </Link>
-          </p>
+          <Link
+            href="/login"
+            className="text-sm text-muted-foreground underline-offset-4 hover:underline"
+          >
+            ← Zurück zur Anmeldung
+          </Link>
         </CardFooter>
       </form>
     </Card>

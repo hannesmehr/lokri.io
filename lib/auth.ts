@@ -1,18 +1,28 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { mcp } from "better-auth/plugins";
+import { mcp, twoFactor } from "better-auth/plugins";
+import { and, eq } from "drizzle-orm";
 import { db } from "./db";
 import {
   accounts,
+  files as filesTable,
   oauthAccessToken,
   oauthApplication,
   oauthConsent,
   ownerAccountMembers,
   ownerAccounts,
   sessions,
+  twoFactor as twoFactorTable,
   users,
   verifications,
 } from "./db/schema";
+import { sendMail } from "./mailer";
+import {
+  deleteAccountTemplate,
+  resetPasswordTemplate,
+  verifyEmailTemplate,
+} from "./mailer/templates";
+import { getStorageProvider } from "./storage";
 
 const FREE_PLAN_ID = "free";
 
@@ -78,6 +88,8 @@ export const auth = betterAuth({
       oauthApplication,
       oauthAccessToken,
       oauthConsent,
+      // Added by `twoFactor` plugin.
+      twoFactor: twoFactorTable,
     },
   }),
 
@@ -98,24 +110,86 @@ export const auth = betterAuth({
     mcp({
       loginPage: "/login",
     }),
+    // TOTP-based 2FA. Backup-codes + optional OTP channels available; we
+    // ship with TOTP only for now (authenticator apps / 1Password etc.).
+    twoFactor({
+      issuer: "lokri.io",
+    }),
   ],
 
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: true,
+    // Password-reset: uses Resend via lib/mailer.
+    sendResetPassword: async ({ user, url }) => {
+      const tpl = resetPasswordTemplate({ name: user.name ?? null, url });
+      await sendMail({ to: user.email, ...tpl });
+    },
+    resetPasswordTokenExpiresIn: 60 * 60, // 1 hour
   },
 
   emailVerification: {
     sendOnSignUp: true,
     autoSignInAfterVerification: true,
     sendVerificationEmail: async ({ user, url }) => {
-      // TODO: Swap for a real mailer in V1.1. Keep the log loud so devs notice.
-      console.log(
-        `\n=== [MAILER STUB] Email verification ===\n` +
-          `To:     ${user.email}\n` +
-          `Verify: ${url}\n` +
-          `========================================\n`,
-      );
+      const tpl = verifyEmailTemplate({ name: user.name ?? null, url });
+      await sendMail({ to: user.email, ...tpl });
+    },
+  },
+
+  user: {
+    // GDPR Artikel 17 — self-service account deletion. Verification email
+    // + best-effort cleanup of owner-scoped resources (handled via
+    // beforeDelete below).
+    deleteUser: {
+      enabled: true,
+      sendDeleteAccountVerification: async ({ user, url }) => {
+        const tpl = deleteAccountTemplate({ name: user.name ?? null, url });
+        await sendMail({ to: user.email, ...tpl });
+      },
+      beforeDelete: async (user) => {
+        // Find all personal owner_accounts where this user is the `owner`
+        // member. Cleanup cascades from owner_accounts → spaces/notes/files
+        // via FK `ON DELETE CASCADE`, but Vercel Blob objects are outside
+        // the DB so we wipe them explicitly first.
+        const memberships = await db
+          .select({ accountId: ownerAccountMembers.ownerAccountId })
+          .from(ownerAccountMembers)
+          .where(
+            and(
+              eq(ownerAccountMembers.userId, user.id),
+              eq(ownerAccountMembers.role, "owner"),
+            ),
+          );
+
+        for (const m of memberships) {
+          const fileRows = await db
+            .select({ id: filesTable.id, storageKey: filesTable.storageKey })
+            .from(filesTable)
+            .where(eq(filesTable.ownerAccountId, m.accountId));
+          if (fileRows.length === 0) continue;
+          const provider = getStorageProvider();
+          await Promise.all(
+            fileRows.map((f) =>
+              provider.delete(f.storageKey).catch((err) => {
+                console.error(
+                  `[auth.deleteUser] Blob delete failed for ${f.id}:`,
+                  err,
+                );
+              }),
+            ),
+          );
+        }
+
+        // Delete owner_accounts this user owns alone. Cascades to spaces,
+        // notes, files, api_tokens, usage_quota, owner_account_members.
+        // (Team scenarios in V2 will need role re-assignment first; MVP
+        // is strictly personal so every owner_account has exactly one
+        // owner member.)
+        for (const m of memberships) {
+          await db.delete(ownerAccounts).where(eq(ownerAccounts.id, m.accountId));
+        }
+      },
     },
   },
 

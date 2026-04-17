@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Geist_Mono, Instrument_Serif, Inter } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
@@ -42,6 +44,9 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         {children}
         <Toaster />
+        {/* Auto no-ops in dev; ships only from the Vercel edge in prod. */}
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

@@ -40,6 +40,9 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   emailVerified: boolean("email_verified").notNull().default(false),
   image: text("image"),
+  // Added by the better-auth `twoFactor` plugin. Defaults to false;
+  // flipped to true after the user finishes TOTP enrollment.
+  twoFactorEnabled: boolean("two_factor_enabled").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -103,6 +106,25 @@ export const accounts = pgTable(
       .$onUpdateFn(() => new Date()),
   },
   (t) => [index("accounts_user_id_idx").on(t.userId)],
+);
+
+// Added by the better-auth `twoFactor` plugin. TOTP secret + backup codes are
+// stored here; the returned:false flag on the plugin fields means the adapter
+// never serialises them into API responses.
+export const twoFactor = pgTable(
+  "two_factor",
+  {
+    id: text("id").primaryKey(),
+    secret: text("secret").notNull(),
+    backupCodes: text("backup_codes").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+  },
+  (t) => [
+    index("two_factor_user_id_idx").on(t.userId),
+    index("two_factor_secret_idx").on(t.secret),
+  ],
 );
 
 export const verifications = pgTable(

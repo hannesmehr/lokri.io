@@ -22,6 +22,14 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
           lokri.io
         </Link>
         {children}
+        <nav className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
+          <Link href="/impressum" className="hover:text-foreground">
+            Impressum
+          </Link>
+          <Link href="/datenschutz" className="hover:text-foreground">
+            Datenschutz
+          </Link>
+        </nav>
       </div>
     </div>
   );

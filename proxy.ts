@@ -7,7 +7,8 @@ import {
 } from "@/lib/rate-limit";
 
 /**
- * Edge middleware — the first line of defense.
+ * Edge proxy (née "middleware" in Next 15 — renamed in Next 16). First line
+ * of defense before any route handler runs.
  *
  * Layered strategy:
  *   1. Every API request hits `globalIp` with a generous per-IP budget
@@ -32,7 +33,7 @@ const SENSITIVE: Array<{
   { pattern: /^\/api\/auth\/mcp\/(authorize|token)(\/|$)/, limiter: "oauthHot" },
 ];
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const ip = ipFromHeaders(req.headers);
 

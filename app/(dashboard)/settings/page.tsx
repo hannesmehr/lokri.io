@@ -1,5 +1,5 @@
 import { and, desc, eq, isNull } from "drizzle-orm";
-import { Key, Plug } from "lucide-react";
+import { Key, Plug, Shield } from "lucide-react";
 import { headers } from "next/headers";
 import {
   Card,
@@ -11,9 +11,11 @@ import {
 import { requireSessionWithAccount } from "@/lib/api/session";
 import { db } from "@/lib/db";
 import { apiTokens } from "@/lib/db/schema";
+import { DangerZone } from "./_danger-zone";
 import { McpInstructions } from "./_mcp-instructions";
 import { TokenList } from "./_token-list";
 import { TokenCreateDialog } from "./_token-create-dialog";
+import { TwoFactorSection } from "./_two-factor-section";
 
 /**
  * Resolve the current origin server-side from forwarded headers. Pre-filling
@@ -28,7 +30,7 @@ async function resolveOrigin(): Promise<string> {
 }
 
 export default async function SettingsPage() {
-  const { ownerAccountId } = await requireSessionWithAccount();
+  const { session, ownerAccountId } = await requireSessionWithAccount();
   const origin = await resolveOrigin();
   const tokens = await db
     .select({
@@ -55,6 +57,29 @@ export default async function SettingsPage() {
           Verwalte deine MCP-Tokens und die Anbindung an KI-Clients.
         </p>
       </div>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br from-amber-500/15 to-rose-500/15 text-amber-700 dark:text-amber-400">
+              <Shield className="h-4 w-4" />
+            </div>
+            <div>
+              <CardTitle>Sicherheit</CardTitle>
+              <CardDescription>
+                Zusätzlicher Schutz für deinen Account.
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <TwoFactorSection
+            enabled={Boolean(
+              (session.user as { twoFactorEnabled?: boolean }).twoFactorEnabled,
+            )}
+          />
+        </CardContent>
+      </Card>
 
       <Card className="overflow-hidden">
         <div className="absolute right-0 top-0 h-24 w-24 rounded-full bg-gradient-to-br from-indigo-500/15 to-fuchsia-500/10 blur-2xl" />
@@ -98,6 +123,8 @@ export default async function SettingsPage() {
           <McpInstructions origin={origin} />
         </CardContent>
       </Card>
+
+      <DangerZone userEmail={session.user.email} />
     </div>
   );
 }

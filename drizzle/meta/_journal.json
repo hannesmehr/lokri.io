@@ -15,6 +15,13 @@
       "when": 1776438438702,
       "tag": "0001_awesome_gladiator",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1776441012444,
+      "tag": "0002_tidy_crystal",
+      "breakpoints": true
     }
   ]
 }
