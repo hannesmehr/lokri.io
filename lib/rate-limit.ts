@@ -39,22 +39,28 @@ interface LimiterConfig {
   analytics?: boolean;
 }
 
-const ENABLED = Boolean(
-  process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN,
-);
+// Accept both naming conventions:
+//   - UPSTASH_REDIS_REST_URL / _TOKEN  (upstream Upstash default)
+//   - KV_REST_API_URL / _TOKEN         (Vercel Marketplace integration)
+// Vercel's Upstash integration only sets the latter, so `vercel env pull`
+// lands them with the KV_ prefix.
+const REDIS_URL =
+  process.env.UPSTASH_REDIS_REST_URL ?? process.env.KV_REST_API_URL;
+const REDIS_TOKEN =
+  process.env.UPSTASH_REDIS_REST_TOKEN ?? process.env.KV_REST_API_TOKEN;
+
+const ENABLED = Boolean(REDIS_URL && REDIS_TOKEN);
 
 if (!ENABLED && process.env.NODE_ENV === "production") {
   console.warn(
-    "[rate-limit] UPSTASH_REDIS_REST_* env not set in production — " +
-      "requests are NOT being rate-limited. Configure Upstash.",
+    "[rate-limit] No Upstash env vars set in production — requests are NOT " +
+      "being rate-limited. Set UPSTASH_REDIS_REST_URL/TOKEN or " +
+      "KV_REST_API_URL/TOKEN (Vercel integration).",
   );
 }
 
 const redis = ENABLED
-  ? new Redis({
-      url: process.env.UPSTASH_REDIS_REST_URL!,
-      token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-    })
+  ? new Redis({ url: REDIS_URL!, token: REDIS_TOKEN! })
   : null;
 
 function makeLimiter(cfg: LimiterConfig): Ratelimit | null {
