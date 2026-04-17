@@ -1,0 +1,1 @@
+ALTER TABLE "oauth_application" ALTER COLUMN "name" DROP NOT NULL;

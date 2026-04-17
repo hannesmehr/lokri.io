@@ -155,7 +155,10 @@ export const oauthApplication = pgTable(
   "oauth_application",
   {
     id: text("id").primaryKey(),
-    name: text("name").notNull(),
+    // Better-Auth's mcp plugin passes `DEFAULT` for `name` when a DCR client
+    // omits `client_name` (RFC 7591 allows that). We keep this nullable so
+    // those requests succeed; the UI falls back to `client_id` for display.
+    name: text("name"),
     icon: text("icon"),
     metadata: text("metadata"),
     clientId: text("client_id").notNull().unique(),
