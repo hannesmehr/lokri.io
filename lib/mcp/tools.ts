@@ -85,7 +85,12 @@ export function registerTools(server: McpServer): void {
 
       const noteSim = sql<number>`1 - (${cosineDistance(notes.embedding, embedding)})`;
       const noteRows = await db
-        .select({ id: notes.id, title: notes.title, similarity: noteSim })
+        .select({
+          id: notes.id,
+          title: notes.title,
+          contentText: notes.contentText,
+          similarity: noteSim,
+        })
         .from(notes)
         .where(eq(notes.ownerAccountId, ownerAccountId))
         .orderBy(desc(noteSim))
@@ -96,6 +101,7 @@ export function registerTools(server: McpServer): void {
         .select({
           id: fileChunks.id,
           filename: files.filename,
+          contentText: fileChunks.contentText,
           similarity: chunkSim,
         })
         .from(fileChunks)
@@ -104,23 +110,33 @@ export function registerTools(server: McpServer): void {
         .orderBy(desc(chunkSim))
         .limit(n);
 
+      const snippet = (t: string) => {
+        const s = t.trim().replace(/\s+/g, " ");
+        return s.length <= 300 ? s : `${s.slice(0, 300)}…`;
+      };
+
       const merged = [
         ...noteRows.map((r) => ({
           id: r.id,
           type: "note" as const,
           title: r.title,
+          snippet: snippet(r.contentText),
           similarity: Number(r.similarity),
         })),
         ...chunkRows.map((r) => ({
           id: r.id,
           type: "file_chunk" as const,
           title: r.filename,
+          snippet: snippet(r.contentText),
           similarity: Number(r.similarity),
         })),
       ]
         .sort((a, b) => b.similarity - a.similarity)
         .slice(0, n);
 
+      // `ids` is returned for ChatGPT-style consumers; `results` now carries
+      // snippets so agents don't need a second round-trip via `fetch` for a
+      // quick decision.
       return ok({ ids: merged.map((m) => m.id), results: merged });
     },
   );
@@ -413,6 +429,45 @@ export function registerTools(server: McpServer): void {
       if (!row) return toolError(`Note not found: ${id}`);
       await applyQuotaDelta(ownerAccountId, { notes: -1 });
       return ok({ deleted: row.id });
+    },
+  );
+
+  // ----- get_file_content --------------------------------------------------
+  server.registerTool(
+    "get_file_content",
+    {
+      title: "Get file content",
+      description:
+        "Download the raw bytes of a file by ID. Returns base64 + mime type. " +
+        "Use this when `search`/`fetch` on chunks is not enough (e.g. image, PDF).",
+      inputSchema: {
+        id: z.string().uuid(),
+      },
+    },
+    async ({ id }, extra) => {
+      const ownerAccountId = requireOwnerAccountId(extra as ToolExtra);
+      const [file] = await db
+        .select({
+          id: files.id,
+          filename: files.filename,
+          mimeType: files.mimeType,
+          sizeBytes: files.sizeBytes,
+          storageKey: files.storageKey,
+        })
+        .from(files)
+        .where(and(eq(files.id, id), eq(files.ownerAccountId, ownerAccountId)))
+        .limit(1);
+      if (!file) return toolError(`File not found: ${id}`);
+
+      const provider = getStorageProvider();
+      const { content } = await provider.get(file.storageKey);
+      return ok({
+        id: file.id,
+        filename: file.filename,
+        mimeType: file.mimeType,
+        sizeBytes: file.sizeBytes,
+        content_base64: Buffer.from(content).toString("base64"),
+      });
     },
   );
 

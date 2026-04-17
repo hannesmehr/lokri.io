@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import { FileText, Key, Plus, Sparkles, StickyNote, Upload } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -11,14 +11,21 @@ import {
 } from "@/components/ui/card";
 import { requireSessionWithAccount } from "@/lib/api/session";
 import { db } from "@/lib/db";
-import { files as filesTable, notes as notesTable } from "@/lib/db/schema";
+import {
+  apiTokens,
+  files as filesTable,
+  notes as notesTable,
+  spaces as spacesTable,
+} from "@/lib/db/schema";
 import { formatBytes, formatRelative } from "@/lib/format";
 import { getQuota } from "@/lib/quota";
+import { OnboardingCard } from "./_onboarding-card";
 import { QuotaRing } from "./_quota-ring";
 
 export default async function DashboardPage() {
   const { session, ownerAccountId } = await requireSessionWithAccount();
-  const [quota, recentNotes, recentFiles] = await Promise.all([
+  const [quota, recentNotes, recentFiles, spaceCount, tokenCount] =
+    await Promise.all([
     getQuota(ownerAccountId),
     db
       .select({
@@ -42,6 +49,15 @@ export default async function DashboardPage() {
       .where(eq(filesTable.ownerAccountId, ownerAccountId))
       .orderBy(desc(filesTable.createdAt))
       .limit(5),
+    db
+      .$count(spacesTable, eq(spacesTable.ownerAccountId, ownerAccountId)),
+    db.$count(
+      apiTokens,
+      and(
+        eq(apiTokens.ownerAccountId, ownerAccountId),
+        isNull(apiTokens.revokedAt),
+      ),
+    ),
   ]);
 
   const firstName = session.user.name?.split(" ")[0] ?? "Hallo";
@@ -84,6 +100,12 @@ export default async function DashboardPage() {
           </Badge>
         </div>
       </div>
+
+      <OnboardingCard
+        hasSpace={spaceCount > 0}
+        hasNote={quota.notesCount > 0}
+        hasToken={tokenCount > 0}
+      />
 
       {/* Quick actions */}
       <div className="grid gap-3 sm:grid-cols-3">

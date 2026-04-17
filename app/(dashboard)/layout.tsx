@@ -4,15 +4,16 @@ import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { auth } from "@/lib/auth";
 import { DashboardFooter } from "./_footer";
-import { LogoutButton } from "./_logout-button";
 import { NavLink } from "./_nav-link";
+import { SearchPalette, SearchTrigger } from "./_search-palette";
+import { UserMenu } from "./_user-menu";
 
 const NAV = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/spaces", label: "Spaces" },
   { href: "/notes", label: "Notes" },
   { href: "/files", label: "Files" },
-  { href: "/settings", label: "Settings" },
+  { href: "/mcp", label: "MCP" },
 ];
 
 export default async function DashboardLayout({
@@ -46,16 +47,17 @@ export default async function DashboardLayout({
             </nav>
           </div>
           <div className="flex items-center gap-3">
-            <span className="hidden text-sm text-muted-foreground sm:inline">
-              {session.user.email}
-            </span>
-            <LogoutButton />
+            <SearchTrigger />
+            <UserMenu
+              user={{ name: session.user.name, email: session.user.email }}
+            />
           </div>
         </div>
       </header>
       <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-8">
         {children}
       </main>
+      <SearchPalette />
       <DashboardFooter />
     </div>
   );

@@ -6,7 +6,9 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { Markdown } from "./_markdown";
 
 interface Props {
   noteId?: string;
@@ -87,14 +89,40 @@ export function NoteEditorForm({
         </select>
       </div>
       <div className="space-y-2">
-        <Label htmlFor="content">Inhalt</Label>
-        <Textarea
-          id="content"
-          required
-          rows={14}
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-        />
+        <div className="flex items-baseline justify-between">
+          <Label htmlFor="content">Inhalt (Markdown)</Label>
+          <span className="text-xs text-muted-foreground">
+            Unterstützt: <code>**bold**</code> <code>_italic_</code>{" "}
+            <code># heading</code> <code>- list</code> <code>[link](url)</code>
+          </span>
+        </div>
+        <Tabs defaultValue="edit" className="gap-2">
+          <TabsList>
+            <TabsTrigger value="edit">Bearbeiten</TabsTrigger>
+            <TabsTrigger value="preview">Vorschau</TabsTrigger>
+          </TabsList>
+          <TabsContent value="edit">
+            <Textarea
+              id="content"
+              required
+              rows={16}
+              className="font-mono text-[13px]"
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+            />
+          </TabsContent>
+          <TabsContent value="preview">
+            <div className="min-h-[16rem] rounded-md border bg-background p-4">
+              {content.trim() ? (
+                <Markdown>{content}</Markdown>
+              ) : (
+                <p className="text-sm italic text-muted-foreground">
+                  Noch nichts zu rendern.
+                </p>
+              )}
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
       <div className="flex items-center justify-end gap-2">
         <Button
