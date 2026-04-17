@@ -94,26 +94,42 @@ pnpm db:seed          # Free-Plan seeden
 ### Claude Desktop
 
 lokri implementiert **OAuth 2.1** inkl. Dynamic Client Registration (RFC 7591)
-und PKCE. Claude Desktop kann direkt nativ verbinden — kein `mcp-remote`,
-kein manueller Token.
+und PKCE. Claude Desktop's Config-Schema akzeptiert in der aktuellen
+Release-Version (Q2 2026) allerdings **keine HTTP-Einträge direkt** — du
+brauchst weiterhin die stdio-Bridge
+[`mcp-remote`](https://www.npmjs.com/package/mcp-remote). Der Unterschied
+zu vorher: **kein manueller Token mehr**, `mcp-remote` erledigt den
+OAuth-Flow automatisch.
 
-In `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
+```bash
+npm install -g mcp-remote
+```
+
+`~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
 bzw. `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
 
 ```json
 {
   "mcpServers": {
     "lokri": {
-      "type": "http",
-      "url": "https://your-lokri-domain/api/mcp"
+      "command": "/absolute/path/to/node",
+      "args": [
+        "/absolute/path/to/mcp-remote",
+        "https://your-lokri-domain/api/mcp"
+      ]
     }
   }
 }
 ```
 
-Beim ersten Tool-Call triggert Claude automatisch den OAuth-Flow: Browser
-öffnet das lokri-Login, User consented, Claude tauscht den Code gegen einen
-Access-Token. Logs: `~/Library/Logs/Claude/mcp.log`.
+Beim ersten Start triggert `mcp-remote` den OAuth-Flow: Browser öffnet sich,
+User loggt sich bei lokri ein, gibt Consent, Token wird gecacht in
+`~/.mcp-auth/`. Ab dann läuft alles silent. Logs:
+`~/Library/Logs/Claude/mcp-server-lokri.log`.
+
+**Achtung nvm-Nutzer:** Claude Desktop erbt den Login-Shell-PATH, aber nvm
+sortiert Versionen nicht chronologisch. Nutze absolute Pfade zu Node 22+
+und zum `mcp-remote`-Binary (nicht `npx`).
 
 **Discovery unter der Haube:**
 

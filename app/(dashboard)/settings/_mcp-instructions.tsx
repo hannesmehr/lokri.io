@@ -52,14 +52,15 @@ export function McpInstructions() {
       : "https://your-domain";
   const mcpUrl = `${origin}/api/mcp`;
 
-  // Native OAuth snippet — Claude Desktop triggers the OAuth 2.1 flow
-  // automatically on first use. No token to paste, no proxy to install.
+  // Claude Desktop's config-file schema still requires a stdio subprocess
+  // even when the remote supports OAuth. The `mcp-remote` bridge handles
+  // OAuth discovery + PKCE for us — no `--header` or token to paste.
   const claudeDesktopSnippet = JSON.stringify(
     {
       mcpServers: {
         lokri: {
-          type: "http",
-          url: mcpUrl,
+          command: "/absolute/path/to/node",
+          args: ["/absolute/path/to/mcp-remote", mcpUrl],
         },
       },
     },
@@ -93,22 +94,22 @@ Tools: search, fetch, list_spaces, list_notes, list_files,
         <strong className="font-medium">OAuth 2.1 aktiv.</strong> Clients
         discovern lokri über <code>/.well-known/oauth-protected-resource</code>,
         registrieren sich per DCR (RFC 7591) und tauschen PKCE-Codes gegen
-        Access-Tokens. Du musst in modernen Clients <em>keinen</em> Token mehr
-        manuell kopieren — die Tokens oben sind für Legacy-Clients gedacht.
+        Access-Tokens. Du musst keinen Token manuell kopieren — die Tokens
+        oben sind für Skripte/CLI (Legacy-Pfad).
       </div>
 
       <section className="space-y-3">
         <div className="flex items-baseline gap-2">
           <h3 className="text-sm font-semibold">Claude Desktop</h3>
-          <span className="text-xs text-muted-foreground">nativ (HTTP + OAuth)</span>
+          <span className="text-xs text-muted-foreground">
+            via <code>mcp-remote</code>-Bridge (OAuth)
+          </span>
         </div>
         <p className="text-xs text-muted-foreground">
-          In{" "}
-          <code>~/Library/Application Support/Claude/claude_desktop_config.json</code>{" "}
-          (macOS) bzw.{" "}
-          <code>%APPDATA%\Claude\claude_desktop_config.json</code> (Windows).
-          Nach dem Restart triggert Claude den OAuth-Flow: Browser-Login via
-          lokri, Consent, fertig.
+          Einmalig <code>npm install -g mcp-remote</code>. Die config-file
+          noch erlaubt Claude Desktop nur stdio-Subprozesse — <code>mcp-remote</code>{" "}
+          bridged zu HTTP und macht die OAuth-Discovery selbst. Kein{" "}
+          <code>--header</code>, kein Token nötig.
         </p>
         <CopyBlock
           label="claude_desktop_config.json"
