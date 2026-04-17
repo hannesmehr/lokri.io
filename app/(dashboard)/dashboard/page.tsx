@@ -49,21 +49,31 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-8">
       {/* Hero */}
-      <div className="relative overflow-hidden rounded-2xl border bg-gradient-to-br from-indigo-500/10 via-fuchsia-500/5 to-amber-500/10 p-8">
-        <div className="absolute -right-12 -top-12 h-40 w-40 rounded-full bg-fuchsia-500/10 blur-3xl" />
-        <div className="absolute -bottom-10 -left-10 h-40 w-40 rounded-full bg-indigo-500/10 blur-3xl" />
-        <div className="relative flex flex-wrap items-start justify-between gap-4">
-          <div>
+      <div
+        className="relative overflow-hidden rounded-2xl border bg-gradient-to-br from-indigo-500/8 via-background to-fuchsia-500/10 p-8 sm:p-10"
+        style={{
+          backgroundImage:
+            "radial-gradient(ellipse 600px 200px at 20% 0%, color-mix(in oklch, var(--chart-1) 15%, transparent), transparent 70%)," +
+            "radial-gradient(ellipse 500px 300px at 100% 100%, color-mix(in oklch, var(--chart-2) 18%, transparent), transparent 60%)," +
+            "radial-gradient(circle at 1px 1px, color-mix(in oklch, var(--foreground) 8%, transparent) 1px, transparent 0)",
+          backgroundSize: "auto, auto, 20px 20px",
+        }}
+      >
+        <div className="relative flex flex-wrap items-start justify-between gap-6">
+          <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
               <Sparkles className="h-3.5 w-3.5" />
               Dashboard
             </div>
-            <h1 className="mt-1 text-3xl font-semibold tracking-tight">
-              Willkommen, {firstName}.
+            <h1 className="font-display mt-2 text-4xl leading-[1.05] sm:text-5xl">
+              Willkommen,{" "}
+              <span className="italic text-brand">{firstName}</span>.
             </h1>
-            <p className="mt-1 max-w-xl text-sm text-muted-foreground">
+            <p className="mt-3 max-w-xl text-sm text-muted-foreground sm:text-base">
               Dein persönlicher MCP-Wissens-Pool — erreichbar aus allen
-              KI-Clients, die du über <em>Settings → MCP-Tokens</em> verbindest.
+              KI-Clients, die du über{" "}
+              <em className="font-display italic">Settings → MCP-Tokens</em>{" "}
+              verbindest.
             </p>
           </div>
           <Badge

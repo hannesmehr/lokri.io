@@ -54,8 +54,8 @@ export default async function FilesPage({
   return (
     <div className="space-y-6">
       <div>
-        <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-semibold tracking-tight">Files</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="font-display text-4xl leading-tight">Files</h1>
           {activeSpace ? (
             <Badge variant="secondary" className="gap-1">
               {activeSpace.name}
@@ -69,7 +69,7 @@ export default async function FilesPage({
             </Badge>
           ) : null}
         </div>
-        <p className="text-sm text-muted-foreground">
+        <p className="mt-1 text-sm text-muted-foreground">
           Private Blob-Storage. 10 MB pro File. Textinhalt (text/*, json) wird
           gechunked und embedded.
         </p>

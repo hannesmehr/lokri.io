@@ -52,8 +52,8 @@ export default async function NotesPage({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-semibold tracking-tight">Notes</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="font-display text-4xl leading-tight">Notes</h1>
             {activeSpace ? (
               <Badge variant="secondary" className="gap-1">
                 {activeSpace.name}
@@ -67,7 +67,7 @@ export default async function NotesPage({
               </Badge>
             ) : null}
           </div>
-          <p className="text-sm text-muted-foreground">
+          <p className="mt-1 text-sm text-muted-foreground">
             {activeSpace
               ? `Notes aus dem Space "${activeSpace.name}".`
               : "Alle Notes deines Accounts."}

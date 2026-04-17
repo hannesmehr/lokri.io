@@ -42,9 +42,11 @@ export default function RegisterPage() {
 
   if (done) {
     return (
-      <Card>
+      <Card className="backdrop-blur-sm">
         <CardHeader>
-          <CardTitle>Fast fertig</CardTitle>
+          <CardTitle className="font-display text-3xl leading-tight">
+            Fast fertig
+          </CardTitle>
           <CardDescription>
             Wir haben dir eine Verifizierungs-Email an{" "}
             <span className="font-medium text-foreground">{email}</span>{" "}
@@ -61,9 +63,11 @@ export default function RegisterPage() {
   }
 
   return (
-    <Card>
+    <Card className="backdrop-blur-sm">
       <CardHeader>
-        <CardTitle>Registrieren</CardTitle>
+        <CardTitle className="font-display text-3xl leading-tight">
+          Registrieren
+        </CardTitle>
         <CardDescription>
           Lege einen neuen lokri.io-Account an.
         </CardDescription>

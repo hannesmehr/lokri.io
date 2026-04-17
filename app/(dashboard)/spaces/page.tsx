@@ -35,10 +35,10 @@ export default async function SpacesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Spaces</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="font-display text-4xl leading-tight">Spaces</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Gruppiere Notes und Files zu Themen.
           </p>
         </div>

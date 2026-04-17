@@ -41,9 +41,11 @@ export default function LoginPage() {
   }
 
   return (
-    <Card>
+    <Card className="backdrop-blur-sm">
       <CardHeader>
-        <CardTitle>Anmelden</CardTitle>
+        <CardTitle className="font-display text-3xl leading-tight">
+          Anmelden
+        </CardTitle>
         <CardDescription>
           Melde dich mit deiner Email und deinem Passwort an.
         </CardDescription>

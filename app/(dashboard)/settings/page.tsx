@@ -36,8 +36,8 @@ export default async function SettingsPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
-        <p className="text-sm text-muted-foreground">
+        <h1 className="font-display text-4xl leading-tight">Settings</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
           Verwalte deine MCP-Tokens und die Anbindung an KI-Clients.
         </p>
       </div>

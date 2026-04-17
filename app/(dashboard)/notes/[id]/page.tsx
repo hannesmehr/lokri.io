@@ -30,9 +30,11 @@ export default async function NoteEditPage({
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold">{note.title}</h1>
-          <p className="text-sm text-muted-foreground">
+        <div className="min-w-0">
+          <h1 className="font-display line-clamp-2 text-3xl leading-tight sm:text-4xl">
+            {note.title}
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Zuletzt aktualisiert:{" "}
             {new Date(note.updatedAt).toLocaleString("de-DE")}
           </p>

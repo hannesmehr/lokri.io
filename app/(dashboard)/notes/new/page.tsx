@@ -20,7 +20,7 @@ export default async function NewNotePage({
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Neue Note</h1>
+      <h1 className="font-display text-4xl leading-tight">Neue Note</h1>
       <NoteEditorForm
         initialSpaceId={spaceId ?? null}
         spaces={spacesList}
