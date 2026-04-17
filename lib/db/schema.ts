@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   bigint,
   boolean,
@@ -409,6 +410,16 @@ export const spaces = pgTable(
       () => storageProviders.id,
       { onDelete: "set null" },
     ),
+    /**
+     * Relative keys (to the provider's `pathPrefix`) that the user has
+     * explicitly hidden from this space's external browser. Small array
+     * kept inline on the row — no separate table until we need richer
+     * metadata per override.
+     */
+    hiddenExternalKeys: text("hidden_external_keys")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

@@ -1,0 +1,1 @@
+ALTER TABLE "spaces" ADD COLUMN "hidden_external_keys" text[] DEFAULT '{}'::text[] NOT NULL;

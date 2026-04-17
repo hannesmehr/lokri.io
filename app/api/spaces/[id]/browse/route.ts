@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { NextResponse, type NextRequest } from "next/server";
 import {
   apiError,
@@ -8,7 +8,7 @@ import {
 } from "@/lib/api/errors";
 import { ApiAuthError, requireSessionWithAccount } from "@/lib/api/session";
 import { db } from "@/lib/db";
-import { spaces, storageProviders } from "@/lib/db/schema";
+import { files, spaces, storageProviders } from "@/lib/db/schema";
 import { decryptJson } from "@/lib/storage/encryption";
 import { S3Provider, type S3Config } from "@/lib/storage/s3";
 
@@ -17,14 +17,13 @@ export const runtime = "nodejs";
 type Params = { params: Promise<{ id: string }> };
 
 /**
- * List the external storage contents of a space at a sub-directory.
+ * Directory-style listing of the space's external bucket + enrichment.
  *
- * Input: `?prefix=folder/sub/` (relative to the provider's root pathPrefix).
- * Output: `{ directories: [], objects: [] }` with relative keys.
+ * Each object carries:
+ *   - `imported`: a `files` row already references this key in lokri
+ *   - `hidden`:   user flagged this key via the space's hidden list
  *
- * Only spaces bound to an external provider return content; internal-storage
- * spaces return 204 with an informational message — keeps the client branch
- * uniform.
+ * The UI uses these to gate the 3-dot actions + dim hidden rows.
  */
 export async function GET(req: NextRequest, { params }: Params) {
   try {
@@ -35,6 +34,7 @@ export async function GET(req: NextRequest, { params }: Params) {
       .select({
         id: spaces.id,
         storageProviderId: spaces.storageProviderId,
+        hiddenExternalKeys: spaces.hiddenExternalKeys,
       })
       .from(spaces)
       .where(
@@ -78,11 +78,43 @@ export async function GET(req: NextRequest, { params }: Params) {
     const s3 = new S3Provider(config);
     const result = await s3.listObjects(prefixParam, continuation);
 
+    // Enrich: which relative keys already have a `files` row?
+    const hiddenSet = new Set(space.hiddenExternalKeys);
+    const relativeKeys = result.objects.map((o) => o.key);
+    const fullPrefix = (config.pathPrefix ?? "").replace(/^\/+|\/+$/g, "");
+    const fullKeys = relativeKeys.map((k) =>
+      fullPrefix ? `${fullPrefix}/${k}` : k,
+    );
+
+    let importedFullKeys = new Set<string>();
+    if (fullKeys.length > 0) {
+      const rows = await db
+        .select({ storageKey: files.storageKey })
+        .from(files)
+        .where(
+          and(
+            eq(files.ownerAccountId, ownerAccountId),
+            eq(files.storageProviderId, space.storageProviderId),
+            inArray(files.storageKey, fullKeys),
+          ),
+        );
+      importedFullKeys = new Set(rows.map((r) => r.storageKey));
+    }
+
+    const enriched = result.objects.map((o, i) => ({
+      ...o,
+      imported: importedFullKeys.has(fullKeys[i]),
+      hidden: hiddenSet.has(o.key),
+    }));
+
     return NextResponse.json({
       attached: true,
       providerName: providerRow.name,
       prefix: prefixParam,
-      ...result,
+      directories: result.directories,
+      objects: enriched,
+      isTruncated: result.isTruncated,
+      nextContinuationToken: result.nextContinuationToken,
     });
   } catch (err) {
     if (err instanceof ApiAuthError) return unauthorized(err.message);
