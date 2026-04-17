@@ -1,4 +1,4 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import { NextResponse, type NextRequest } from "next/server";
 import {
   apiError,
@@ -16,14 +16,37 @@ export const runtime = "nodejs";
 
 type Params = { params: Promise<{ id: string }> };
 
+type ObjectEntry = {
+  kind: "internal" | "external";
+  /** Relative path — for external = relative to provider root; for internal = filename. */
+  key: string;
+  /** files.id when this has a materialised row; null for non-imported external objects. */
+  fileId: string | null;
+  size: number;
+  lastModified: string | null;
+  mimeType: string | null;
+  imported: boolean;
+  hidden: boolean;
+};
+
+type DirEntry = { key: string; hidden: boolean };
+
+function isKeyHidden(key: string, hiddenList: string[]): boolean {
+  for (const h of hiddenList) {
+    if (h.endsWith("/")) {
+      if (key.startsWith(h)) return true;
+    } else if (h === key) return true;
+  }
+  return false;
+}
+
 /**
- * Directory-style listing of the space's external bucket + enrichment.
+ * Unified directory browser for a space.
  *
- * Each object carries:
- *   - `imported`: a `files` row already references this key in lokri
- *   - `hidden`:   user flagged this key via the space's hidden list
- *
- * The UI uses these to gate the 3-dot actions + dim hidden rows.
+ * If the space is attached to an external S3 provider, lists bucket contents
+ * (with `imported`/`hidden` enrichment). Otherwise lists internal Vercel-Blob
+ * files belonging to this space. Both modes share the same response shape so
+ * the UI component can render either transparently.
  */
 export async function GET(req: NextRequest, { params }: Params) {
   try {
@@ -37,21 +60,57 @@ export async function GET(req: NextRequest, { params }: Params) {
         hiddenExternalKeys: spaces.hiddenExternalKeys,
       })
       .from(spaces)
-      .where(
-        and(eq(spaces.id, id), eq(spaces.ownerAccountId, ownerAccountId)),
-      )
+      .where(and(eq(spaces.id, id), eq(spaces.ownerAccountId, ownerAccountId)))
       .limit(1);
     if (!space) return notFound();
 
+    const hiddenList = space.hiddenExternalKeys ?? [];
+
+    // ── Internal path (no external provider) ───────────────────────────
     if (!space.storageProviderId) {
+      const rows = await db
+        .select({
+          id: files.id,
+          filename: files.filename,
+          mimeType: files.mimeType,
+          sizeBytes: files.sizeBytes,
+          mcpHidden: files.mcpHidden,
+          createdAt: files.createdAt,
+        })
+        .from(files)
+        .where(
+          and(
+            eq(files.ownerAccountId, ownerAccountId),
+            eq(files.spaceId, id),
+            isNull(files.storageProviderId),
+          ),
+        )
+        .orderBy(desc(files.createdAt))
+        .limit(1000);
+
+      const objects: ObjectEntry[] = rows.map((r) => ({
+        kind: "internal",
+        key: r.filename,
+        fileId: r.id,
+        size: r.sizeBytes,
+        lastModified: r.createdAt.toISOString(),
+        mimeType: r.mimeType,
+        imported: true,
+        hidden: r.mcpHidden,
+      }));
+
       return NextResponse.json({
-        attached: false,
-        directories: [],
-        objects: [],
+        source: "internal",
+        providerName: "lokri-managed",
         prefix: "",
+        directories: [] as DirEntry[],
+        objects,
+        isTruncated: false,
+        nextContinuationToken: null,
       });
     }
 
+    // ── External path (S3) ─────────────────────────────────────────────
     const [providerRow] = await db
       .select({
         configEncrypted: storageProviders.configEncrypted,
@@ -78,18 +137,17 @@ export async function GET(req: NextRequest, { params }: Params) {
     const s3 = new S3Provider(config);
     const result = await s3.listObjects(prefixParam, continuation);
 
-    // Enrich: which relative keys already have a `files` row?
-    const hiddenSet = new Set(space.hiddenExternalKeys);
+    // Enrich objects with imported/hidden flags.
     const relativeKeys = result.objects.map((o) => o.key);
     const fullPrefix = (config.pathPrefix ?? "").replace(/^\/+|\/+$/g, "");
     const fullKeys = relativeKeys.map((k) =>
       fullPrefix ? `${fullPrefix}/${k}` : k,
     );
 
-    let importedFullKeys = new Set<string>();
+    const fileRowByKey = new Map<string, string>();
     if (fullKeys.length > 0) {
       const rows = await db
-        .select({ storageKey: files.storageKey })
+        .select({ id: files.id, storageKey: files.storageKey })
         .from(files)
         .where(
           and(
@@ -98,21 +156,31 @@ export async function GET(req: NextRequest, { params }: Params) {
             inArray(files.storageKey, fullKeys),
           ),
         );
-      importedFullKeys = new Set(rows.map((r) => r.storageKey));
+      for (const r of rows) fileRowByKey.set(r.storageKey, r.id);
     }
 
-    const enriched = result.objects.map((o, i) => ({
-      ...o,
-      imported: importedFullKeys.has(fullKeys[i]),
-      hidden: hiddenSet.has(o.key),
+    const objects: ObjectEntry[] = result.objects.map((o, i) => ({
+      kind: "external",
+      key: o.key,
+      fileId: fileRowByKey.get(fullKeys[i]) ?? null,
+      size: o.size,
+      lastModified: o.lastModified,
+      mimeType: null,
+      imported: fileRowByKey.has(fullKeys[i]),
+      hidden: isKeyHidden(o.key, hiddenList),
+    }));
+
+    const directories: DirEntry[] = result.directories.map((d) => ({
+      key: d,
+      hidden: isKeyHidden(d, hiddenList),
     }));
 
     return NextResponse.json({
-      attached: true,
+      source: "external",
       providerName: providerRow.name,
       prefix: prefixParam,
-      directories: result.directories,
-      objects: enriched,
+      directories,
+      objects,
       isTruncated: result.isTruncated,
       nextContinuationToken: result.nextContinuationToken,
     });

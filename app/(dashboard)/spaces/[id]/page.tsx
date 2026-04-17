@@ -123,44 +123,47 @@ export default async function SpaceDetailPage({ params }: Params) {
         </div>
       </div>
 
-      {/* External-bucket browser */}
-      {provider ? (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br from-emerald-500/15 to-teal-500/15 text-emerald-700 dark:text-emerald-400">
-                <Folder className="h-4 w-4" />
-              </div>
-              <div>
-                <CardTitle>Bucket-Inhalt</CardTitle>
-                <CardDescription>
-                  Live-Listing deines Buckets unter dem konfigurierten
-                  Path-Prefix. Dateien, die andere Tools bereits hochgeladen
-                  haben, tauchen hier automatisch auf.
-                </CardDescription>
-              </div>
+      {/* Unified browser — internal and external behave identically */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br from-emerald-500/15 to-teal-500/15 text-emerald-700 dark:text-emerald-400">
+              <Folder className="h-4 w-4" />
             </div>
-          </CardHeader>
-          <CardContent>
-            <BucketBrowser spaceId={space.id} providerName={provider.name} />
-          </CardContent>
-        </Card>
-      ) : (
-        <Card className="border-dashed">
-          <CardContent className="py-8 text-center text-sm text-muted-foreground">
-            Diesem Space ist kein externer Storage-Provider zugewiesen. Spaces
-            ohne Provider nutzen lokris internen Blob-Storage — das Datei-Listing
-            findest du unter{" "}
-            <Link
-              href={`/files?spaceId=${space.id}`}
-              className="underline underline-offset-4"
-            >
-              Files
-            </Link>
-            .
-          </CardContent>
-        </Card>
-      )}
+            <div>
+              <CardTitle>
+                {provider ? "Bucket-Inhalt" : "Dateien"}
+              </CardTitle>
+              <CardDescription>
+                {provider ? (
+                  <>
+                    Live-Listing deines Buckets unter dem konfigurierten
+                    Path-Prefix. Dateien, die andere Tools bereits hochgeladen
+                    haben, tauchen hier automatisch auf.
+                  </>
+                ) : (
+                  <>
+                    Alle Dateien im Space. Uploads macht du weiterhin auf der
+                    <Link
+                      href={`/files?spaceId=${space.id}`}
+                      className="ml-1 underline underline-offset-4"
+                    >
+                      Files-Seite
+                    </Link>
+                    .
+                  </>
+                )}
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <BucketBrowser
+            spaceId={space.id}
+            defaultProviderName={provider?.name ?? "lokri-managed"}
+          />
+        </CardContent>
+      </Card>
     </div>
   );
 }

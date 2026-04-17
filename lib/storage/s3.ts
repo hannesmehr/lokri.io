@@ -253,6 +253,68 @@ export class S3Provider implements StorageProvider {
   }
 
   /**
+   * Recursive (flat) listing of all objects under a relative prefix —
+   * crosses directory boundaries. Capped at `limit` to bound duration;
+   * returns whatever was collected + a flag if more exist.
+   */
+  async listRecursive(
+    relativePrefix: string,
+    limit = 500,
+  ): Promise<{
+    objects: Array<{
+      key: string;
+      size: number;
+      lastModified: string | null;
+    }>;
+    truncatedAt: boolean;
+  }> {
+    const cleanRel = relativePrefix.replace(/^\/+/, "");
+    const normalized =
+      cleanRel && !cleanRel.endsWith("/") ? `${cleanRel}/` : cleanRel;
+    const fullPrefix = this.prefix
+      ? `${this.prefix}/${normalized}`
+      : normalized;
+
+    const stripRoot = (k: string) => {
+      if (!this.prefix) return k;
+      const p = `${this.prefix}/`;
+      return k.startsWith(p) ? k.slice(p.length) : k;
+    };
+
+    const collected: Array<{
+      key: string;
+      size: number;
+      lastModified: string | null;
+    }> = [];
+    let continuationToken: string | undefined;
+
+    for (;;) {
+      const res = await this.client.send(
+        new ListObjectsV2Command({
+          Bucket: this.bucket,
+          Prefix: fullPrefix,
+          ContinuationToken: continuationToken,
+          MaxKeys: Math.min(1000, limit - collected.length),
+        }),
+      );
+      for (const o of res.Contents ?? []) {
+        if (!o.Key || o.Key === fullPrefix) continue;
+        collected.push({
+          key: stripRoot(o.Key),
+          size: Number(o.Size ?? 0),
+          lastModified: o.LastModified ? o.LastModified.toISOString() : null,
+        });
+        if (collected.length >= limit) {
+          return { objects: collected, truncatedAt: true };
+        }
+      }
+      if (!res.IsTruncated) break;
+      continuationToken = res.NextContinuationToken;
+    }
+    return { objects: collected, truncatedAt: false };
+  }
+
+  /**
    * Fetch an object by key relative to `rootPrefix`. Throws if the caller's
    * `relativeKey` tries to escape the root (defence against path-prefix
    * bypass).
