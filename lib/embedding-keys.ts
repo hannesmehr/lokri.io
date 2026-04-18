@@ -2,6 +2,7 @@ import { createOpenAI, type OpenAIProvider } from "@ai-sdk/openai";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { embeddingKeys } from "@/lib/db/schema";
+import { assertEmbeddingKeyFormat, EmbeddingKeyError } from "@/lib/embedding-key-errors";
 import { decryptJson } from "@/lib/storage/encryption";
 
 /** Embedding-model instance returned by `OpenAIProvider.textEmbeddingModel`. */
@@ -32,6 +33,7 @@ export const ALLOWED_BYOK_MODELS = {
 } as const;
 
 export type EmbeddingProviderKind = keyof typeof ALLOWED_BYOK_MODELS;
+
 
 interface KeyConfig {
   apiKey: string;
@@ -113,21 +115,75 @@ export async function testEmbeddingKey(
   model: string,
   apiKey: string,
 ): Promise<void> {
+  assertEmbeddingKeyFormat(apiKey);
+
   const allowed = ALLOWED_BYOK_MODELS[provider];
   if (!allowed.has(model)) {
-    throw new Error(
-      `Modell "${model}" ist nicht erlaubt — muss 1536-dim emittieren. Unterstützt: ${[...allowed].join(", ")}.`,
+    throw new EmbeddingKeyError(
+      "embeddingKey.verificationFailed",
+      "Embedding-Key konnte nicht verifiziert werden. Bitte prüfe ihn.",
+      400,
     );
   }
-  const p = createOpenAI({ apiKey });
-  const { embed } = await import("ai");
-  const { embedding } = await embed({
-    model: p.textEmbeddingModel(model),
-    value: "lokri connectivity test",
-  });
-  if (!Array.isArray(embedding) || embedding.length !== EMBEDDING_DIMENSIONS) {
-    throw new Error(
-      `Modell liefert ${embedding?.length ?? "?"} Dimensionen, erwartet ${EMBEDDING_DIMENSIONS}.`,
+
+  try {
+    const p = createOpenAI({ apiKey });
+    const { embed } = await import("ai");
+    const { embedding } = await embed({
+      model: p.textEmbeddingModel(model),
+      value: "lokri connectivity test",
+    });
+    if (!Array.isArray(embedding) || embedding.length !== EMBEDDING_DIMENSIONS) {
+      throw new EmbeddingKeyError(
+        "embeddingKey.verificationFailed",
+        "Embedding-Key konnte nicht verifiziert werden. Bitte prüfe ihn.",
+        400,
+      );
+    }
+  } catch (err) {
+    if (err instanceof EmbeddingKeyError) throw err;
+
+    const status =
+      typeof err === "object" &&
+      err &&
+      "statusCode" in err &&
+      typeof err.statusCode === "number"
+        ? err.statusCode
+        : typeof err === "object" &&
+            err &&
+            "status" in err &&
+            typeof err.status === "number"
+          ? err.status
+          : typeof err === "object" &&
+              err &&
+              "cause" in err &&
+              typeof err.cause === "object" &&
+              err.cause &&
+              "status" in err.cause &&
+              typeof err.cause.status === "number"
+            ? err.cause.status
+            : null;
+
+    if (status === 401 || status === 403) {
+      throw new EmbeddingKeyError(
+        "embeddingKey.unauthorized",
+        "Der Embedding-Key wurde vom Provider abgelehnt (ungültig oder Berechtigungen fehlen).",
+        400,
+      );
+    }
+
+    if (status !== null && status >= 500) {
+      throw new EmbeddingKeyError(
+        "embeddingKey.providerUnreachable",
+        "Der Embedding-Provider ist aktuell nicht erreichbar.",
+        503,
+      );
+    }
+
+    throw new EmbeddingKeyError(
+      "embeddingKey.verificationFailed",
+      "Embedding-Key konnte nicht verifiziert werden. Bitte prüfe ihn.",
+      400,
     );
   }
 }

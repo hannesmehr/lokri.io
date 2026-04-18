@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import {
-  apiError,
+  codedApiError,
   parseJsonBody,
   serverError,
   authErrorResponse,
@@ -10,6 +10,7 @@ import {
 import { ApiAuthError, requireSessionWithAccount } from "@/lib/api/session";
 import { db } from "@/lib/db";
 import { embeddingKeys } from "@/lib/db/schema";
+import { EmbeddingKeyError, maskEmbeddingKey } from "@/lib/embedding-key-errors";
 import {
   ALLOWED_BYOK_MODELS,
   testEmbeddingKey,
@@ -23,7 +24,7 @@ const bodySchema = z.object({
   provider: z.enum(["openai"] as const),
   model: z.string().min(1).max(100),
   /** Plaintext API key — stored AES-256-GCM-encrypted; never returned back. */
-  apiKey: z.string().min(10).max(400)});
+  apiKey: z.string().min(1).max(400)});
 
 // ---- GET: current BYOK state (never returns the plaintext key) -------------
 
@@ -65,9 +66,11 @@ export async function POST(req: NextRequest) {
     // but erroring here skips an unnecessary network round-trip.
     const allowed = ALLOWED_BYOK_MODELS[provider as EmbeddingProviderKind];
     if (!allowed || !allowed.has(model)) {
-      return apiError(
-        `Modell "${model}" wird nicht unterstützt (muss 1536-dim liefern).`,
+      // TODO(i18n-rollout): `message`-Fallback entfernen nach Phase-2-Abschluss.
+      return codedApiError(
         400,
+        "embeddingKey.verificationFailed",
+        "Embedding-Key konnte nicht verifiziert werden. Bitte prüfe ihn.",
       );
     }
 
@@ -76,8 +79,16 @@ export async function POST(req: NextRequest) {
     try {
       await testEmbeddingKey(provider as EmbeddingProviderKind, model, apiKey);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Unknown error";
-      return apiError(`Test fehlgeschlagen: ${msg}`, 400);
+      if (err instanceof EmbeddingKeyError) {
+        // TODO(i18n-rollout): `message`-Fallback entfernen nach Phase-2-Abschluss.
+        return codedApiError(err.status, err.code, err.message);
+      }
+      // TODO(i18n-rollout): `message`-Fallback entfernen nach Phase-2-Abschluss.
+      return codedApiError(
+        400,
+        "embeddingKey.verificationFailed",
+        "Embedding-Key konnte nicht verifiziert werden. Bitte prüfe ihn.",
+      );
     }
 
     const configEncrypted = encryptJson({ apiKey });
@@ -103,6 +114,15 @@ export async function POST(req: NextRequest) {
         createdAt: embeddingKeys.createdAt});
 
     return NextResponse.json({ key: row }, { status: 201 });
+    return NextResponse.json(
+      {
+        key: {
+          ...row,
+          maskedKey: maskEmbeddingKey(apiKey),
+        },
+      },
+      { status: 201 },
+    );
   } catch (err) {
     if (err instanceof ApiAuthError) return authErrorResponse(err);
     console.error("[embedding-key.POST]", err);
@@ -115,6 +135,21 @@ export async function POST(req: NextRequest) {
 export async function DELETE() {
   try {
     const { ownerAccountId } = await requireSessionWithAccount({ minRole: "admin" });
+    const [existing] = await db
+      .select({ id: embeddingKeys.id })
+      .from(embeddingKeys)
+      .where(eq(embeddingKeys.ownerAccountId, ownerAccountId))
+      .limit(1);
+
+    if (!existing) {
+      // TODO(i18n-rollout): `message`-Fallback entfernen nach Phase-2-Abschluss.
+      return codedApiError(
+        404,
+        "embeddingKey.notFound",
+        "Kein Embedding-Key hinterlegt.",
+      );
+    }
+
     await db
       .delete(embeddingKeys)
       .where(eq(embeddingKeys.ownerAccountId, ownerAccountId));
