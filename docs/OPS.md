@@ -47,6 +47,19 @@ bis dahin ist das der Weg.
 Die Tabelle `audit_events` wird fire-and-forget von allen
 security-relevanten Punkten gefüttert. Kein UI. Typische Abfragen:
 
+**Login-Events** werden über Better-Auths `databaseHooks.session.create.after`
+geschrieben — jede erfolgreich erstellte Session landet als `login.success`
+im Audit-Log (gescoped auf den Personal-Account des Users, nicht auf das
+aktuell aktive Team — Logins sind Identity-Events, nicht Team-Business).
+
+`login.failed` ist **nicht** erfasst: Better-Auth 1.x bietet keinen
+sauberen Pre-Failure-Hook. Credential-Stuffing wird aber bereits via
+`proxy.ts` rate-limited (5/h pro IP auf `/api/auth/sign-in`), und wenn
+eine Attacke durchrutscht, würde die daraus resultierende erfolgreiche
+Session ein `login.success` aus fremder IP erzeugen — das ist der
+Detektions-Pfad. Sobald die Library einen Failure-Hook anbietet,
+nachziehen.
+
 Alle Events eines Accounts, neueste zuerst:
 
 ```sql
@@ -79,6 +92,20 @@ FROM audit_events
 WHERE action IN ('token.revoked', 'token.revoked_on_member_remove')
   AND owner_account_id = '<account-uuid>'
 ORDER BY created_at DESC;
+```
+
+Login-Historie eines Users (via personal-account-scope):
+
+```sql
+SELECT a.created_at, a.ip_address, a.user_agent, a.metadata->>'sessionId' AS session_id
+FROM audit_events a
+JOIN owner_account_members m ON m.owner_account_id = a.owner_account_id
+JOIN owner_accounts oa       ON oa.id              = a.owner_account_id
+WHERE a.action = 'login.success'
+  AND oa.type = 'personal'
+  AND m.user_id = '<user-id>'
+ORDER BY a.created_at DESC
+LIMIT 50;
 ```
 
 Aktionen, die ein bestimmter User ausgelöst hat:

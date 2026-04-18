@@ -16,6 +16,7 @@ import {
   users,
   verifications,
 } from "./db/schema";
+import { logAuditEvent } from "./audit/log";
 import { localeForUserEmail } from "./i18n/user-locale";
 import { sendMail } from "./mailer";
 import {
@@ -94,6 +95,7 @@ export const auth = betterAuth({
       twoFactor: twoFactorTable,
     },
   }),
+
 
   plugins: [
     // Enables OAuth 2.1 + Dynamic Client Registration so remote MCP clients
@@ -257,14 +259,28 @@ export const auth = betterAuth({
     },
   },
 
+  /**
+   * Database-level hooks. Two wire-in points:
+   *
+   *   1. `user.create.after` — auto-provision a personal owner_account
+   *      + membership row on signup. Best-effort: if this hiccups, the
+   *      helper `getOrCreateOwnerAccountForUser` self-heals on the
+   *      user's next API call.
+   *   2. `session.create.after` — fires on every successful sign-in
+   *      (password + 2FA, OAuth callback, refresh). We write a
+   *      `login.success` audit event against the user's personal
+   *      owner_account. Scope is intentionally personal: a login is
+   *      an identity event, not a business operation on whatever
+   *      team the user happens to have active.
+   *
+   * `login.failed` is *not* wired — Better-Auth doesn't expose a
+   * pre-failure hook. Documented as a known limitation in
+   * `docs/OPS.md`; revisit when the upstream grows one.
+   */
   databaseHooks: {
     user: {
       create: {
         after: async (user) => {
-          // Auto-provision a personal owner_account + membership on signup.
-          // Best-effort: if this fails (e.g. free plan missing), the user row
-          // still exists. Reconciliation is handled by
-          // `getOrCreateOwnerAccountForUser` in API helpers (Schritt 8).
           try {
             const [ownerAccount] = await db
               .insert(ownerAccounts)
@@ -287,6 +303,45 @@ export const auth = betterAuth({
               `[auth.user.create.after] Failed to provision owner_account for user ${user.id}:`,
               err,
             );
+          }
+        },
+      },
+    },
+    session: {
+      create: {
+        after: async (session) => {
+          try {
+            const userId = session.userId;
+            if (!userId) return;
+            const [row] = await db
+              .select({ id: ownerAccounts.id })
+              .from(ownerAccountMembers)
+              .innerJoin(
+                ownerAccounts,
+                eq(ownerAccountMembers.ownerAccountId, ownerAccounts.id),
+              )
+              .where(
+                and(
+                  eq(ownerAccountMembers.userId, userId),
+                  eq(ownerAccounts.type, "personal"),
+                  eq(ownerAccountMembers.role, "owner"),
+                ),
+              )
+              .limit(1);
+            if (!row) return; // personal account not yet provisioned
+            await logAuditEvent({
+              ownerAccountId: row.id,
+              actorUserId: userId,
+              action: "login.success",
+              targetType: "user",
+              targetId: userId,
+              ipAddress: session.ipAddress ?? null,
+              userAgent: session.userAgent ?? null,
+              metadata: { sessionId: session.id },
+            });
+          } catch (err) {
+            // Never surface — login must not fail because auditing hiccuped.
+            console.error("[auth.session.create.after]", err);
           }
         },
       },
