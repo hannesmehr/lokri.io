@@ -1,13 +1,14 @@
 "use client";
 
 import { CheckCircle2, CloudUpload, FileUp, Loader2, XCircle } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { cn } from "@/lib/utils";
 import { formatBytes } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
 const MAX_BYTES = 10 * 1024 * 1024;
 
@@ -19,6 +20,8 @@ interface Props {
 type Status = "idle" | "uploading" | "success" | "error";
 
 export function FileUploader({ spaces, defaultSpaceId = null }: Props) {
+  const t = useTranslations("files.uploader");
+  const tToasts = useTranslations("toasts");
   const router = useRouter();
   const fileInput = useRef<HTMLInputElement>(null);
   const [spaceId, setSpaceId] = useState<string>(defaultSpaceId ?? "");
@@ -29,11 +32,12 @@ export function FileUploader({ spaces, defaultSpaceId = null }: Props) {
     null,
   );
   const dragOver = dragDepth > 0;
+  const maxSize = formatBytes(MAX_BYTES);
 
   function validate(file: File): string | null {
-    if (file.size === 0) return "Datei ist leer.";
+    if (file.size === 0) return t("errors.empty");
     if (file.size > MAX_BYTES)
-      return `Datei ist zu groß (max ${(MAX_BYTES / 1024 / 1024).toFixed(0)} MB).`;
+      return t("errors.tooLarge", { max: maxSize });
     return null;
   }
 
@@ -52,7 +56,7 @@ export function FileUploader({ spaces, defaultSpaceId = null }: Props) {
       xhr.addEventListener("load", () => {
         if (xhr.status >= 200 && xhr.status < 300) resolve();
         else {
-          let message = `Upload fehlgeschlagen (${xhr.status})`;
+          let message = t("errors.uploadFailedWithStatus", { status: xhr.status });
           try {
             const data = JSON.parse(xhr.responseText);
             if (data?.error) message = data.error;
@@ -62,8 +66,8 @@ export function FileUploader({ spaces, defaultSpaceId = null }: Props) {
           reject(new Error(message));
         }
       });
-      xhr.addEventListener("error", () => reject(new Error("Netzwerkfehler")));
-      xhr.addEventListener("abort", () => reject(new Error("Abgebrochen")));
+      xhr.addEventListener("error", () => reject(new Error(tToasts("error.networkFailed"))));
+      xhr.addEventListener("abort", () => reject(new Error(t("errors.aborted"))));
       xhr.open("POST", "/api/files");
       xhr.send(form);
     });
@@ -82,7 +86,7 @@ export function FileUploader({ spaces, defaultSpaceId = null }: Props) {
       await uploadWithProgress(file, spaceId);
       setStatus("success");
       setProgress(100);
-      toast.success(`${file.name} hochgeladen.`);
+      toast.success(t("success.uploaded", { name: file.name }));
       if (fileInput.current) fileInput.current.value = "";
       router.refresh();
       // Reset banner after a beat
@@ -93,7 +97,8 @@ export function FileUploader({ spaces, defaultSpaceId = null }: Props) {
       }, 1800);
     } catch (e) {
       setStatus("error");
-      const message = e instanceof Error ? e.message : "Upload fehlgeschlagen.";
+      const message =
+        e instanceof Error ? e.message : tToasts("error.generic");
       toast.error(message);
     }
   }
@@ -110,7 +115,7 @@ export function FileUploader({ spaces, defaultSpaceId = null }: Props) {
       {spaces.length > 0 && (
         <div className="flex items-center gap-2 text-sm">
           <Label htmlFor="upload-space" className="text-muted-foreground">
-            Space:
+            {t("spaceLabel")}:
           </Label>
           <select
             id="upload-space"
@@ -119,7 +124,7 @@ export function FileUploader({ spaces, defaultSpaceId = null }: Props) {
             onChange={(e) => setSpaceId(e.target.value)}
             disabled={status === "uploading"}
           >
-            <option value="">— keiner —</option>
+            <option value="">{t("noSpace")}</option>
             {spaces.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}
@@ -139,10 +144,10 @@ export function FileUploader({ spaces, defaultSpaceId = null }: Props) {
         onDragLeave={() => setDragDepth((d) => Math.max(0, d - 1))}
         onDrop={onDrop}
         className={cn(
-          "relative block cursor-pointer overflow-hidden rounded-2xl border-2 border-dashed bg-gradient-to-br from-indigo-500/5 via-fuchsia-500/5 to-amber-500/5 px-6 py-10 transition-all",
+          "relative block cursor-pointer overflow-hidden rounded-2xl border-2 border-dashed bg-card px-6 py-10 transition-all",
           dragOver
-            ? "scale-[1.01] border-indigo-500 bg-indigo-500/10 shadow-lg"
-            : "border-muted-foreground/25 hover:border-muted-foreground/40",
+            ? "border-foreground/50 bg-muted/40"
+            : "border-muted-foreground/30 hover:border-foreground/50",
           status === "uploading" && "pointer-events-none",
         )}
       >
@@ -162,13 +167,13 @@ export function FileUploader({ spaces, defaultSpaceId = null }: Props) {
             className={cn(
               "grid h-14 w-14 place-items-center rounded-full transition-all",
               status === "uploading"
-                ? "bg-indigo-500/15 text-indigo-600 dark:text-indigo-300"
+                ? "bg-muted text-foreground"
                 : status === "success"
-                  ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                  ? "bg-muted text-foreground"
                   : status === "error"
-                    ? "bg-red-500/15 text-red-600 dark:text-red-400"
+                    ? "bg-muted text-foreground"
                     : dragOver
-                      ? "bg-indigo-500/20 text-indigo-600 dark:text-indigo-300"
+                      ? "bg-muted text-foreground"
                       : "bg-muted text-muted-foreground",
             )}
           >
@@ -187,15 +192,15 @@ export function FileUploader({ spaces, defaultSpaceId = null }: Props) {
           <div>
             <div className="text-sm font-medium">
               {status === "uploading" && active
-                ? `${active.name} wird hochgeladen…`
+                ? t("status.uploading", { name: active.name })
                 : status === "success" && active
-                  ? `${active.name} hochgeladen`
+                  ? t("status.uploaded", { name: active.name })
                   : dragOver
-                    ? "Loslassen zum Hochladen"
-                    : "Datei hier hinziehen oder klicken"}
+                    ? t("dropActive")
+                    : t("idle")}
             </div>
             <div className="mt-1 text-xs text-muted-foreground">
-              Max 10 MB. Textdateien und JSON werden automatisch embedded.
+              {t("hint", { max: maxSize })}
             </div>
           </div>
           {active ? (
