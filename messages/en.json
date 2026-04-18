@@ -250,6 +250,20 @@
       "button": "Accept invitation",
       "expiry": "The invitation link is valid until {expiresAt}.",
       "ignoreHint": "Not interested? Simply ignore this email — nothing will happen."
+    },
+    "ownershipTransferredNotification": {
+      "subject": "You are now the owner of {teamName}",
+      "heading": "Ownership transferred",
+      "intro": "{previousOwnerName} has transferred the owner role of {teamName} to you. You can now manage billing settings, invite further members, change roles, and delete the team.",
+      "button": "Open team settings",
+      "responsibility": "As owner, you are responsible for the team's billing and data stewardship. If you do not want to take this on, contact {previousOwnerName} or transfer the role onward."
+    },
+    "ownershipTransferredConfirmation": {
+      "subject": "Ownership of {teamName} transferred",
+      "heading": "Ownership transferred",
+      "intro": "You have transferred the owner role of {teamName} to {newOwnerName}. You are now an admin and can continue contributing to the team, but no longer have access to billing or team deletion.",
+      "reversalHint": "If this was a mistake, ask {newOwnerName} to transfer the role back — we cannot undo this automatically.",
+      "button": "Open team settings"
     }
   },
 

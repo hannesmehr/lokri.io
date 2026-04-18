@@ -250,6 +250,20 @@
       "button": "Einladung annehmen",
       "expiry": "Der Einladungslink ist bis {expiresAt} gültig.",
       "ignoreHint": "Kein Interesse? Ignoriere diese E-Mail einfach — es passiert nichts."
+    },
+    "ownershipTransferredNotification": {
+      "subject": "Du bist jetzt Owner von {teamName}",
+      "heading": "Owner-Rolle übertragen",
+      "intro": "{previousOwnerName} hat dir die Owner-Rolle von {teamName} übertragen. Du kannst ab sofort Billing-Einstellungen verwalten, weitere Mitglieder einladen, Rollen ändern und das Team löschen.",
+      "button": "Team-Einstellungen öffnen",
+      "responsibility": "Als Owner verantwortest du Abrechnung und Datenhoheit des Teams. Falls du das nicht übernehmen möchtest, kontaktiere {previousOwnerName} oder übertrage die Rolle weiter."
+    },
+    "ownershipTransferredConfirmation": {
+      "subject": "Owner-Rolle von {teamName} übertragen",
+      "heading": "Owner-Rolle übertragen",
+      "intro": "Du hast die Owner-Rolle von {teamName} an {newOwnerName} übertragen. Du bist jetzt Admin und kannst das Team weiter mitgestalten, hast aber keinen Zugriff mehr auf Billing oder Team-Löschung.",
+      "reversalHint": "Falls das ein Versehen war, bitte {newOwnerName} um eine erneute Übertragung — wir können das nicht automatisch rückgängig machen.",
+      "button": "Team-Einstellungen öffnen"
     }
   },
 

@@ -63,7 +63,9 @@ async function loadEmailStrings(
     | "deleteAccount"
     | "changeEmail"
     | "twoFactorOtp"
-    | "teamInvite",
+    | "teamInvite"
+    | "ownershipTransferredNotification"
+    | "ownershipTransferredConfirmation",
 ) {
   const t = await getTranslations({ locale, namespace: `email.${section}` });
   const shared = await getTranslations({ locale, namespace: "email.shared" });
@@ -210,6 +212,74 @@ export async function twoFactorOtpTemplate({
        <p>${t("intro")}</p>
        <p style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:28px;font-weight:700;letter-spacing:4px;background:#f4f4f5;padding:14px 18px;border-radius:10px;display:inline-block">${code}</p>
        <p style="color:#555;font-size:13px">${t("expiry", { minutes: 10 })}</p>`,
+      locale,
+      footer,
+    ),
+  };
+}
+
+export async function ownershipTransferredNotificationTemplate({
+  teamName,
+  previousOwnerName,
+  teamSettingsUrl,
+  locale = defaultLocale,
+}: {
+  teamName: string;
+  previousOwnerName: string;
+  teamSettingsUrl: string;
+  locale?: Locale;
+}) {
+  const { t, shared } = await loadEmailStrings(
+    locale,
+    "ownershipTransferredNotification",
+  );
+  const footer = shared("footer");
+
+  return {
+    subject: t("subject", { teamName }),
+    text: `${t("intro", { previousOwnerName, teamName })}\n\n${teamSettingsUrl}\n\n${t("responsibility", { previousOwnerName })}`,
+    html: wrap(
+      `<h2 style="font-size:18px;margin:0 0 12px">${t("heading")}</h2>
+       <p>${t("intro", {
+         previousOwnerName: `<strong>${previousOwnerName}</strong>`,
+         teamName: `<strong>${teamName}</strong>`,
+       })}</p>
+       ${button(teamSettingsUrl, t("button"))}
+       <p style="color:#555;font-size:13px">${t("responsibility", { previousOwnerName })}</p>`,
+      locale,
+      footer,
+    ),
+  };
+}
+
+export async function ownershipTransferredConfirmationTemplate({
+  teamName,
+  newOwnerName,
+  teamSettingsUrl,
+  locale = defaultLocale,
+}: {
+  teamName: string;
+  newOwnerName: string;
+  teamSettingsUrl: string;
+  locale?: Locale;
+}) {
+  const { t, shared } = await loadEmailStrings(
+    locale,
+    "ownershipTransferredConfirmation",
+  );
+  const footer = shared("footer");
+
+  return {
+    subject: t("subject", { teamName }),
+    text: `${t("intro", { teamName, newOwnerName })}\n\n${teamSettingsUrl}\n\n${t("reversalHint", { newOwnerName })}`,
+    html: wrap(
+      `<h2 style="font-size:18px;margin:0 0 12px">${t("heading")}</h2>
+       <p>${t("intro", {
+         teamName: `<strong>${teamName}</strong>`,
+         newOwnerName: `<strong>${newOwnerName}</strong>`,
+       })}</p>
+       ${button(teamSettingsUrl, t("button"))}
+       <p style="color:#555;font-size:13px">${t("reversalHint", { newOwnerName })}</p>`,
       locale,
       footer,
     ),

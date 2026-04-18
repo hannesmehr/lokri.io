@@ -2,7 +2,14 @@ import { and, eq } from "drizzle-orm";
 import { logAuditEvent } from "@/lib/audit/log";
 import { normalizeLegacyRole } from "@/lib/auth/roles";
 import { db } from "@/lib/db";
-import { ownerAccountMembers } from "@/lib/db/schema";
+import { ownerAccountMembers, ownerAccounts, users } from "@/lib/db/schema";
+import { localeForUserId } from "@/lib/i18n/user-locale";
+import { sendMail } from "@/lib/mailer";
+import {
+  ownershipTransferredConfirmationTemplate,
+  ownershipTransferredNotificationTemplate,
+} from "@/lib/mailer/templates";
+import { resolveAppOrigin } from "@/lib/origin";
 import { TeamError } from "./errors";
 
 /**
@@ -15,6 +22,10 @@ import { TeamError } from "./errors";
  * Post-condition:
  *   • exactly one row with `role='owner'` for the account (the target)
  *   • the former owner becomes `admin`
+ *   • both users receive an email in their own locale: the new owner
+ *     a "you are now owner" notification, the old owner a "you handed
+ *     it over" confirmation. Sent best-effort after the transaction —
+ *     a dead mailer should never undo a valid transfer.
  *
  * Callers have already checked the HTTP-level role gate via
  * `requireSessionWithAccount({ minRole: 'owner' })` — the service re-
@@ -91,4 +102,66 @@ export async function transferOwnership(
       toUserId: input.newOwnerUserId,
     },
   });
+
+  // Best-effort notifications. We never throw from the mail path — the
+  // transfer already committed, and resend the template manually (via
+  // ops-script) is always an option. Any failure surfaces as a console
+  // log picked up by the ops-alert infra.
+  await sendTransferEmails(input).catch((err) => {
+    console.error("[ownership.transferEmails] failed:", err);
+  });
+}
+
+async function sendTransferEmails(input: TransferOwnershipInput): Promise<void> {
+  const [team] = await db
+    .select({ name: ownerAccounts.name })
+    .from(ownerAccounts)
+    .where(eq(ownerAccounts.id, input.ownerAccountId))
+    .limit(1);
+  if (!team) return;
+
+  const [previousOwner] = await db
+    .select({ id: users.id, name: users.name, email: users.email })
+    .from(users)
+    .where(eq(users.id, input.currentOwnerUserId))
+    .limit(1);
+  const [newOwner] = await db
+    .select({ id: users.id, name: users.name, email: users.email })
+    .from(users)
+    .where(eq(users.id, input.newOwnerUserId))
+    .limit(1);
+  if (!previousOwner || !newOwner) return;
+
+  const previousOwnerDisplay =
+    previousOwner.name?.trim() || previousOwner.email;
+  const newOwnerDisplay = newOwner.name?.trim() || newOwner.email;
+  const teamSettingsUrl = `${resolveAppOrigin()}/settings/team`;
+
+  // Recipients read in their own preferred language. Serialise the two
+  // lookups separately so a DB hiccup on one side can't take down both
+  // mail sends in a Promise.all.
+  const [newOwnerLocale, previousOwnerLocale] = await Promise.all([
+    localeForUserId(newOwner.id),
+    localeForUserId(previousOwner.id),
+  ]);
+
+  const notificationTpl = await ownershipTransferredNotificationTemplate({
+    teamName: team.name,
+    previousOwnerName: previousOwnerDisplay,
+    teamSettingsUrl,
+    locale: newOwnerLocale,
+  });
+  const confirmationTpl = await ownershipTransferredConfirmationTemplate({
+    teamName: team.name,
+    newOwnerName: newOwnerDisplay,
+    teamSettingsUrl,
+    locale: previousOwnerLocale,
+  });
+
+  // Run both sends concurrently but tolerate individual failures so one
+  // down-mailer doesn't swallow the other.
+  await Promise.allSettled([
+    sendMail({ to: newOwner.email, ...notificationTpl }),
+    sendMail({ to: previousOwner.email, ...confirmationTpl }),
+  ]);
 }
