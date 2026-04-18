@@ -396,14 +396,42 @@
       "toLogin": "Zum Login"
     },
     "twoFactor": {
-      "title": "Zwei-Faktor",
+      "title": "Zwei-Faktor-Code",
       "subtitle": "Gib den 6-stelligen Code aus deiner Authenticator-App ein.",
+      "descriptionTotp": "Gib den 6-stelligen Code aus deiner Authenticator-App ein.",
+      "descriptionBackup": "Gib einen deiner Backup-Codes ein. Jeder funktioniert nur einmal.",
       "code": "Code",
-      "submit": "Verifizieren",
-      "useBackup": "Backup-Code verwenden"
+      "fieldLabelTotp": "TOTP-Code",
+      "fieldLabelBackup": "Backup-Code",
+      "placeholders": {
+        "totp": "123456",
+        "backup": "xxxx-xxxx-xxxx"
+      },
+      "submit": "Bestätigen",
+      "submitting": "Prüfe…",
+      "useBackup": "Backup-Code verwenden",
+      "switchToBackup": "Backup-Code verwenden",
+      "switchToTotp": "Authenticator-App verwenden",
+      "backToLogin": "Zurück zur Anmeldung",
+      "success": "Angemeldet.",
+      "errors": {
+        "invalidCode": "Code ungültig."
+      }
     },
     "verifyEmail": {
-      "success": "E-Mail bestätigt — du wirst weitergeleitet."
+      "success": "E-Mail bestätigt — du wirst weitergeleitet.",
+      "checking": "Bestätigungslink wird geprüft.",
+      "successTitle": "E-Mail bestätigt",
+      "expiredTitle": "Link abgelaufen",
+      "alreadyVerifiedTitle": "E-Mail bereits bestätigt",
+      "resend": "Bestätigungslink erneut senden"
+    },
+    "layout": {
+      "footer": {
+        "impressum": "Impressum",
+        "datenschutz": "Datenschutz",
+        "contact": "Kontakt"
+      }
     }
   },
 
@@ -1495,6 +1523,13 @@
   },
 
   "marketing": {
+    "layout": {
+      "login": "Login",
+      "impressum": "Impressum",
+      "datenschutz": "Datenschutz",
+      "contact": "Kontakt",
+      "copyright": "© {year} lokri.io"
+    },
     "comingSoon": {
       "title": "Bald verfügbar",
       "tagline": "Der DSGVO-konforme MCP-Gateway für deine KI-Clients.",

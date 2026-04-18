@@ -396,14 +396,42 @@
       "toLogin": "Go to sign in"
     },
     "twoFactor": {
-      "title": "Two-factor",
+      "title": "Two-factor code",
       "subtitle": "Enter the 6-digit code from your authenticator app.",
+      "descriptionTotp": "Enter the 6-digit code from your authenticator app.",
+      "descriptionBackup": "Enter one of your backup codes. Each one only works once.",
       "code": "Code",
-      "submit": "Verify",
-      "useBackup": "Use backup code"
+      "fieldLabelTotp": "TOTP code",
+      "fieldLabelBackup": "Backup code",
+      "placeholders": {
+        "totp": "123456",
+        "backup": "xxxx-xxxx-xxxx"
+      },
+      "submit": "Confirm",
+      "submitting": "Checking…",
+      "useBackup": "Use backup code",
+      "switchToBackup": "Use backup code",
+      "switchToTotp": "Use authenticator app",
+      "backToLogin": "Back to sign in",
+      "success": "Signed in.",
+      "errors": {
+        "invalidCode": "Invalid code."
+      }
     },
     "verifyEmail": {
-      "success": "Email confirmed — redirecting."
+      "success": "Email confirmed — redirecting.",
+      "checking": "Checking confirmation link.",
+      "successTitle": "Email confirmed",
+      "expiredTitle": "Link expired",
+      "alreadyVerifiedTitle": "Email already confirmed",
+      "resend": "Send confirmation link again"
+    },
+    "layout": {
+      "footer": {
+        "impressum": "Imprint",
+        "datenschutz": "Privacy",
+        "contact": "Contact"
+      }
     }
   },
 
@@ -1495,6 +1523,13 @@
   },
 
   "marketing": {
+    "layout": {
+      "login": "Sign in",
+      "impressum": "Imprint",
+      "datenschutz": "Privacy",
+      "contact": "Contact",
+      "copyright": "© {year} lokri.io"
+    },
     "comingSoon": {
       "title": "Coming soon",
       "tagline": "The GDPR-compliant MCP gateway for your AI clients.",
