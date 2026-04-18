@@ -253,6 +253,14 @@
           "rateLimit": "GitHub-Rate-Limit erreicht. Bitte später erneut versuchen."
         }
       },
+      "embeddingKey": {
+        "invalidFormat": "Der Embedding-Key hat ein ungültiges Format.",
+        "verificationFailed": "Embedding-Key konnte nicht verifiziert werden. Bitte prüfe ihn.",
+        "providerUnreachable": "Der Embedding-Provider ist aktuell nicht erreichbar.",
+        "notFound": "Kein Embedding-Key hinterlegt.",
+        "inUse": "Embedding-Key wird noch verwendet und kann nicht gelöscht werden.",
+        "unauthorized": "Der Embedding-Key wurde vom Provider abgelehnt (ungültig oder Berechtigungen fehlen)."
+      },
       "team": {
         "createDisabled": "Team-Erstellung ist derzeit nicht freigeschaltet.",
         "nameRequired": "Team-Name darf nicht leer sein.",
@@ -1098,36 +1106,49 @@
       }
     },
     "embeddingKey": {
-      "title": "Eigener Embedding-API-Key (BYOK)",
-      "subtitle": "Statt über die Vercel AI Gateway läuft jede Embedding-Anfrage direkt gegen deinen OpenAI-Account. Keine zusätzlichen Gebühren bei uns, vollständige Audit-Spur bei dir. Solange kein Key hinterlegt ist, wird die Gateway-Default-Route verwendet.",
-      "active": "BYOK aktiv — {provider} · {model}",
-      "activeHint": "Jede Embedding-Anfrage geht jetzt direkt an api.openai.com — die Vercel AI Gateway wird übersprungen.",
-      "createdAt": "Hinterlegt am {datetime}",
-      "lastUsedAt": "zuletzt genutzt {datetime}",
-      "neverUsed": "noch nicht genutzt",
-      "inactive": "Kein Key hinterlegt — Gateway-Fallback aktiv",
-      "inactiveHint": "Embeddings werden aktuell über die Vercel AI Gateway geroutet. Lege unten einen eigenen Key an, wenn du die Gateway-Kosten umgehen oder eine saubere Audit-Spur bei deinem OpenAI-Account willst.",
-      "provider": "Provider",
-      "providerNote": "nur OpenAI für v1",
-      "model": "Modell",
-      "modelHint": "Beide Modelle emittieren 1536-dim Vektoren — Pflicht für unsere pgvector-Spalte.",
-      "apiKey": "OpenAI API-Key",
-      "apiKeyHint": "Der Key wird AES-256-GCM-verschlüsselt in der DB abgelegt und niemals wieder im Klartext zurückgegeben. Wir testen die Verbindung vor dem Speichern — ungültige Keys werden nicht persistiert.",
-      "save": "Testen & Speichern",
-      "saving": "Teste Verbindung…",
-      "replace": "Key ersetzen",
-      "remove": "Key entfernen",
-      "removing": "Entfernt…",
-      "removeConfirm": "Key wirklich entfernen? Embeddings laufen danach wieder über die Vercel AI Gateway.",
-      "successSave": "Key gespeichert — ab jetzt laufen Embeddings über deinen Account.",
-      "successRemove": "Key entfernt — Fallback auf Gateway aktiv.",
-      "errors": {
-        "generic": "Konnte Key nicht speichern.",
-        "removeFailed": "Konnte nicht entfernen."
+      "heading": "Eigener Embedding-API-Key (BYOK)",
+      "description": "Statt über die Vercel AI Gateway läuft jede Embedding-Anfrage direkt gegen deinen OpenAI-Account. Keine zusätzlichen Gebühren bei uns, vollständige Audit-Spur bei dir.",
+      "intro": {
+        "title": "Bring your own key",
+        "description": "Solange kein Key hinterlegt ist, nutzt lokri die Gateway-Default-Route. Mit eigenem Key laufen neue Embeddings direkt über deinen OpenAI-Account."
       },
-      "modelSwitchWarning": {
-        "title": "Achtung bei Modellwechsel",
-        "body": "Ein Wechsel von {modelA} zu {modelB} lässt bestehende Vektoren im Raum inkompatibel — neue Queries landen in einem anderen Embedding-Space als alte Chunks. Für sauberen Betrieb: nach einem Modellwechsel alle Spaces einmal {reindexLabel} lassen.",
+      "currentKey": {
+        "title": "Aktueller Key",
+        "activeBadge": "aktiv",
+        "inactiveBadge": "nicht konfiguriert",
+        "activeDescription": "Neue Embedding-Anfragen werden direkt gegen deinen Provider ausgeführt.",
+        "inactiveDescription": "Aktuell ist kein eigener Key hinterlegt. lokri nutzt den Gateway-Fallback.",
+        "masked": "Maskierter Key: {value}",
+        "createdAt": "Hinterlegt am {datetime}",
+        "lastVerifiedAt": "Zuletzt genutzt {datetime}",
+        "neverVerified": "Noch nicht genutzt"
+      },
+      "form": {
+        "providerLabel": "Provider",
+        "providerNote": "nur OpenAI für v1",
+        "modelLabel": "Modell",
+        "modelHint": "Beide Modelle emittieren 1536-dim Vektoren und passen zu unserer pgvector-Spalte.",
+        "apiKeyLabel": "OpenAI API-Key",
+        "apiKeyPlaceholder": "sk-...",
+        "apiKeyHint": "Der Key wird AES-256-GCM-verschlüsselt in der DB abgelegt und niemals wieder im Klartext zurückgegeben."
+      },
+      "actions": {
+        "save": "Testen & Speichern",
+        "saving": "Teste Verbindung…",
+        "rotate": "Key ersetzen",
+        "delete": "Key entfernen",
+        "showKey": "Key anzeigen",
+        "hideKey": "Key ausblenden"
+      },
+      "toasts": {
+        "saved": "Key gespeichert — ab jetzt laufen Embeddings über deinen Account.",
+        "saveFailed": "Konnte Key nicht speichern.",
+        "deleteFailed": "Konnte Key nicht entfernen."
+      },
+      "dialogs": {
+        "deleteDescription": "Ohne eigenen Key können keine neuen Embeddings direkt über deinen Provider erstellt werden. lokri fällt dann auf die Gateway-Route zurück.",
+        "rotateWarningTitle": "Achtung bei Modellwechsel",
+        "rotateWarningBody": "Ein Wechsel von {modelA} zu {modelB} lässt bestehende Vektoren im Raum inkompatibel. Für sauberen Betrieb: nach einem Modellwechsel alle Spaces einmal {reindexLabel} lassen.",
         "reindexLabel": "Neu indizieren"
       }
     },
