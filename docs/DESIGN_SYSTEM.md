@@ -208,8 +208,18 @@ und Main-Container. Admin-Bereich bleibt auf `max-w-6xl` (72 rem =
 Begründung: bei `max-w-6xl` und 3-Spalten-Grids wurden die einzelnen
 Cards im User-Bereich 350+ px breit — für kurzen Content (Label +
 3-stelligen Value + kurze Description) ist das zu luftig. `5xl`
-bringt Cards auf 310 px, Activity-Listen auf 470 px — dichter, näher
-an Linear/Vercel.
+bringt Cards auf ~312 px — dichter, näher an Linear/Vercel.
+
+**List-Sections sitzen noch enger:** Activity-Sektion (Letzte Notes,
+Letzte Files) bekommt innerhalb des 5xl-Main-Containers nochmal ein
+eigenes `mx-auto max-w-4xl` (896 px), damit sie sich von den breiteren
+Summary-Widgets (Quick-Actions, KPI-Tiles in voller 5xl-Breite) optisch
+abgrenzt und schmale Rows (z.B. „Geöffnete Browser-Tabs · gestern")
+nicht in eine 470-px-Card fluten. Convention:
+
+- **Summary-Widgets** (Zahlen, Badges, Quick-Actions): volle Main-Breite
+- **List-Sections** (Notes, Files, Tokens, Invites): `mx-auto max-w-4xl`
+  zentriert unter dem Summary-Block
 
 ### Grid-Layouts
 
@@ -219,7 +229,7 @@ Konventionen aus der Showcase:
 | --- | --- | --- | --- | --- |
 | Quick-Actions (3 Cards) | 1 col | 2 cols | 2 cols | 3 cols |
 | KPI-Tiles (mit Progress-Bar + Suffix) | 1 col | 1 col | 3 cols | 3 cols |
-| Activity-Cards (breit, 2 Stück) | 1 col | 1 col | 1 col | 2 cols |
+| Activity-Cards (zentrierte List-Section, 2 Stück) | 1 col | 1 col | 1 col | 2 cols (im `max-w-4xl`-Wrapper) |
 | Onboarding-Steps (3 Stück) | 1 col | 1 col | 3 cols | 3 cols |
 
 Faustregel: **„Breiter Content bleibt länger 1-spaltig."** Karten mit
@@ -345,23 +355,66 @@ Gesamtgleichung passen:
   darunter nur `Zurück`
 - **Admin-Header Sub-Line „Aktionen werden protokolliert"**: `hidden sm:inline`
 
-### Testing — 6 Zustände
+### Testing-Protokoll
 
-Jede neue Seite / Komponente wird vor dem Commit in **drei Viewports ×
-zwei Theme-Modi = 6 Zuständen** durchgeklickt:
+Breakpoint-Schwellen (640, 768, 1024, 1280) sind als Testing-Basis
+**nicht** ausreichend — Overflow-Bugs entstehen fast immer **zwischen**
+Breakpoints. Die Phase-1-QA hat das schmerzhaft gelernt: „alles grün
+bei 375/768/1280" verdeckte 119 reale Violations in anderen Viewports,
+die erst das Audit-Script aufgedeckt hat.
 
-| Viewport | Pixelbreite | Theme |
-| --- | --- | --- |
-| Mobile | 375 | Light + Dark |
-| Tablet | 768 | Light + Dark |
-| Desktop | 1280 | Light + Dark |
+**Pflicht-Protokoll vor jedem Design-Commit:**
 
-Bricht ein State, wird er **im selben Commit** gefixt — keine „okay, das
-fixen wir später"-Ausnahme. Dashboard-Home ist die Referenz: wenn ein
-Pattern dort nicht existiert, gibt's einen guten Grund, es in einer
-Folge-Seite zu erfinden.
+1. **Visueller 6-State-Check** — drei Viewports × zwei Theme-Modi:
 
-**Verifikations-Checks, die sich in der Showcase bewährt haben:**
+   | Viewport | Pixelbreite | Theme |
+   | --- | --- | --- |
+   | Mobile | 375 | Light + Dark |
+   | Tablet | 768 | Light + Dark |
+   | Desktop | 1280 | Light + Dark |
+
+2. **Overflow-Audit-Script** über zehn Zwischen-Breakpoint-Viewports:
+
+   ```bash
+   # Dev-Server läuft auf :3000
+   pnpm audit:responsive --url /dashboard --auth
+   ```
+
+   Viewports: `320, 375, 390, 414, 500, 620, 700, 900, 1100, 1280`.
+   Erwartung: **0 Violations** vor Commit. Exit-Code ≠ 0 = Commit
+   blockiert.
+
+   Was das Skript findet:
+   - `scrollWidth > clientWidth` auf Containern (internal overflow)
+   - `rect.right > vw` / `rect.left < 0` (Viewport-Clipping)
+   - Per-Nav-Child-Position (erkennt Nav-vs-Search-Trigger-Zusammenstöße)
+
+   Skript-Skips (False-Positive-Filter): `sr-only`-Elemente, bewusste
+   `truncate`-Container, `overflow-x: auto/scroll`, `display: none`
+   / hidden / zero-size.
+
+3. **Bricht ein State**, wird er **im selben Commit** gefixt — keine
+   „okay, das fixen wir später"-Ausnahme. Dashboard-Home ist die
+   Referenz; wenn ein Pattern dort nicht existiert, gibt's einen guten
+   Grund, es in einer Folge-Seite zu erfinden.
+
+**Aufruf-Varianten:**
+
+```bash
+# Einzelne Seite, gated (zieht Session-Cookie aus DB)
+pnpm audit:responsive --url /dashboard --auth
+
+# Mehrere Seiten in einem Lauf
+pnpm audit:responsive --url /dashboard --url /spaces --url /settings --auth
+
+# Öffentliche Seiten ohne Auth
+pnpm audit:responsive --url /login
+
+# Custom-Viewports (z.B. nur Mobile-Bereich debuggen)
+pnpm audit:responsive --url /dashboard --auth --viewports 320,375,390
+```
+
+**Verifikations-Hilfen für manuelle Debug-Sessions:**
 
 - `window.innerWidth` prüfen, dass der Viewport-Emulator den Wert
   wirklich setzt (Preview-Tools zeigen manchmal kleinere Screenshots,
@@ -369,6 +422,13 @@ Folge-Seite zu erfinden.
 - `getBoundingClientRect()` auf Header-Controls, wenn der Verdacht auf
   Overlap besteht — gibt exakte x/y/w/h aus, enttarnt schnell
   `justify-between`-Zusammenstöße
+
+**Realer Fund, der das Skript gerechtfertigt hat:** Bei Viewports
+375–620 wurde die Activity-List von einem einzigen langen MIME-Typ
+(`application/vnd.openxmlformats-officedocument.wordprocessingml.document`)
+horizontal gesprengt. Die Card war dann 682 px breit trotz 320 px
+Viewport. Visuell beim Scrollen unsichtbar (horizontaler Page-Scroll
+wird oft übersehen), aber für User katastrophal.
 
 ### Anti-Patterns (Responsive-Checkliste vor PR)
 
@@ -391,6 +451,13 @@ Folge-Seite zu erfinden.
   `z-40`, Admin `z-20`, Sheet-Overlay `z-50`. Daran halten.
 - [ ] **Container ohne max-width** — User-Seiten `max-w-5xl` (1024 px),
   Admin `max-w-6xl` (1152 px). Kein freies `w-full` auf Main-Content.
+- [ ] **List-Sections in voller Main-Breite** auf Desktop — Rows mit
+  kurzem Content (z.B. „Note-Titel · vor 3 Stunden") fluten sonst
+  in zu breite Cards. List-Sections bekommen `mx-auto max-w-4xl`
+  innerhalb des Main-Containers.
+- [ ] **„Test bei 640, 768, 1024 war grün"** ist nicht ausreichend als
+  Responsive-Nachweis. `pnpm audit:responsive` mit den 10 Zwischen-
+  Breakpoint-Viewports **muss** vor Commit 0 Violations melden.
 - [ ] **Elemente, die nur in einem Theme gut aussehen** — muss beides
   testen, nicht nur eins
 

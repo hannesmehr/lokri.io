@@ -36,7 +36,13 @@ export function ActivityList({
   return (
     <section
       className={cn(
-        "flex flex-col rounded-lg border bg-card",
+        // `min-w-0` + `overflow-hidden` verhindern, dass lange
+        // unbreakbare Strings (z.B. MIME-Type
+        // `application/vnd.openxmlformats-officedocument.wordprocessingml.document`)
+        // die Card breiter pushen als ihr Flex-Parent erlaubt. Ohne
+        // dieses Guard-Pattern ragt die Card rechts aus dem Viewport,
+        // der Audit-Script flaggt das als right-clip (320–620 px).
+        "flex min-w-0 flex-col overflow-hidden rounded-lg border bg-card",
         className,
       )}
     >

@@ -72,7 +72,9 @@ export function KpiCard({
         {value}
       </div>
       {valueSuffix ? (
-        <div className="mt-1 text-xs text-muted-foreground">{valueSuffix}</div>
+        <div className="mt-1 font-mono text-xs text-muted-foreground">
+          {valueSuffix}
+        </div>
       ) : null}
       {pct != null ? (
         <div className="mt-4 space-y-1">

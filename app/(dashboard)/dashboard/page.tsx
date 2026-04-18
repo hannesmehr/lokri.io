@@ -128,26 +128,31 @@ export default async function DashboardPage() {
           <KpiCard
             label="Storage"
             value={formatBytes(quota.usedBytes)}
-            valueSuffix={<span className="font-mono">von {formatBytes(quota.maxBytes)}</span>}
+            valueSuffix={`von ${formatBytes(quota.maxBytes)}`}
             progress={{ used: quota.usedBytes, max: quota.maxBytes }}
           />
           <KpiCard
             label="Files"
             value={quota.filesCount.toLocaleString("de-DE")}
-            valueSuffix={<span className="font-mono">von {quota.maxFiles}</span>}
+            valueSuffix={`von ${quota.maxFiles}`}
             progress={{ used: quota.filesCount, max: quota.maxFiles }}
           />
           <KpiCard
             label="Notes"
             value={quota.notesCount.toLocaleString("de-DE")}
-            valueSuffix={<span className="font-mono">von {quota.maxNotes}</span>}
+            valueSuffix={`von ${quota.maxNotes}`}
             progress={{ used: quota.notesCount, max: quota.maxNotes }}
           />
         </div>
       </section>
 
-      {/* Activity — 1 col bis md, 2 cols ab lg */}
-      <div className="grid gap-3 lg:grid-cols-2">
+      {/* Activity — 1 col bis md, 2 cols ab lg; zentriert mit max-w-4xl.
+          Bewusst schmaler als Main (max-w-5xl) damit Listen-Content nicht
+          auf Desktop „zu breit" wirkt. „Geöffnete Browser-Tabs" in einer
+          474px-Card ließ zu viel Whitespace rechts; 4xl bringt Cards auf
+          ~440px und rahmt die Sektion visuell von Quick-Actions/KPIs
+          oben ab (Summary-Widgets volle Breite, List-Sections schmaler). */}
+      <div className="mx-auto grid w-full max-w-4xl gap-3 lg:grid-cols-2">
         <ActivityList
           title="Letzte Notes"
           icon={<StickyNote className="h-4 w-4" />}

@@ -112,7 +112,11 @@ export function AccountSwitcher({
               className="flex items-center gap-1.5 rounded-md border bg-background px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
             >
               <TriggerIcon className="h-3.5 w-3.5" />
-              <span className="max-w-[90px] truncate font-medium text-foreground sm:max-w-[140px]">
+              {/* Account-Name wird auf iPhone-SE-Klassen (<360) ganz
+                  versteckt; zwischen 360 und sm: mit 90px-Trunk; ab
+                  sm: voller 140px-Trunk. Trigger bleibt immer als
+                  Icon + Chevron erreichbar. */}
+              <span className="hidden max-w-[90px] truncate font-medium text-foreground min-[360px]:inline-block sm:max-w-[140px]">
                 {activeAccountName}
               </span>
               <span className="hidden shrink-0 rounded border px-1 py-0.5 text-[9px] uppercase tracking-wide sm:inline">
