@@ -19,23 +19,16 @@ test("assertEmbeddingKeyFormat rejects malformed keys with embeddingKey.invalidF
 });
 
 test("codedApiError serializes embeddingKey.notFound metadata", async () => {
-  const res = codedApiError(
-    404,
-    "embeddingKey.notFound",
-    "Kein Embedding-Key hinterlegt.",
-  );
+  const res = codedApiError(404, "embeddingKey.notFound");
 
   assert.equal(res.status, 404);
 
   const body = (await res.json()) as {
-    error: string;
-    details: { code: string; message: string; status: number };
+    details: { code: string; status: number };
   };
 
-  assert.equal(body.error, "Kein Embedding-Key hinterlegt.");
   assert.deepEqual(body.details, {
     code: "embeddingKey.notFound",
-    message: "Kein Embedding-Key hinterlegt.",
     status: 404,
   });
 });

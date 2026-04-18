@@ -4,33 +4,21 @@ import { codedApiError } from "@/lib/api/errors";
 import { GitHubProvider, GitHubProviderError } from "@/lib/storage/github";
 import { TeamError, teamErrorStatus } from "@/lib/teams/errors";
 
-test("codedApiError keeps fallback message while exposing structured details", async () => {
-  const res = codedApiError(
-    409,
-    "storageProvider.inUse",
-    "Storage-Provider wird noch verwendet und kann nicht gelöscht werden.",
-    { fileCount: 3 },
-  );
+test("codedApiError serializes code-based details without fallback message", async () => {
+  const res = codedApiError(409, "storageProvider.inUse", { fileCount: 3 });
 
   assert.equal(res.status, 409);
 
   const body = (await res.json()) as {
-    error: string;
     details: {
       code: string;
-      message: string;
       status: number;
       fileCount: number;
     };
   };
 
-  assert.equal(
-    body.error,
-    "Storage-Provider wird noch verwendet und kann nicht gelöscht werden.",
-  );
   assert.deepEqual(body.details, {
     code: "storageProvider.inUse",
-    message: "Storage-Provider wird noch verwendet und kann nicht gelöscht werden.",
     status: 409,
     fileCount: 3,
   });
@@ -136,24 +124,18 @@ test("GitHubProvider maps 404 responses to repoNotFound", async () => {
   }
 });
 
-test("team create-disabled errors retain fallback message and status metadata", async () => {
-  const err = new TeamError(
-    "team.createDisabled",
-    "Team-Erstellung ist derzeit nicht freigeschaltet.",
-  );
+test("team create-disabled errors keep code and status metadata", async () => {
+  const err = new TeamError("team.createDisabled");
 
-  const res = codedApiError(teamErrorStatus(err.code), err.code, err.message);
+  const res = codedApiError(teamErrorStatus(err.code), err.code);
   assert.equal(res.status, 403);
 
   const body = (await res.json()) as {
-    error: string;
-    details: { code: string; message: string; status: number };
+    details: { code: string; status: number };
   };
 
-  assert.equal(body.error, "Team-Erstellung ist derzeit nicht freigeschaltet.");
   assert.deepEqual(body.details, {
     code: "team.createDisabled",
-    message: "Team-Erstellung ist derzeit nicht freigeschaltet.",
     status: 403,
   });
 });
