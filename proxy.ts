@@ -1,4 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { pickFromAcceptLanguage } from "@/lib/i18n/locale";
+import {
+  defaultLocale,
+  isLocale,
+  localeCookieMaxAge,
+  localeCookieName,
+} from "@/lib/i18n/config";
 import {
   ipFromHeaders,
   limit,
@@ -7,25 +14,20 @@ import {
 } from "@/lib/rate-limit";
 
 /**
- * Edge proxy (née "middleware" in Next 15 — renamed in Next 16). First line
- * of defense before any route handler runs.
+ * Edge proxy (née "middleware" in Next 15 — renamed in Next 16). Two
+ * responsibilities, in this order:
  *
- * Layered strategy:
- *   1. Every API request hits `globalIp` with a generous per-IP budget
- *      (600/min). Catches runaway bots before they reach route handlers.
- *   2. Specific sensitive paths (signup, signin, DCR, password reset) get
- *      stricter budgets on top. These trigger first — if a stricter limit is
- *      exceeded we never touch the global counter for this request.
- *   3. Route handlers add a final per-user limit where the identifier is the
- *      authenticated principal (so one abusive user doesn't poison an IP).
+ *   1. **Rate-limiting** on `/api/*` + `/.well-known/*`. Layered: sensitive
+ *      paths get their own bucket first, everything else hits the shared
+ *      `globalIp` bucket.
+ *   2. **Locale-cookie seeding** on page requests. We do NOT run next-intl's
+ *      own middleware (no URL prefixes); cookie + `Accept-Language` are
+ *      inspected server-side in `lib/i18n/request.ts`. For stable UX we
+ *      set the cookie once on the first page visit — subsequent requests
+ *      hit a fast hit-path without re-parsing the header.
  */
 
-// Paths that need stricter-than-global limits. Ordered most-specific first.
-// The limiter name + the identifier-source signals how to key the check.
-const SENSITIVE: Array<{
-  pattern: RegExp;
-  limiter: LimiterName;
-}> = [
+const SENSITIVE: Array<{ pattern: RegExp; limiter: LimiterName }> = [
   { pattern: /^\/api\/auth\/sign-up(\/|$)/, limiter: "authSignup" },
   { pattern: /^\/api\/auth\/sign-in(\/|$)/, limiter: "authSignin" },
   { pattern: /^\/api\/auth\/forget-password(\/|$)/, limiter: "authForgot" },
@@ -33,36 +35,63 @@ const SENSITIVE: Array<{
   { pattern: /^\/api\/auth\/mcp\/(authorize|token)(\/|$)/, limiter: "oauthHot" },
 ];
 
+/**
+ * Attach a `Set-Cookie` for the locale if none is present. Uses
+ * `Accept-Language` to pick one of our supported locales, otherwise the
+ * default. Cookie is readable from client (not httpOnly) so the profile
+ * switcher can flip it without a round-trip.
+ */
+function ensureLocaleCookie(req: NextRequest, res: NextResponse): void {
+  const existing = req.cookies.get(localeCookieName)?.value;
+  if (isLocale(existing)) return;
+
+  const fromHeader = pickFromAcceptLanguage(req.headers.get("accept-language"));
+  const locale = fromHeader ?? defaultLocale;
+
+  res.cookies.set({
+    name: localeCookieName,
+    value: locale,
+    path: "/",
+    sameSite: "lax",
+    httpOnly: false,
+    maxAge: localeCookieMaxAge,
+  });
+}
+
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const ip = ipFromHeaders(req.headers);
 
-  // 1. Specific sensitive paths first.
-  for (const entry of SENSITIVE) {
-    if (entry.pattern.test(pathname)) {
-      const result = await limit(entry.limiter, `ip:${ip}`);
-      if (!result.ok) return rateLimitResponse(result);
-      break; // do not double-count against global
-    }
-  }
-
-  // 2. Global per-IP cap on all /api/* traffic (including MCP + well-known).
+  // ── Rate-limiting branch (API + .well-known only) ────────────────────
   if (pathname.startsWith("/api/") || pathname.startsWith("/.well-known/")) {
+    for (const entry of SENSITIVE) {
+      if (entry.pattern.test(pathname)) {
+        const result = await limit(entry.limiter, `ip:${ip}`);
+        if (!result.ok) return rateLimitResponse(result);
+        break; // do not double-count against global
+      }
+    }
     const result = await limit("globalIp", `ip:${ip}`);
     if (!result.ok) return rateLimitResponse(result);
+    return NextResponse.next();
   }
 
-  return NextResponse.next();
+  // ── Page branch: pass-through + locale cookie seeding ───────────────
+  const res = NextResponse.next();
+  ensureLocaleCookie(req, res);
+  return res;
 }
 
 /**
- * Match API + well-known paths + auth API paths. Skip static assets, Next
- * internals, images, fonts. Pages are not rate-limited at the edge; the
- * cost is low and rate-limiting them confuses normal browsing.
+ * Matcher covers everything except static assets and Next internals.
+ * Pages pass through with just the locale-cookie seeding; API +
+ * well-known routes still get rate-limited.
  */
 export const config = {
   matcher: [
-    "/api/:path*",
-    "/.well-known/:path*",
+    // Everything except _next internals, favicon, static files, OpenGraph
+    // image generation, robots/sitemap, manifest. The negative-lookahead
+    // keeps the matcher cheap.
+    "/((?!_next/static|_next/image|favicon\\.ico|robots\\.txt|sitemap\\.xml|opengraph-image|apple-icon|icon|.*\\.(?:png|jpg|jpeg|gif|svg|webp|ico|woff2?|ttf|otf|eot|css|js|map)).*)",
   ],
 };

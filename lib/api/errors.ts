@@ -20,6 +20,25 @@ export function unauthorized(message = "Unauthorized") {
   return apiError(message, 401);
 }
 
+export function forbidden(message = "Forbidden") {
+  return apiError(message, 403);
+}
+
+/**
+ * Map a thrown `ApiAuthError` to the correct HTTP response. `status === 403`
+ * → `forbidden()` (user is logged in but lacks the required role/scope),
+ * everything else → `unauthorized()` (no session / stale cookie).
+ *
+ * Existing routes that still call `unauthorized(err.message)` directly keep
+ * working — they just always respond 401 even on role mismatches. New routes
+ * that use the `minRole` guard should prefer this helper so the frontend
+ * can distinguish "log in" from "ask an admin".
+ */
+export function authErrorResponse(err: { message: string; status?: number }) {
+  if (err.status === 403) return forbidden(err.message);
+  return unauthorized(err.message);
+}
+
 export function notFound(message = "Not found") {
   return apiError(message, 404);
 }

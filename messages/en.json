@@ -1,0 +1,728 @@
+{
+  "metadata": {
+    "root": {
+      "titleTemplate": "%s · lokri.io",
+      "defaultTitle": "lokri.io",
+      "description": "GDPR-compliant MCP gateway — a persistent knowledge and file pool for Claude Desktop, ChatGPT, Cursor & Codex.",
+      "ogTitle": "lokri.io — MCP Gateway",
+      "ogDescription": "A shared memory pool for all your AI clients. EU-hosted, GDPR-compliant.",
+      "keywords": [
+        "MCP",
+        "Model Context Protocol",
+        "Claude Desktop",
+        "ChatGPT",
+        "Cursor",
+        "Semantic search",
+        "GDPR",
+        "EU-hosted",
+        "AI memory",
+        "pgvector"
+      ]
+    },
+    "marketing": {
+      "title": "Coming soon",
+      "description": "lokri.io is launching soon. The GDPR-compliant MCP gateway for your AI clients."
+    },
+    "impressum": {
+      "title": "Imprint",
+      "description": "Legal notice according to § 5 TMG."
+    },
+    "datenschutz": {
+      "title": "Privacy Policy",
+      "description": "How lokri.io handles your data."
+    }
+  },
+
+  "common": {
+    "buttons": {
+      "save": "Save",
+      "cancel": "Cancel",
+      "close": "Close",
+      "confirm": "Confirm",
+      "delete": "Delete",
+      "remove": "Remove",
+      "edit": "Edit",
+      "create": "Create",
+      "add": "Add",
+      "submit": "Submit",
+      "retry": "Retry",
+      "copy": "Copy",
+      "copied": "Copied",
+      "back": "Back",
+      "next": "Next",
+      "signIn": "Sign in",
+      "signOut": "Sign out",
+      "openInNewTab": "Open in new tab",
+      "loadMore": "Load more",
+      "showMore": "Show more",
+      "showLess": "Show less"
+    },
+    "validation": {
+      "required": "Required",
+      "emailInvalid": "Invalid email address",
+      "passwordTooShort": "Password must be at least {min} characters",
+      "fieldTooLong": "Maximum {max} characters allowed",
+      "mustMatch": "Entries do not match",
+      "urlInvalid": "Invalid URL",
+      "atLeastOneField": "Provide at least one field"
+    },
+    "actions": {
+      "loading": "Loading…",
+      "saving": "Saving…",
+      "deleting": "Deleting…",
+      "creating": "Creating…",
+      "sending": "Sending…",
+      "uploading": "Uploading…",
+      "processing": "Processing…"
+    },
+    "status": {
+      "success": "Success",
+      "error": "Error",
+      "warning": "Warning",
+      "info": "Info"
+    },
+    "userMenu": {
+      "profile": "Profile",
+      "billing": "Billing",
+      "settings": "Settings",
+      "signOut": "Sign out"
+    },
+    "search": {
+      "triggerLabel": "Search & jump…",
+      "placeholder": "Search, jump, or run a command…",
+      "noResults": "No results.",
+      "commands": "Commands",
+      "contentSearch": "Content search",
+      "loading": "Searching content…"
+    },
+    "empty": {
+      "noData": "No data yet"
+    },
+    "pagination": {
+      "loadingMore": "Loading…"
+    }
+  },
+
+  "enums": {
+    "role": {
+      "owner": "Owner",
+      "admin": "Admin",
+      "member": "Member",
+      "viewer": "Viewer",
+      "editor": "Editor",
+      "reader": "Reader"
+    },
+    "accountType": {
+      "personal": "Personal",
+      "team": "Team"
+    },
+    "planName": {
+      "free": "Free",
+      "starter": "Starter",
+      "pro": "Pro",
+      "business": "Business",
+      "team": "Team"
+    },
+    "planDescription": {
+      "free": "To get started. No payment method required.",
+      "starter": "100 MB of storage — fits regular use.",
+      "pro": "1 GB — for power users with large file pools.",
+      "business": "10 GB — for large single-user accounts.",
+      "team": "Seat-based — 5 GB / 1,000 files / 5,000 notes per member. Billing is currently manual (beta)."
+    },
+    "tokenScope": {
+      "personal": "Personal",
+      "team": "Team-wide"
+    },
+    "storageProviderType": {
+      "internal": "lokri-managed",
+      "s3": "S3-compatible",
+      "github": "GitHub"
+    },
+    "billingPeriod": {
+      "monthly": "monthly",
+      "yearly": "yearly"
+    }
+  },
+
+  "errors": {
+    "common": {
+      "unknown": "Something went wrong.",
+      "network": "Network error. Please try again.",
+      "notFound": "Not found.",
+      "forbidden": "Access denied.",
+      "unauthorized": "Not authenticated.",
+      "tooManyRequests": "Too many requests. Please try again later.",
+      "invalidInput": "Invalid input."
+    },
+    "api": {
+      "auth": {
+        "unauthorized": "Please sign in.",
+        "forbidden": "You lack the required permissions.",
+        "sessionExpired": "Session expired — please sign in again."
+      },
+      "quota": {
+        "exceeded": "Quota exceeded: {reason}",
+        "filesExceeded": "Plan's file limit reached.",
+        "bytesExceeded": "Plan's storage limit reached.",
+        "notesExceeded": "Plan's notes limit reached."
+      },
+      "storage": {
+        "providerNotFound": "Storage provider not found.",
+        "providerNameTaken": "A provider with this name already exists.",
+        "connectionFailed": "Connection test failed: {reason}",
+        "readOnly": "This provider is read-only — writes are not allowed.",
+        "fileNotFound": "File not found."
+      },
+      "team": {
+        "createDisabled": "Team creation is currently not enabled for you.",
+        "nameRequired": "Team name must not be empty.",
+        "nameTooLong": "Team name is too long.",
+        "notFound": "Team not found.",
+        "forbidden": "Only owners and admins may do that.",
+        "alreadyMember": "This email is already a member of the team.",
+        "ownerProtected": "The owner cannot be removed or demoted.",
+        "confirmNameMismatch": "The entered name does not match the team name."
+      },
+      "invite": {
+        "invalidToken": "Invitation link is invalid or has expired.",
+        "emailMismatch": "This invitation link belongs to a different email address.",
+        "alreadyAccepted": "Invitation has already been accepted."
+      },
+      "upload": {
+        "empty": "File is empty.",
+        "tooLarge": "File exceeds the {maxMb} MB limit.",
+        "invalidType": "File type is not supported.",
+        "extractFailed": "Text extraction failed — the file is stored but not searchable."
+      },
+      "search": {
+        "queryTooShort": "Query too short — at least {min} characters.",
+        "embeddingFailed": "Query could not be embedded."
+      }
+    }
+  },
+
+  "email": {
+    "shared": {
+      "greeting": "Hi {name}",
+      "greetingFallback": "Hi there",
+      "signature": "— The lokri.io team",
+      "footer": "This email was sent automatically. Replies are not monitored."
+    },
+    "verifyEmail": {
+      "subject": "Please confirm your email address",
+      "heading": "Welcome to lokri.io",
+      "intro": "Thanks for signing up. Please confirm your email address to activate your account.",
+      "button": "Confirm email",
+      "fallback": "If the button does not work, open this link: {url}"
+    },
+    "resetPassword": {
+      "subject": "Reset your password",
+      "heading": "Reset password",
+      "intro": "You asked to reset your password. Click the button to choose a new one. The link expires in one hour.",
+      "button": "Set new password",
+      "ignoreHint": "If you did not request this, simply ignore this email."
+    },
+    "deleteAccount": {
+      "subject": "Confirm account deletion",
+      "heading": "Delete account",
+      "intro": "To permanently delete your lokri.io account, confirm via the link below. All data (notes, files, spaces, tokens) will be irrecoverably removed.",
+      "button": "Confirm deletion",
+      "warning": "If you did not request this, ignore this email — nothing will happen."
+    },
+    "changeEmail": {
+      "subject": "Confirm new email address",
+      "heading": "Email change",
+      "intro": "You want to change your email address to {newEmail}. Confirm to complete the switch.",
+      "button": "Confirm new email",
+      "warning": "If you did not request this, ignore this email."
+    },
+    "twoFactorOtp": {
+      "subject": "Your sign-in code for lokri.io",
+      "heading": "Two-factor code",
+      "intro": "Your sign-in code is:",
+      "expiry": "The code is valid for {minutes} minutes."
+    },
+    "teamInvite": {
+      "subject": "Invitation to {teamName} on lokri.io",
+      "heading": "You've been invited",
+      "intro": "{inviterName} invited you to join the team {teamName} as {role}.",
+      "button": "Accept invitation",
+      "expiry": "The invitation link is valid until {expiresAt}.",
+      "ignoreHint": "Not interested? Simply ignore this email — nothing will happen."
+    }
+  },
+
+  "auth": {
+    "login": {
+      "title": "Sign in",
+      "subtitle": "Welcome back to lokri.io.",
+      "email": "Email",
+      "password": "Password",
+      "forgotLink": "Forgot?",
+      "submit": "Sign in",
+      "submitting": "Signing in…",
+      "inviteHint": "Registration is currently closed — <contact>contact us</contact> for an invite."
+    },
+    "register": {
+      "title": "Registration closed",
+      "subtitle": "We're not taking new accounts right now. If you've been invited or already have access, just sign in.",
+      "contactIntro": "Still interested? Write to us at <email></email> — we'll reach out when registration opens again.",
+      "toLogin": "Go to sign in"
+    },
+    "forgotPassword": {
+      "title": "Forgot password",
+      "subtitle": "Enter your email and we'll send you a reset link.",
+      "email": "Email",
+      "submit": "Send link",
+      "submitting": "Sending…",
+      "sentTitle": "Email on its way",
+      "sentBody": "If an account exists for <email></email>, we've sent a reset link. Check your inbox — the link is valid for one hour.",
+      "backToLogin": "Back to sign in"
+    },
+    "resetPassword": {
+      "title": "New password",
+      "subtitle": "Choose a new password for your account.",
+      "password": "New password",
+      "passwordHint": "At least 8 characters.",
+      "submit": "Set password",
+      "submitting": "Setting…",
+      "successTitle": "Done",
+      "successBody": "Your password has been reset. You can sign in now.",
+      "toLogin": "Go to sign in"
+    },
+    "twoFactor": {
+      "title": "Two-factor",
+      "subtitle": "Enter the 6-digit code from your authenticator app.",
+      "code": "Code",
+      "submit": "Verify",
+      "useBackup": "Use backup code"
+    },
+    "verifyEmail": {
+      "success": "Email confirmed — redirecting."
+    }
+  },
+
+  "dashboard": {
+    "nav": {
+      "dashboard": "Dashboard",
+      "spaces": "Spaces",
+      "notes": "Notes",
+      "files": "Files"
+    },
+    "overview": {
+      "title": "Dashboard",
+      "subtitle": "A quick glance at your content.",
+      "stats": {
+        "notes": "Notes",
+        "files": "Files",
+        "spaces": "Spaces",
+        "storage": "Storage"
+      },
+      "recent": {
+        "notes": "Recent notes",
+        "files": "Recent files",
+        "noNotes": "No notes yet",
+        "noFiles": "No files yet",
+        "viewAll": "View all"
+      }
+    }
+  },
+
+  "spaces": {
+    "title": "Spaces",
+    "subtitle": "Thematic groups for notes and files.",
+    "create": "Create space",
+    "empty": {
+      "title": "No spaces yet",
+      "body": "Spaces bundle notes + files by topic. Create your first one."
+    },
+    "createDialog": {
+      "title": "New space",
+      "description": "Give the space a name and optionally pick a storage provider.",
+      "name": "Name",
+      "descriptionLabel": "Description (optional)",
+      "storage": "Storage",
+      "submit": "Create space"
+    },
+    "detail": {
+      "back": "← Spaces",
+      "createdAt": "Created {relative}",
+      "updatedAt": "last updated {relative}",
+      "stats": {
+        "notes": "Notes",
+        "files": "Files (internal)",
+        "storage": "Storage",
+        "internal": "lokri-managed (default)"
+      },
+      "reindex": {
+        "button": "Reindex",
+        "working": "Indexing…",
+        "confirm": "Reindex all files in this space? Existing embeddings will be replaced. This may take several minutes depending on size.",
+        "loading": "Reindexing space…",
+        "success": "{indexed} indexed · {chunks} chunks total",
+        "partial": "{indexed} indexed · {noText} without text · {failed} failed",
+        "truncated": "more files remaining. Click again."
+      }
+    },
+    "browser": {
+      "title": "Bucket contents",
+      "titleInternal": "Files",
+      "readOnly": "read-only",
+      "hiddenCount": "{count} hidden — show",
+      "hiddenToggle": "Hide hidden ({count})",
+      "empty": {
+        "internal": "No files yet — drop them here or upload via the Files page.",
+        "external": "This path has no visible objects — drop files here to upload them into the bucket.",
+        "readOnly": "This path has no visible objects (source is read-only)."
+      },
+      "dropzone": {
+        "title": "Drop files here to upload",
+        "hintExternal": "They land in the connected bucket and are indexed immediately.",
+        "hintInternal": "Stored in this space and indexed immediately.",
+        "uploading": "Upload in progress…"
+      },
+      "upload": {
+        "progress": "{current}/{total} · {filename}",
+        "success": "{count, plural, one {# file uploaded.} other {# files uploaded.}}",
+        "partial": "{ok} uploaded, {failed} failed.",
+        "failed": "Upload failed.",
+        "noValidFiles": "No valid files (folders are not supported).",
+        "busy": "Wait until the current upload finishes."
+      },
+      "actions": {
+        "import": "Import into lokri",
+        "alreadyImported": "Already imported",
+        "copyUrl": "Copy URL",
+        "hide": "Hide (also for MCP)",
+        "unhide": "Unhide",
+        "reindex": "Reindex",
+        "delete": "Delete",
+        "deleteConfirm": "Really delete \"{name}\"?",
+        "recursiveImport": "Import recursively",
+        "hideDirectory": "Hide directory"
+      },
+      "bulk": {
+        "selected": "{count} selected",
+        "importable": "{count} importable",
+        "importAll": "Import all",
+        "importing": "Importing…",
+        "hide": "Hide",
+        "unhide": "Show",
+        "deselect": "Deselect"
+      }
+    }
+  },
+
+  "notes": {
+    "title": "Notes",
+    "subtitle": "Markdown notes with semantic search.",
+    "create": "New note",
+    "empty": {
+      "title": "No notes yet",
+      "body": "Notes are automatically embedded and searchable via MCP. Write your first one."
+    },
+    "form": {
+      "title": "Title",
+      "space": "Space (optional)",
+      "content": "Content",
+      "submit": "Save note",
+      "submitting": "Saving…"
+    },
+    "detail": {
+      "updatedAt": "Last updated {datetime}",
+      "delete": "Delete note",
+      "deleteConfirm": "Really delete note \"{title}\"?"
+    }
+  },
+
+  "files": {
+    "title": "Files",
+    "subtitle": "Files — local or from connected storage providers.",
+    "upload": "Upload file",
+    "empty": {
+      "title": "No files yet",
+      "body": "Your uploads land here. Text is extracted and made searchable."
+    },
+    "table": {
+      "filename": "Name",
+      "size": "Size",
+      "mimeType": "Type",
+      "createdAt": "Uploaded",
+      "actions": "Actions"
+    }
+  },
+
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Account-wide settings and storage providers.",
+    "navigation": {
+      "general": "General",
+      "mcp": "MCP",
+      "storage": "Storage",
+      "embeddingKey": "Embedding key",
+      "team": "Team"
+    },
+    "general": {
+      "languageTitle": "Language",
+      "languageDescription": "Language of the web UI. Saved in a cookie and on your profile.",
+      "dangerZone": "Danger zone"
+    },
+    "mcp": {
+      "title": "MCP",
+      "subtitle": "Connect Claude Desktop, ChatGPT, Cursor, or other MCP clients to your lokri account.",
+      "tokens": {
+        "title": "Legacy bearer tokens",
+        "description": "Static tokens for scripts and CLI integrations. Modern clients use OAuth instead (see below).",
+        "new": "New token",
+        "empty": "No tokens yet. Create one for your first client.",
+        "createdAt": "Created {date}",
+        "lastUsedAt": "last used {datetime}",
+        "neverUsed": "never used",
+        "revoke": "Revoke",
+        "revokeConfirm": "Revoke token \"{name}\"? Clients will lose access immediately."
+      },
+      "create": {
+        "title": "New MCP token",
+        "subtitle": "Name the token and decide what access the client should have.",
+        "createdTitle": "Token created",
+        "createdSubtitle": "Copy the token now — it will not be shown again.",
+        "oneTimeWarning": "After closing this dialog the token cannot be shown again. Save it in your AI client configuration or a password manager.",
+        "name": "Name",
+        "namePlaceholder": "e.g. Claude Desktop",
+        "scope": "Visibility",
+        "scopeAll": "All spaces",
+        "scopeAllHint": "full account access",
+        "scopeSelected": "Selected only",
+        "scopeSelectedHint": "{count} available",
+        "scopeEmpty": "You have no spaces yet. Create one first to assign it here.",
+        "readOnly": "Read-only",
+        "readOnlyHint": "The client can read and search but cannot create, change, or delete anything.",
+        "submit": "Create token",
+        "submitting": "Creating…",
+        "copyToClipboard": "Copy to clipboard",
+        "copied": "Token copied.",
+        "errors": {
+          "generic": "Could not create token.",
+          "selectAtLeastOne": "Select at least one space — or pick \"all spaces\"."
+        }
+      },
+      "instructions": {
+        "title": "Set up a client",
+        "subtitle": "Copy & paste snippets for Claude Desktop, ChatGPT, Cursor."
+      }
+    },
+    "storage": {
+      "title": "Storage",
+      "subtitle": "Attach your own S3 buckets or GitHub repos.",
+      "internal": {
+        "name": "lokri-managed (Vercel Blob)",
+        "default": "Default",
+        "description": "Default for all uploads without a space-specific assignment. Always available, not deletable."
+      },
+      "list": {
+        "empty": "No external providers yet. Create one, then you can assign it to individual spaces.",
+        "remove": "Remove",
+        "removeConfirm": "Really remove provider \"{name}\"?"
+      },
+      "add": {
+        "button": "New provider",
+        "title": "New storage provider",
+        "subtitle": "S3-compatible bucket or a GitHub repo (read-only). We test the connection before saving — invalid credentials are not persisted.",
+        "encryptionNote": "Access credentials are AES-256-GCM encrypted in the DB and never returned in plain text.",
+        "tabs": {
+          "s3": "S3-compatible",
+          "s3Hint": "AWS, R2, B2, MinIO",
+          "github": "GitHub",
+          "githubHint": "Repo read-only"
+        },
+        "fields": {
+          "name": "Name",
+          "bucket": "Bucket",
+          "region": "Region",
+          "endpoint": "Endpoint (R2/B2/MinIO)",
+          "accessKeyId": "Access Key ID",
+          "secretAccessKey": "Secret Access Key",
+          "pathPrefix": "Path prefix (optional)",
+          "forcePathStyle": "Force path-style (needed for R2 / MinIO)",
+          "owner": "Owner",
+          "repo": "Repository",
+          "ref": "Branch / ref (optional)",
+          "refPlaceholder": "empty = default branch",
+          "token": "Access token (PAT)"
+        },
+        "githubHelp": "Optional for public repos — without a token, GitHub's IP rate limit applies (60 req/h). For private repos use a {patLink} with the \"Contents: Read\" scope on the repo.",
+        "patLinkLabel": "fine-grained PAT",
+        "submit": "Test & save",
+        "submitting": "Testing connection…",
+        "saved": "Saved",
+        "created": "Provider \"{name}\" created.",
+        "errors": {
+          "generic": "Saving failed."
+        }
+      }
+    },
+    "embeddingKey": {
+      "title": "Own embedding API key (BYOK)",
+      "subtitle": "Instead of routing through the Vercel AI Gateway, every embedding request hits your own OpenAI account directly. No markup on our side, full audit trail on yours. Without a key, the default gateway route is used.",
+      "active": "BYOK active — {provider} · {model}",
+      "activeHint": "Every embedding request now goes directly to api.openai.com — the Vercel AI Gateway is bypassed.",
+      "createdAt": "Added on {datetime}",
+      "lastUsedAt": "last used {datetime}",
+      "neverUsed": "not used yet",
+      "inactive": "No key configured — gateway fallback active",
+      "inactiveHint": "Embeddings are currently routed through the Vercel AI Gateway. Add your own key below to bypass gateway costs or keep a clean audit trail in your OpenAI account.",
+      "provider": "Provider",
+      "providerNote": "OpenAI only for v1",
+      "model": "Model",
+      "modelHint": "Both models emit 1536-dim vectors — required by our pgvector column.",
+      "apiKey": "OpenAI API key",
+      "apiKeyHint": "The key is AES-256-GCM encrypted in the DB and never returned in plain text. We test the connection before saving — invalid keys are not persisted.",
+      "save": "Test & save",
+      "saving": "Testing connection…",
+      "replace": "Replace key",
+      "remove": "Remove key",
+      "removing": "Removing…",
+      "removeConfirm": "Really remove the key? Embeddings will fall back to the Vercel AI Gateway.",
+      "successSave": "Key saved — embeddings now run via your account.",
+      "successRemove": "Key removed — gateway fallback active.",
+      "errors": {
+        "generic": "Could not save the key.",
+        "removeFailed": "Could not remove."
+      },
+      "modelSwitchWarning": {
+        "title": "Model-switch warning",
+        "body": "Switching from {modelA} to {modelB} leaves existing vectors in an incompatible embedding space — new queries will search a different space than old chunks. For clean operation, {reindexLabel} every space once after a model switch.",
+        "reindexLabel": "reindex"
+      }
+    },
+    "team": {
+      "title": "Team",
+      "subtitle": "Members, roles, and settings for this team."
+    }
+  },
+
+  "profile": {
+    "title": "Profile",
+    "subtitle": "Your personal settings.",
+    "navigation": {
+      "overview": "Overview",
+      "security": "Security",
+      "data": "Data"
+    },
+    "overview": {
+      "name": "Name",
+      "email": "Email",
+      "save": "Save"
+    },
+    "locale": {
+      "title": "Language",
+      "description": "Language of the web UI and our emails.",
+      "label": "Select language",
+      "saved": "Language changed."
+    },
+    "security": {
+      "title": "Security",
+      "password": {
+        "title": "Change password",
+        "current": "Current password",
+        "next": "New password",
+        "submit": "Change password",
+        "success": "Password changed."
+      },
+      "twoFactor": {
+        "title": "Two-factor authentication",
+        "subtitle": "Extra protection via a TOTP app (1Password, Authy, Google Authenticator).",
+        "enable": "Enable",
+        "disable": "Disable",
+        "enabled": "Enabled",
+        "disabled": "Disabled"
+      }
+    },
+    "data": {
+      "title": "My data",
+      "export": {
+        "title": "Export",
+        "description": "Download a complete export of your data (JSON + files as ZIP).",
+        "download": "Download export"
+      }
+    },
+    "dangerZone": {
+      "title": "Danger zone",
+      "deleteAccount": "Delete account",
+      "deleteConfirm": "Really delete your account? This cannot be undone. All notes, files, tokens, and spaces will be removed.",
+      "deleteInitiated": "Confirmation email on the way. Click the link to finalize the deletion."
+    }
+  },
+
+  "billing": {
+    "title": "Billing",
+    "subtitle": "Plan, invoices, and payments.",
+    "navigation": {
+      "overview": "Overview",
+      "plans": "Plans",
+      "invoices": "Invoices"
+    },
+    "currentPlan": {
+      "title": "Current plan",
+      "expires": "expires on {date}",
+      "renewed": "last renewed {date}",
+      "freePlan": "Free — no active subscription."
+    },
+    "plans": {
+      "title": "Plans",
+      "subtitle": "Pick a plan that fits you. One-time payment via PayPal.",
+      "period": {
+        "monthly": "Monthly",
+        "yearly": "Yearly",
+        "save": "save 2 months"
+      },
+      "features": {
+        "storage": "{bytes} storage",
+        "files": "{count} files",
+        "notes": "{count} notes"
+      },
+      "upgrade": "Upgrade",
+      "currentBadge": "Current plan"
+    },
+    "invoices": {
+      "title": "Invoices",
+      "empty": "No invoices yet — you're on the Free plan.",
+      "number": "Invoice number",
+      "issuedAt": "Date",
+      "amount": "Amount",
+      "download": "Download PDF"
+    },
+    "success": {
+      "title": "Payment successful",
+      "body": "Your plan is active. The invoice is available in your billing documents.",
+      "backToDashboard": "Back to dashboard"
+    },
+    "errors": {
+      "createOrderFailed": "PayPal order failed.",
+      "noApproveUrl": "No approval URL received from PayPal.",
+      "captureFailed": "Payment could not be completed."
+    },
+    "upgradeButton": {
+      "label": "Upgrade",
+      "opening": "Opening PayPal…"
+    }
+  },
+
+  "marketing": {
+    "comingSoon": {
+      "title": "Coming soon",
+      "tagline": "The GDPR-compliant MCP gateway for your AI clients.",
+      "loginCta": "Sign in"
+    }
+  },
+
+  "legal": {
+    "impressum": {
+      "headingNote": "For legal reasons the Imprint is only available in German."
+    },
+    "datenschutz": {
+      "headingNote": "For legal reasons the Privacy Policy is only available in German."
+    }
+  }
+}

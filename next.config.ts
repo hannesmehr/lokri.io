@@ -1,4 +1,13 @@
 import type { NextConfig } from "next";
+import createNextIntlPlugin from "next-intl/plugin";
+
+/**
+ * next-intl wiring. The plugin only teaches Next where to find the
+ * request-config — we do NOT use next-intl's routing middleware (no
+ * URL-prefixes). Locale resolution is entirely server-side inside
+ * `lib/i18n/request.ts` (cookie / DB / Accept-Language / default).
+ */
+const withNextIntl = createNextIntlPlugin("./lib/i18n/request.ts");
 
 /**
  * Baseline security headers for every response. The CSP is intentionally
@@ -76,4 +85,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withNextIntl(nextConfig);

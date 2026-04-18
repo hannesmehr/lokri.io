@@ -20,6 +20,10 @@ Context Protocol.
   `delete_note`, `upload_file`, `delete_file`)
 - **Email/Passwort-Auth** (Better-Auth) mit Email-Verification
 - **Quota** pro Account, atomar getrackt (Free: 20 MB · 100 Files · 500 Notes)
+- **Mehrsprachigkeit** (`next-intl`) — Deutsch + English, Wechsel im Profil,
+  Cookie-basiert, ohne URL-Prefix. Emails werden in der Sprache des Empfängers
+  versendet (`users.preferred_locale`). Impressum + Datenschutz bleiben aus
+  rechtlichen Gründen deutschsprachig.
 
 ## Tech-Stack
 

@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,28 +17,28 @@ import {
  * `emailAndPassword.disableSignUp` (see `lib/auth.ts`); this page is the
  * friendly UX counterpart to that 400.
  */
-export default function RegisterPage() {
+export default async function RegisterPage() {
+  const t = await getTranslations("auth.register");
   return (
     <Card className="backdrop-blur-sm">
       <CardHeader>
         <CardTitle className="font-display text-3xl leading-tight">
-          Registrierung geschlossen
+          {t("title")}
         </CardTitle>
-        <CardDescription>
-          Wir nehmen aktuell keine neuen Accounts auf. Wenn du bereits eingeladen
-          bist oder einen bestehenden Zugang hast, melde dich einfach an.
-        </CardDescription>
+        <CardDescription>{t("subtitle")}</CardDescription>
       </CardHeader>
       <CardContent>
         <p className="text-sm text-muted-foreground">
-          Interessiert trotzdem? Schreib uns unter{" "}
-          <a
-            href="mailto:hello@lokri.io"
-            className="font-medium text-foreground underline-offset-4 hover:underline"
-          >
-            hello@lokri.io
-          </a>{" "}
-          — wir melden uns, sobald die Registrierung wieder offen ist.
+          {t.rich("contactIntro", {
+            email: () => (
+              <a
+                href="mailto:hello@lokri.io"
+                className="font-medium text-foreground underline-offset-4 hover:underline"
+              >
+                hello@lokri.io
+              </a>
+            ),
+          })}
         </p>
       </CardContent>
       <CardFooter className="flex flex-col gap-3">
@@ -46,7 +47,7 @@ export default function RegisterPage() {
           render={<Link href="/login" />}
           className="w-full"
         >
-          Zum Login
+          {t("toLogin")}
         </Button>
       </CardFooter>
     </Card>

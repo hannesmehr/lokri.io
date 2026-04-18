@@ -1,8 +1,13 @@
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 
-export const metadata: Metadata = {
-  title: "Datenschutz · lokri.io",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("metadata.datenschutz");
+  return {
+    title: t("title"),
+    description: t("description"),
+  };
+}
 
 export default function DatenschutzPage() {
   return (

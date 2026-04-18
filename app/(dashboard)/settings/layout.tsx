@@ -1,21 +1,28 @@
+import { getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
 import { SectionNav } from "../profile/_section-nav";
 
-export default function SettingsLayout({ children }: { children: ReactNode }) {
+export default async function SettingsLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  const t = await getTranslations("settings");
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-display text-4xl leading-tight">Einstellungen</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Kontowide Einstellungen, Storage-Anbieter.
-        </p>
+        <h1 className="font-display text-4xl leading-tight">{t("title")}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">{t("subtitle")}</p>
       </div>
       <SectionNav
         items={[
-          { href: "/settings", label: "Allgemein" },
-          { href: "/settings/mcp", label: "MCP" },
-          { href: "/settings/storage", label: "Storage" },
-          { href: "/settings/embedding-key", label: "Embedding-Key" },
+          { href: "/settings", label: t("navigation.general") },
+          { href: "/settings/mcp", label: t("navigation.mcp") },
+          { href: "/settings/storage", label: t("navigation.storage") },
+          {
+            href: "/settings/embedding-key",
+            label: t("navigation.embeddingKey"),
+          },
         ]}
       />
       {children}

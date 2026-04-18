@@ -16,6 +16,7 @@ import {
   User,
   Zap,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -216,6 +217,7 @@ function score(haystack: string, needle: string): number | null {
 
 export function SearchPalette() {
   const router = useRouter();
+  const t = useTranslations("common.search");
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [data, setData] = useState<PaletteData | null>(null);
@@ -339,7 +341,7 @@ export function SearchPalette() {
       >
         <Command shouldFilter={false} className="bg-popover">
           <CommandInput
-            placeholder="Suchen, springen, oder Kommando ausführen…"
+            placeholder={t("placeholder")}
             value={query}
             onValueChange={setQuery}
           />
@@ -348,13 +350,13 @@ export function SearchPalette() {
               <CommandEmpty>
                 <span className="inline-flex items-center gap-2 text-sm text-muted-foreground">
                   <SearchIcon className="h-4 w-4" />
-                  Keine Treffer.
+                  {t("noResults")}
                 </span>
               </CommandEmpty>
             ) : null}
 
             {filtered.cmds.length > 0 ? (
-              <CommandGroup heading="Kommandos">
+              <CommandGroup heading={t("commands")}>
                 {filtered.cmds.map((c) => {
                   const Icon = c.icon;
                   return (
@@ -428,7 +430,7 @@ export function SearchPalette() {
             ) : null}
 
             {semanticHits.length > 0 ? (
-              <CommandGroup heading="Inhaltssuche">
+              <CommandGroup heading={t("contentSearch")}>
                 {semanticHits.map((h) => {
                   const Icon = h.type === "note" ? StickyNote : FileText;
                   return (
@@ -465,7 +467,7 @@ export function SearchPalette() {
             ) : semanticLoading && query.length >= MIN_SEMANTIC_CHARS ? (
               <div className="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground">
                 <Loader2 className="h-3 w-3 animate-spin" />
-                Inhaltssuche läuft…
+                {t("loading")}
               </div>
             ) : null}
           </CommandList>
@@ -477,6 +479,7 @@ export function SearchPalette() {
 
 /** Inline trigger in the nav so users discover the shortcut. */
 export function SearchTrigger() {
+  const t = useTranslations("common.search");
   const [mac, setMac] = useState(false);
   useEffect(() => {
     setMac(
@@ -498,10 +501,10 @@ export function SearchTrigger() {
       type="button"
       onClick={open}
       className="hidden items-center gap-2 rounded-md border bg-background px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground sm:inline-flex"
-      aria-label="Suchen oder Kommando"
+      aria-label={t("triggerLabel")}
     >
       <SearchIcon className="h-3.5 w-3.5" />
-      <span>Suchen & Springen…</span>
+      <span>{t("triggerLabel")}</span>
       <kbd className="rounded bg-muted px-1 py-0.5 font-mono text-[10px]">
         {mac ? "⌘" : "Ctrl"} K
       </kbd>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
@@ -29,6 +30,9 @@ function ResetPasswordInner() {
   const router = useRouter();
   const params = useSearchParams();
   const token = params.get("token");
+  const t = useTranslations("auth.resetPassword");
+  const tCommon = useTranslations("common.validation");
+  const tErr = useTranslations("errors.common");
 
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -40,18 +44,16 @@ function ResetPasswordInner() {
       <Card className="backdrop-blur-sm">
         <CardHeader>
           <CardTitle className="font-display text-3xl leading-tight">
-            Ungültiger Link
+            {t("title")}
           </CardTitle>
-          <CardDescription>
-            Der Reset-Link fehlt oder ist abgelaufen. Fordere einen neuen an.
-          </CardDescription>
+          <CardDescription>{t("subtitle")}</CardDescription>
         </CardHeader>
         <CardFooter>
           <Link
             href="/forgot-password"
             className="text-sm underline-offset-4 hover:underline"
           >
-            Neuen Link anfordern
+            {t("toLogin")}
           </Link>
         </CardFooter>
       </Card>
@@ -62,11 +64,11 @@ function ResetPasswordInner() {
     e.preventDefault();
     setError(null);
     if (password !== confirm) {
-      setError("Die Passwörter stimmen nicht überein.");
+      setError(tCommon("mustMatch"));
       return;
     }
     if (password.length < 8) {
-      setError("Mindestens 8 Zeichen.");
+      setError(tCommon("passwordTooShort", { min: 8 }));
       return;
     }
     setLoading(true);
@@ -76,13 +78,10 @@ function ResetPasswordInner() {
     });
     setLoading(false);
     if (rpError) {
-      setError(
-        rpError.message ??
-          "Reset fehlgeschlagen — der Link ist vermutlich abgelaufen.",
-      );
+      setError(rpError.message ?? tErr("unknown"));
       return;
     }
-    toast.success("Passwort aktualisiert. Melde dich jetzt an.");
+    toast.success(t("successBody"));
     router.push("/login");
   }
 
@@ -90,16 +89,14 @@ function ResetPasswordInner() {
     <Card className="backdrop-blur-sm">
       <CardHeader>
         <CardTitle className="font-display text-3xl leading-tight">
-          Neues Passwort
+          {t("title")}
         </CardTitle>
-        <CardDescription>
-          Wähle ein neues Passwort. Mindestens 8 Zeichen.
-        </CardDescription>
+        <CardDescription>{t("subtitle")}</CardDescription>
       </CardHeader>
       <form onSubmit={onSubmit}>
         <CardContent className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="password">Neues Passwort</Label>
+            <Label htmlFor="password">{t("password")}</Label>
             <Input
               id="password"
               type="password"
@@ -111,7 +108,7 @@ function ResetPasswordInner() {
             />
           </div>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="confirm">Bestätigen</Label>
+            <Label htmlFor="confirm">{tCommon("mustMatch")}</Label>
             <Input
               id="confirm"
               type="password"
@@ -130,7 +127,7 @@ function ResetPasswordInner() {
         </CardContent>
         <CardFooter>
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Speichere…" : "Passwort setzen"}
+            {loading ? t("submitting") : t("submit")}
           </Button>
         </CardFooter>
       </form>

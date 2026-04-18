@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronDown, CreditCard, LogOut, Settings, User } from "lucide-react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -18,6 +19,7 @@ interface Props {
 
 export function UserMenu({ user }: Props) {
   const router = useRouter();
+  const t = useTranslations("common.userMenu");
   const initials =
     user.name
       .split(" ")
@@ -51,15 +53,15 @@ export function UserMenu({ user }: Props) {
         <DropdownMenuSeparator />
         <DropdownMenuItem render={<Link href="/profile" />}>
           <User className="h-4 w-4" />
-          Profil
+          {t("profile")}
         </DropdownMenuItem>
         <DropdownMenuItem render={<Link href="/billing" />}>
           <CreditCard className="h-4 w-4" />
-          Billing
+          {t("billing")}
         </DropdownMenuItem>
         <DropdownMenuItem render={<Link href="/settings" />}>
           <Settings className="h-4 w-4" />
-          Einstellungen
+          {t("settings")}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
@@ -70,7 +72,7 @@ export function UserMenu({ user }: Props) {
           }}
         >
           <LogOut className="h-4 w-4" />
-          Abmelden
+          {t("signOut")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

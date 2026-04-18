@@ -4,6 +4,7 @@ import {
   boolean,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   text,
@@ -22,10 +23,25 @@ export const ownerAccountTypeEnum = pgEnum("owner_account_type", [
   "team",
 ]);
 
+/**
+ * Role enum used by both `owner_account_members` (team-level) and
+ * `space_members` (per-space ACL).
+ *
+ * Modern values: `owner | admin | member | viewer`.
+ *
+ * Legacy values `editor` and `reader` stay in the enum for backwards-compat
+ * with existing `space_members` rows. At the application layer they are
+ * aliased (`editor ≙ member`, `reader ≙ viewer`) via
+ * `normalizeLegacyRole` in `lib/auth/roles.ts`. New `owner_account_members`
+ * rows should always use the modern values.
+ */
 export const memberRoleEnum = pgEnum("member_role", [
   "owner",
   "editor",
   "reader",
+  "admin",
+  "member",
+  "viewer",
 ]);
 
 // ---------------------------------------------------------------------------
@@ -44,6 +60,30 @@ export const users = pgTable("users", {
   // Added by the better-auth `twoFactor` plugin. Defaults to false;
   // flipped to true after the user finishes TOTP enrollment.
   twoFactorEnabled: boolean("two_factor_enabled").notNull().default(false),
+  /**
+   * Manual beta-gate for team creation. Flipped via SQL by an admin
+   * (`UPDATE users SET can_create_teams = true WHERE email = ?`). The
+   * "Create team" button in the account switcher is only rendered when
+   * this is true. Self-service + payment lands in a later release.
+   */
+  canCreateTeams: boolean("can_create_teams").notNull().default(false),
+  /**
+   * Last owner_account the user switched to via the account switcher.
+   * Null → fall back to their personal account. FK set-null so deleting
+   * a team transparently kicks the user back to personal.
+   */
+  activeOwnerAccountId: uuid("active_owner_account_id").references(
+    () => ownerAccounts.id,
+    { onDelete: "set null" },
+  ),
+  /**
+   * User-chosen UI language. Wins over the browser `Accept-Language`
+   * header. Null → no preference yet; resolver falls back to cookie
+   * then to the header. Values are the `Locale` strings from
+   * `lib/i18n/config.ts`; we keep the column as plain text to avoid an
+   * enum migration every time we add a language.
+   */
+  preferredLocale: text("preferred_locale"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -241,9 +281,13 @@ export const oauthConsent = pgTable(
 // ---------------------------------------------------------------------------
 
 export const plans = pgTable("plans", {
-  id: text("id").primaryKey(), // e.g. "free", "starter", "pro"
+  id: text("id").primaryKey(), // e.g. "free", "starter", "pro", "team"
   name: text("name").notNull(),
   description: text("description"),
+  /**
+   * Base per-account limits. When `isSeatBased` is true, the effective
+   * limit at runtime is `maxBytes × seatCount` etc. (see `lib/quota.ts`).
+   */
   maxBytes: bigint("max_bytes", { mode: "number" }).notNull(),
   maxFiles: integer("max_files").notNull(),
   maxNotes: integer("max_notes").notNull(),
@@ -252,9 +296,22 @@ export const plans = pgTable("plans", {
   priceEurMonthly: integer("price_eur_monthly").notNull().default(0),
   priceMonthlyCents: integer("price_monthly_cents").notNull().default(0),
   priceYearlyCents: integer("price_yearly_cents").notNull().default(0),
+  /**
+   * Team/seat-priced plans multiply limits by active seat count and use
+   * the `pricePerSeat*` columns instead of the flat `priceMonthly*`
+   * columns. Single-seat plans (`free`, `starter`, `pro`, `business`)
+   * stay `false`.
+   */
+  isSeatBased: boolean("is_seat_based").notNull().default(false),
+  /** Null unless `isSeatBased` — otherwise in EUR cents per seat. */
+  pricePerSeatMonthlyCents: integer("price_per_seat_monthly_cents"),
+  pricePerSeatYearlyCents: integer("price_per_seat_yearly_cents"),
   /** Display order in the pricing table (ascending). */
   sortOrder: integer("sort_order").notNull().default(0),
-  /** False for `free`/deprecated tiers — hides them from the upgrade UI. */
+  /**
+   * False for `free`/deprecated tiers and for the `team` plan in V1
+   * (teams are manually provisioned — no self-service checkout yet).
+   */
   isPurchasable: boolean("is_purchasable").notNull().default(false),
 });
 
@@ -395,6 +452,15 @@ export const ownerAccountMembers = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     role: memberRoleEnum("role").notNull(),
+    /**
+     * Who invited this member. Null for the initial `owner` row (they
+     * created the team) and for members added before the invite flow
+     * existed. FK set-null so deleting the inviter doesn't tear down
+     * membership.
+     */
+    invitedByUserId: text("invited_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
     joinedAt: timestamp("joined_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -406,6 +472,53 @@ export const ownerAccountMembers = pgTable(
       t.ownerAccountId,
       t.userId,
     ),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// Team invites (Magic-Link invitation flow)
+//
+// One row per outstanding email invite into a team. Token is hashed with
+// bcrypt — the raw token (`inv_…`) lives only in the email that was sent
+// out. Invites expire after 7 days by default; the `/invites/accept` route
+// validates against the current state (not accepted, not revoked, not
+// expired) before materialising the membership.
+// ---------------------------------------------------------------------------
+
+export const teamInvites = pgTable(
+  "team_invites",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    ownerAccountId: uuid("owner_account_id")
+      .notNull()
+      .references(() => ownerAccounts.id, { onDelete: "cascade" }),
+    /** The invitee's email — used for display and as an identity claim
+     *  (must match the accepting user's email on `acceptInvite`). */
+    email: text("email").notNull(),
+    /** Role the invitee will receive on accept. `owner` is not allowed
+     *  here — ownership transfer is a separate flow. */
+    role: memberRoleEnum("role").notNull(),
+    /** bcrypt hash of the raw `inv_…` token. Lookups iterate pending
+     *  rows and compare — same pattern as `api_tokens`. */
+    tokenHash: text("token_hash").notNull().unique(),
+    invitedByUserId: text("invited_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    acceptedAt: timestamp("accepted_at", { withTimezone: true }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("team_invites_owner_account_id_idx").on(t.ownerAccountId),
+    // Partial unique — only one pending invite per (account, email) at a
+    // time. Accepted/revoked rows stay around for history and don't block
+    // re-inviting the same address later.
+    uniqueIndex("team_invites_pending_unique_idx")
+      .on(t.ownerAccountId, t.email)
+      .where(sql`accepted_at IS NULL AND revoked_at IS NULL`),
   ],
 );
 
@@ -737,3 +850,55 @@ export const usageQuota = pgTable("usage_quota", {
     .defaultNow()
     .$onUpdateFn(() => new Date()),
 });
+
+// ---------------------------------------------------------------------------
+// Audit log
+//
+// Security-relevant events — team lifecycle, membership changes, token
+// operations, logins. Fire-and-forget writes from `lib/audit/log.ts`;
+// reads are admin-only (no UI in V1 — query via SQL, see docs/OPS.md).
+//
+// `action` is a slug like "team.created" or "member.role_changed". Keep
+// consistent — any `grep -r` on the codebase should turn up every action
+// name and where it's written.
+// ---------------------------------------------------------------------------
+
+export const auditEvents = pgTable(
+  "audit_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    /** Scope — which owner_account this event belongs to. */
+    ownerAccountId: uuid("owner_account_id")
+      .notNull()
+      .references(() => ownerAccounts.id, { onDelete: "cascade" }),
+    /** Who did it. Null = system event (e.g. a cron or delete-cascade). */
+    actorUserId: text("actor_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    /** Slug-style identifier — e.g. "team.created", "member.invited". */
+    action: text("action").notNull(),
+    /** Free-form. Common values: "user", "token", "space", "team", "invite". */
+    targetType: text("target_type"),
+    targetId: text("target_id"),
+    /** Arbitrary structured context (old/new role, token IDs, etc.). */
+    metadata: jsonb("metadata"),
+    /**
+     * Raw client IP extracted from forwarding headers. Stored as text,
+     * not `inet`, so we don't care whether the header carries IPv4, IPv6,
+     * a comma list, or junk — the column's job is diagnostics, not
+     * perfect normalisation.
+     */
+    ipAddress: text("ip_address"),
+    userAgent: text("user_agent"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("audit_events_owner_account_id_created_at_idx").on(
+      t.ownerAccountId,
+      t.createdAt.desc(),
+    ),
+    index("audit_events_action_idx").on(t.action),
+  ],
+);

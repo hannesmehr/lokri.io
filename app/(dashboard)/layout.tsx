@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { headers } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -8,13 +9,6 @@ import { NavLink } from "./_nav-link";
 import { SearchPalette, SearchTrigger } from "./_search-palette";
 import { UserMenu } from "./_user-menu";
 
-const NAV = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/spaces", label: "Spaces" },
-  { href: "/notes", label: "Notes" },
-  { href: "/files", label: "Files" },
-];
-
 export default async function DashboardLayout({
   children,
 }: {
@@ -22,6 +16,15 @@ export default async function DashboardLayout({
 }) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) redirect("/login");
+
+  const t = await getTranslations("dashboard.nav");
+
+  const NAV = [
+    { href: "/dashboard", label: t("dashboard") },
+    { href: "/spaces", label: t("spaces") },
+    { href: "/notes", label: t("notes") },
+    { href: "/files", label: t("files") },
+  ];
 
   return (
     <div className="flex min-h-screen flex-col bg-gradient-to-b from-background via-background to-muted/30">

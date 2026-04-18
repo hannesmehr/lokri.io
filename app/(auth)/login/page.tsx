@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -18,6 +19,8 @@ import { signIn } from "@/lib/auth-client";
 
 export default function LoginPage() {
   const router = useRouter();
+  const t = useTranslations("auth.login");
+  const tErr = useTranslations("errors.common");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -34,7 +37,7 @@ export default function LoginPage() {
     });
     setLoading(false);
     if (signInError) {
-      setError(signInError.message ?? "Login fehlgeschlagen.");
+      setError(signInError.message ?? tErr("unknown"));
       return;
     }
     router.push("/dashboard");
@@ -44,16 +47,14 @@ export default function LoginPage() {
     <Card className="backdrop-blur-sm">
       <CardHeader>
         <CardTitle className="font-display text-3xl leading-tight">
-          Anmelden
+          {t("title")}
         </CardTitle>
-        <CardDescription>
-          Melde dich mit deiner Email und deinem Passwort an.
-        </CardDescription>
+        <CardDescription>{t("subtitle")}</CardDescription>
       </CardHeader>
       <form onSubmit={onSubmit}>
         <CardContent className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">{t("email")}</Label>
             <Input
               id="email"
               type="email"
@@ -65,12 +66,12 @@ export default function LoginPage() {
           </div>
           <div className="flex flex-col gap-2">
             <div className="flex items-baseline justify-between">
-              <Label htmlFor="password">Passwort</Label>
+              <Label htmlFor="password">{t("password")}</Label>
               <Link
                 href="/forgot-password"
                 className="text-xs text-muted-foreground underline-offset-4 hover:underline"
               >
-                Vergessen?
+                {t("forgotLink")}
               </Link>
             </div>
             <Input
@@ -91,17 +92,19 @@ export default function LoginPage() {
         </CardContent>
         <CardFooter className="flex flex-col gap-3">
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Anmelden…" : "Anmelden"}
+            {loading ? t("submitting") : t("submit")}
           </Button>
           <p className="text-sm text-muted-foreground">
-            Registrierung ist aktuell geschlossen —{" "}
-            <a
-              href="mailto:hello@lokri.io"
-              className="font-medium text-foreground underline-offset-4 hover:underline"
-            >
-              Kontakt
-            </a>{" "}
-            für Einladung.
+            {t.rich("inviteHint", {
+              contact: (chunks) => (
+                <a
+                  href="mailto:hello@lokri.io"
+                  className="font-medium text-foreground underline-offset-4 hover:underline"
+                >
+                  {chunks}
+                </a>
+              ),
+            })}
           </p>
         </CardFooter>
       </form>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,8 @@ import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth-client";
 
 export default function ForgotPasswordPage() {
+  const t = useTranslations("auth.forgotPassword");
+  const tErr = useTranslations("errors.common");
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -31,11 +34,11 @@ export default function ForgotPasswordPage() {
     });
     setLoading(false);
     if (fpError) {
-      setError(fpError.message ?? "Konnte Reset-Link nicht senden.");
+      setError(fpError.message ?? tErr("unknown"));
       return;
     }
-    // Immer "Done" anzeigen, auch wenn die Email nicht existiert — verhindert
-    // User-Enumeration.
+    // Always show "Done" even if the account doesn't exist — prevents
+    // user enumeration.
     setDone(true);
   }
 
@@ -44,12 +47,14 @@ export default function ForgotPasswordPage() {
       <Card className="backdrop-blur-sm">
         <CardHeader>
           <CardTitle className="font-display text-3xl leading-tight">
-            Check deine Mails
+            {t("sentTitle")}
           </CardTitle>
           <CardDescription>
-            Falls ein Account mit <span className="font-medium text-foreground">{email}</span>{" "}
-            existiert, haben wir einen Reset-Link geschickt. Der Link ist 1 Stunde
-            gültig.
+            {t.rich("sentBody", {
+              email: () => (
+                <span className="font-medium text-foreground">{email}</span>
+              ),
+            })}
           </CardDescription>
         </CardHeader>
         <CardFooter>
@@ -57,7 +62,7 @@ export default function ForgotPasswordPage() {
             href="/login"
             className="text-sm text-muted-foreground underline-offset-4 hover:underline"
           >
-            ← Zurück zur Anmeldung
+            {t("backToLogin")}
           </Link>
         </CardFooter>
       </Card>
@@ -68,17 +73,14 @@ export default function ForgotPasswordPage() {
     <Card className="backdrop-blur-sm">
       <CardHeader>
         <CardTitle className="font-display text-3xl leading-tight">
-          Passwort vergessen
+          {t("title")}
         </CardTitle>
-        <CardDescription>
-          Wir schicken dir einen Link, mit dem du ein neues Passwort setzen
-          kannst.
-        </CardDescription>
+        <CardDescription>{t("subtitle")}</CardDescription>
       </CardHeader>
       <form onSubmit={onSubmit}>
         <CardContent className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">{t("email")}</Label>
             <Input
               id="email"
               type="email"
@@ -96,13 +98,13 @@ export default function ForgotPasswordPage() {
         </CardContent>
         <CardFooter className="flex flex-col gap-3">
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Sende…" : "Reset-Link schicken"}
+            {loading ? t("submitting") : t("submit")}
           </Button>
           <Link
             href="/login"
             className="text-sm text-muted-foreground underline-offset-4 hover:underline"
           >
-            ← Zurück zur Anmeldung
+            {t("backToLogin")}
           </Link>
         </CardFooter>
       </form>

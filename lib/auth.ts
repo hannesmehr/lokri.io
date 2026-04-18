@@ -16,6 +16,7 @@ import {
   users,
   verifications,
 } from "./db/schema";
+import { localeForUserEmail } from "./i18n/user-locale";
 import { sendMail } from "./mailer";
 import {
   changeEmailTemplate,
@@ -131,7 +132,12 @@ export const auth = betterAuth({
     disableSignUp: true,
     // Password-reset: uses Resend via lib/mailer.
     sendResetPassword: async ({ user, url }) => {
-      const tpl = resetPasswordTemplate({ name: user.name ?? null, url });
+      const locale = await localeForUserEmail(user.email);
+      const tpl = await resetPasswordTemplate({
+        name: user.name ?? null,
+        url,
+        locale,
+      });
       await sendMail({ to: user.email, ...tpl });
     },
     resetPasswordTokenExpiresIn: 60 * 60, // 1 hour
@@ -141,7 +147,12 @@ export const auth = betterAuth({
     sendOnSignUp: true,
     autoSignInAfterVerification: true,
     sendVerificationEmail: async ({ user, url }) => {
-      const tpl = verifyEmailTemplate({ name: user.name ?? null, url });
+      const locale = await localeForUserEmail(user.email);
+      const tpl = await verifyEmailTemplate({
+        name: user.name ?? null,
+        url,
+        locale,
+      });
       await sendMail({ to: user.email, ...tpl });
     },
   },
@@ -160,10 +171,12 @@ export const auth = betterAuth({
         newEmail: string;
         url: string;
       }) => {
-        const tpl = changeEmailTemplate({
+        const locale = await localeForUserEmail(user.email);
+        const tpl = await changeEmailTemplate({
           name: user.name ?? null,
           newEmail,
           url,
+          locale,
         });
         await sendMail({ to: newEmail, ...tpl });
       },
@@ -174,7 +187,12 @@ export const auth = betterAuth({
     deleteUser: {
       enabled: true,
       sendDeleteAccountVerification: async ({ user, url }) => {
-        const tpl = deleteAccountTemplate({ name: user.name ?? null, url });
+        const locale = await localeForUserEmail(user.email);
+        const tpl = await deleteAccountTemplate({
+          name: user.name ?? null,
+          url,
+          locale,
+        });
         await sendMail({ to: user.email, ...tpl });
       },
       beforeDelete: async (user) => {
