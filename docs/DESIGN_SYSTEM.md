@@ -175,6 +175,201 @@ Tailwind-Default-Scale, keine Custom-Tokens. Konventionen für konsistente Abst�
 
 ---
 
+## Responsive Design
+
+### Grundprinzip
+
+**Mobile-First.** Jede Komponente wird erst für die schmalste Variante
+gebaut; Tablet und Desktop kommen als Breakpoint-Utility-Enhancements
+oben drauf. Klassen ohne Prefix gelten für Mobile; alles mit `sm:`,
+`md:`, `lg:` ist additiv.
+
+### Breakpoints
+
+Tailwind-Defaults — keine Custom-Schwellen.
+
+| Tier | Prefix | Greift ab | Typischer Use-Case |
+| --- | --- | --- | --- |
+| Mobile | *(kein Prefix)* | 0 – 639 px | Phones Portrait/Landscape |
+| Tablet | `sm:` | 640 px | Phones Landscape, Tablet Portrait-Klein |
+| Small Desktop | `md:` | 768 px | Tablet Portrait/Landscape, schmale Desktops |
+| Desktop | `lg:` | 1024 px | Standard-Desktop-Monitore |
+| Large Desktop | `xl:` | 1280 px | Größere Monitore — selten nötig in Tools-UIs |
+
+In der Dashboard-Home-Showcase nutzen wir alle vier unteren Tiers
+aktiv; `xl:` ist bisher nicht gebraucht.
+
+### Grid-Layouts
+
+Konventionen aus der Showcase:
+
+| Kontext | Mobile | sm (640+) | md (768+) | lg (1024+) |
+| --- | --- | --- | --- | --- |
+| Quick-Actions (3 Cards) | 1 col | 2 cols | 2 cols | 3 cols |
+| KPI-Tiles (schmal, 3 Stück) | 1 col | 3 cols | 3 cols | 3 cols |
+| Activity-Cards (breit, 2 Stück) | 1 col | 1 col | 1 col | 2 cols |
+| Onboarding-Steps (3 Stück) | 1 col | 1 col | 3 cols | 3 cols |
+
+Faustregel: **Kärtchen mit schmalem Content** (KPI-Tiles, Chips) dürfen
+früher auf mehrspaltig umschalten. **Karten mit breitem Content** (List-
+Container, Rich-Cards) bleiben länger 1-spaltig und brechen erst bei
+`lg:` auf 2 Spalten um. Niemals von 1 → 3 in einem Schritt — das bricht
+visuell unsauber auf 2+1-Reihen.
+
+### Typografie pro Breakpoint
+
+Nur Page-Headings skalieren. Body / Labels / Mono bleiben konstant.
+
+| Element | Mobile | sm: | lg: |
+| --- | --- | --- | --- |
+| Page-H1 | `text-2xl` | `sm:text-3xl` | `lg:text-4xl` |
+| Section-H2 | `text-lg` | — | — |
+| Card-Title | `text-base` | — | — |
+| Body / Labels / Mono | fix | — | — |
+
+### Padding-Konventionen
+
+**Main-Content-Container** (wrappt die ganze Seite):
+
+```
+px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10
+```
+
+**Header-Container** (Top-Nav bzw. Admin-Header):
+
+```
+px-4 py-3 sm:px-6
+```
+
+**Section-Abstände** auf der Seite:
+
+```
+space-y-6 sm:space-y-8
+```
+
+Cards und Inline-Content behalten ihre kontextuellen Paddings (siehe
+Abschnitt *Spacing* oben).
+
+### Touch-Targets
+
+Alle klickbaren Elemente auf Mobile müssen **≥ 44×44 px tap-area**
+haben (iOS-HIG). Konkret in unserem Codebase:
+
+- **Icon-Buttons** (Hamburger, Search-Icon, Theme-Toggle): `h-10 w-10`
+  (40 px, mit Hover-Padding effektive Tap-Area ≥ 44)
+- **Nav-Items im Drawer**: `min-h-11` (44 px)
+- **Pills / Badges mit Link**: `min-h-9` plus adäquates `px-`
+- **shadcn Buttons** mit `size="default"`: sind 40 px hoch, tap-ok
+- **shadcn Buttons** mit `size="sm"`: 32 px — nur verwenden, wenn ein
+  größerer Button daneben steht, oder auf Desktop-only-Flows
+
+### Mobile-Nav-Pattern
+
+Die Top-Nav kollabiert auf `< md` zu einem Hamburger-Trigger +
+Left-Sliding Sheet-Drawer. Die horizontale Nav-Liste ist `hidden md:flex`,
+der Hamburger `md:hidden`. Referenz-Implementierung:
+
+```tsx
+// app/(dashboard)/_mobile-nav.tsx
+<Sheet open={open} onOpenChange={setOpen}>
+  <SheetTrigger
+    render={
+      <button
+        type="button"
+        aria-label="Navigation öffnen"
+        className="inline-flex h-10 w-10 items-center justify-center
+                   rounded-md text-muted-foreground transition-colors
+                   hover:bg-muted hover:text-foreground md:hidden"
+      >
+        <Menu className="h-5 w-5" />
+      </button>
+    }
+  />
+  <SheetContent side="left" className="flex w-[280px] flex-col p-0">
+    <SheetHeader className="border-b">
+      <SheetTitle>Navigation</SheetTitle>
+    </SheetHeader>
+    <nav className="flex-1 space-y-1 p-2">
+      {items.map((item) => (
+        <Link
+          key={item.href}
+          href={item.href}
+          onClick={() => setOpen(false)}
+          className="flex min-h-11 items-center rounded-md px-3 text-sm ..."
+        >
+          {item.label}
+        </Link>
+      ))}
+    </nav>
+  </SheetContent>
+</Sheet>
+```
+
+Gleiches Pattern greift in der Admin-Sidebar: statisch `hidden lg:flex`,
+darunter `AdminMobileNavTrigger` als Hamburger + Drawer.
+
+**Controls, die im Drawer-Zustand sichtbar bleiben müssen:** Logo (als
+Icon-Square), Account-Switcher (kompakt), Search-Trigger (icon-only),
+Theme-Toggle, User-Menu. Alles andere gehört in den Drawer.
+
+### Kompaktierung über Breakpoints
+
+Einzelne UI-Elemente haben eigene Responsive-Regeln, die zur
+Gesamtgleichung passen:
+
+- **Logo-Label**: `hidden lg:inline` — unter lg zeigt nur das Icon-Square,
+  spart Platz für Nav und Search
+- **Search-Trigger**: Icon-only bis `lg`, Full-Pill mit `⌘K` erst ab `lg`
+- **AccountSwitcher-Name**: `max-w-[90px] sm:max-w-[140px]`
+- **AccountSwitcher Typ-Badge** (`personal`/`team`): `hidden sm:inline`
+- **Admin-Header „Zurück zum User-Dashboard"**: `hidden sm:inline`,
+  darunter nur `Zurück`
+- **Admin-Header Sub-Line „Aktionen werden protokolliert"**: `hidden sm:inline`
+
+### Testing — 6 Zustände
+
+Jede neue Seite / Komponente wird vor dem Commit in **drei Viewports ×
+zwei Theme-Modi = 6 Zuständen** durchgeklickt:
+
+| Viewport | Pixelbreite | Theme |
+| --- | --- | --- |
+| Mobile | 375 | Light + Dark |
+| Tablet | 768 | Light + Dark |
+| Desktop | 1280 | Light + Dark |
+
+Bricht ein State, wird er **im selben Commit** gefixt — keine „okay, das
+fixen wir später"-Ausnahme. Dashboard-Home ist die Referenz: wenn ein
+Pattern dort nicht existiert, gibt's einen guten Grund, es in einer
+Folge-Seite zu erfinden.
+
+**Verifikations-Checks, die sich in der Showcase bewährt haben:**
+
+- `window.innerWidth` prüfen, dass der Viewport-Emulator den Wert
+  wirklich setzt (Preview-Tools zeigen manchmal kleinere Screenshots,
+  als der Viewport tatsächlich ist)
+- `getBoundingClientRect()` auf Header-Controls, wenn der Verdacht auf
+  Overlap besteht — gibt exakte x/y/w/h aus, enttarnt schnell
+  `justify-between`-Zusammenstöße
+
+### Anti-Patterns (Responsive-Checkliste vor PR)
+
+- [ ] **Horizontale Scroll-Bars** durch `whitespace-nowrap` ohne
+  `overflow-hidden` oder `truncate`
+- [ ] **Fixed-Widths** wie `w-[320px]` statt `max-w-*` / fluid-Widths
+- [ ] **Touch-Targets unter 44×44 px** auf Mobile (Icon-Buttons, die nur
+  `h-8 w-8` sind)
+- [ ] **Body-Text kleiner als `text-sm` (14 px)** auf Mobile (außer
+  bewusste Mono-Captions mit `font-mono text-[11px]` o.ä.)
+- [ ] **Grid, das von 1 direkt auf 3 Spalten springt** ohne
+  Zwischenstufe (außer bei schmalen KPI-Tiles, wo 3-across auf 640+
+  bewusst passt)
+- [ ] **Sticky-Header ohne `z-index`-Plan** — aktuell nutzen User-Header
+  `z-40`, Admin `z-20`, Sheet-Overlay `z-50`. Daran halten.
+- [ ] **Elemente, die nur in einem Theme gut aussehen** — muss beides
+  testen, nicht nur eins
+
+---
+
 ## Beispiel-Komponenten
 
 ### KPI-Card (`components/kpi-card.tsx` aus Phase 1)
