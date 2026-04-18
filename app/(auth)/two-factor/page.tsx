@@ -1,5 +1,7 @@
 "use client";
 
+import { ArrowLeft } from "lucide-react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -25,6 +27,8 @@ import { authClient } from "@/lib/auth-client";
  */
 export default function TwoFactorChallengePage() {
   const router = useRouter();
+  const t = useTranslations("auth.twoFactor");
+  const tCommon = useTranslations("errors.common");
   const [mode, setMode] = useState<"totp" | "backup">("totp");
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -41,10 +45,28 @@ export default function TwoFactorChallengePage() {
         : await authClient.twoFactor.verifyBackupCode({ code: trimmed });
     setLoading(false);
     if (err) {
-      setError(err.message ?? "Code ungültig.");
+      const rawCode =
+        typeof err === "object" &&
+        err &&
+        "code" in err &&
+        typeof err.code === "string"
+          ? err.code
+          : null;
+      const message =
+        rawCode === "INVALID_TOTP_CODE" ||
+        rawCode === "invalid_totp_code" ||
+        rawCode === "INVALID_BACKUP_CODE" ||
+        rawCode === "invalid_backup_code" ||
+        rawCode === "INVALID_TWO_FACTOR_CODE" ||
+        rawCode === "invalid_two_factor_code"
+          ? t("errors.invalidCode")
+          : typeof err.message === "string" && err.message.length > 0
+            ? err.message
+            : tCommon("unknown");
+      setError(message);
       return;
     }
-    toast.success("Angemeldet.");
+    toast.success(t("success"));
     router.push("/dashboard");
     router.refresh();
   }
@@ -52,28 +74,33 @@ export default function TwoFactorChallengePage() {
   const isTotp = mode === "totp";
 
   return (
-    <Card className="backdrop-blur-sm">
+    <Card>
       <CardHeader>
-        <CardTitle className="font-display text-3xl leading-tight">
-          Zwei-Faktor-Code
+        <CardTitle className="text-3xl font-semibold tracking-tight leading-tight">
+          {t("title")}
         </CardTitle>
         <CardDescription>
-          {isTotp
-            ? "Gib den 6-stelligen Code aus deiner Authenticator-App ein."
-            : "Gib einen deiner Backup-Codes ein. Jeder funktioniert nur einmal."}
+          {isTotp ? t("descriptionTotp") : t("descriptionBackup")}
         </CardDescription>
       </CardHeader>
       <form onSubmit={submit}>
         <CardContent className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="code">{isTotp ? "TOTP-Code" : "Backup-Code"}</Label>
+            <Label htmlFor="code">
+              {isTotp ? t("fieldLabelTotp") : t("fieldLabelBackup")}
+            </Label>
             <Input
               id="code"
               autoFocus
               inputMode={isTotp ? "numeric" : "text"}
               autoComplete="one-time-code"
               maxLength={isTotp ? 6 : 24}
-              placeholder={isTotp ? "123456" : "xxxx-xxxx-xxxx"}
+              placeholder={
+                isTotp ? t("placeholders.totp") : t("placeholders.backup")
+              }
+              aria-label={
+                isTotp ? t("fieldLabelTotp") : t("fieldLabelBackup")
+              }
               value={code}
               onChange={(e) =>
                 setCode(
@@ -96,7 +123,7 @@ export default function TwoFactorChallengePage() {
             className="w-full"
             disabled={loading || code.length === 0}
           >
-            {loading ? "Prüfe…" : "Bestätigen"}
+            {loading ? t("submitting") : t("submit")}
           </Button>
           <button
             type="button"
@@ -107,13 +134,14 @@ export default function TwoFactorChallengePage() {
               setError(null);
             }}
           >
-            {isTotp ? "Backup-Code verwenden" : "Authenticator-App verwenden"}
+            {isTotp ? t("switchToBackup") : t("switchToTotp")}
           </button>
           <Link
             href="/login"
-            className="text-xs text-muted-foreground underline-offset-4 hover:underline"
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground underline-offset-4 hover:underline"
           >
-            ← Zurück zur Anmeldung
+            <ArrowLeft className="h-3 w-3" />
+            {t("backToLogin")}
           </Link>
         </CardFooter>
       </form>
