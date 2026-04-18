@@ -42,7 +42,13 @@ export async function requireSession(): Promise<AuthSession> {
     .limit(1);
   if (userRow?.disabledAt) {
     await db.delete(sessions).where(eq(sessions.userId, session.user.id));
-    throw new ApiAuthError("Konto gesperrt", 403);
+    // TODO(i18n-rollout): `message`-Fallback entfernen nach Phase-2-Abschluss.
+    // Frontend mappt dann konsequent code → t('errors.api.session.accountDisabled').
+    throw new ApiAuthError(
+      403,
+      "session.accountDisabled",
+      "Dein Konto ist gesperrt. Wende dich an den Support.",
+    );
   }
 
   return session as AuthSession;
@@ -72,6 +78,7 @@ export async function requireAdminSession(): Promise<{
     .where(eq(users.id, session.user.id))
     .limit(1);
   if (!row?.isAdmin) {
+    // Admin-only — bleibt deutsch (nicht i18n-relevant, siehe docs/I18N_AUDIT.md).
     throw new ApiAuthError("Admin-Berechtigung erforderlich", 403);
   }
   return { session, userId: session.user.id };

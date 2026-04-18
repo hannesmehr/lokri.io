@@ -10,11 +10,22 @@ import type { ZodError } from "zod";
  */
 export class ApiAuthError extends Error {
   readonly status: number;
+  readonly code?: string;
 
-  constructor(message = "Unauthorized", status = 401) {
+  constructor();
+  constructor(message: string, status?: number);
+  constructor(status: number, code: string, message?: string);
+  constructor(
+    arg1: string | number = "Unauthorized",
+    arg2: number | string = 401,
+    arg3?: string,
+  ) {
+    const isStructured = typeof arg1 === "number" && typeof arg2 === "string";
+    const message = isStructured ? (arg3 ?? arg2) : (arg1 as string);
     super(message);
     this.name = "ApiAuthError";
-    this.status = status;
+    this.status = isStructured ? arg1 : (arg2 as number);
+    this.code = isStructured ? arg2 : undefined;
   }
 }
 
@@ -31,6 +42,20 @@ export function apiError(
     details !== undefined ? { error: message, details } : { error: message },
     { status },
   );
+}
+
+export function codedApiError(
+  status: number,
+  code: string,
+  message: string,
+  details?: Record<string, unknown>,
+): NextResponse {
+  return apiError(message, status, {
+    code,
+    message,
+    status,
+    ...(details ?? {}),
+  });
 }
 
 export function unauthorized(message = "Unauthorized") {
@@ -50,7 +75,23 @@ export function forbidden(message = "Forbidden", code = "forbidden") {
  * keep working — they just always respond 401 even on role mismatches.
  * New routes that use the `minRole` guard should prefer this helper.
  */
-export function authErrorResponse(err: { message: string; status?: number }) {
+export function authErrorResponse(err: {
+  message: string;
+  status?: number;
+  code?: string;
+}) {
+  if (err.code && err.status) {
+    return NextResponse.json(
+      {
+        error: {
+          code: err.code,
+          message: err.message,
+          status: err.status,
+        },
+      },
+      { status: err.status },
+    );
+  }
   if (err.status === 403) return forbidden(err.message, "forbidden.role");
   return unauthorized(err.message);
 }
