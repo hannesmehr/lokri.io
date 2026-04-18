@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { KeyRound } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import {
   Card,
   CardContent,
@@ -14,6 +15,7 @@ import { EmbeddingKeyManager } from "./_embedding-key-manager";
 
 export default async function EmbeddingKeyPage() {
   const { ownerAccountId } = await requireSessionWithAccount();
+  const t = await getTranslations("settings.embeddingKey");
 
   const [row] = await db
     .select({
@@ -31,16 +33,13 @@ export default async function EmbeddingKeyPage() {
     <Card>
       <CardHeader>
         <div className="flex items-center gap-3">
-          <div className="grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br from-indigo-500/15 to-fuchsia-500/15 text-indigo-700 dark:text-indigo-300">
+          <div className="grid h-9 w-9 place-items-center rounded-lg border border-border bg-muted text-muted-foreground">
             <KeyRound className="h-4 w-4" />
           </div>
           <div>
-            <CardTitle>Eigener Embedding-API-Key (BYOK)</CardTitle>
+            <CardTitle>{t("heading")}</CardTitle>
             <CardDescription>
-              Statt über die Vercel AI Gateway läuft jede Embedding-Anfrage
-              direkt gegen deinen OpenAI-Account. Keine zusätzlichen Gebühren
-              bei uns, vollständige Audit-Spur bei dir. Solange kein Key
-              hinterlegt ist, wird die Gateway-Default-Route verwendet.
+              {t("description")}
             </CardDescription>
           </div>
         </div>
