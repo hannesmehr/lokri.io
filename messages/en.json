@@ -284,6 +284,10 @@
       "search": {
         "queryTooShort": "Query too short — at least {min} characters.",
         "embeddingFailed": "Query could not be embedded."
+      },
+      "billing": {
+        "captureFailed": "Payment could not be confirmed.",
+        "network": "Network error. Please try again."
       }
     }
   },
@@ -1033,7 +1037,7 @@
           "regionRequired": "Region *",
           "regionPlaceholder": "eu-central-1 / auto (R2)",
           "endpoint": "Endpoint (R2/B2/MinIO)",
-          "endpointPlaceholder": "https://<id>.r2.cloudflarestorage.com",
+          "endpointPlaceholder": "https://account-id.r2.cloudflarestorage.com",
           "accessKeyId": "Access Key ID",
           "accessKeyIdRequired": "Access Key ID *",
           "secretAccessKey": "Secret Access Key",
@@ -1388,47 +1392,96 @@
   },
 
   "billing": {
-    "title": "Billing",
-    "subtitle": "Plan, invoices, and payments.",
-    "navigation": {
-      "overview": "Overview",
-      "plans": "Plans",
-      "invoices": "Invoices"
+    "layout": {
+      "title": "Billing",
+      "subtitle": "Plan, invoices, and payments.",
+      "navigation": {
+        "overview": "Overview",
+        "plans": "Plans",
+        "invoices": "Invoices"
+      }
     },
-    "currentPlan": {
-      "title": "Current plan",
-      "expires": "expires on {date}",
-      "renewed": "last renewed {date}",
-      "freePlan": "Free — no active subscription."
+    "overview": {
+      "currentPlanLabel": "Current plan",
+      "currentPlanDescription": "{storage} storage · {files} files · {notes} notes",
+      "changePlan": "Change plan",
+      "cancelled": {
+        "title": "Order cancelled",
+        "description": "PayPal sent you back without a payment. Your plan stays unchanged."
+      },
+      "kpis": {
+        "status": "Status",
+        "expiresAt": "Expires at",
+        "renewedAt": "Last renewed"
+      },
+      "status": {
+        "active": "active",
+        "expired": "expired",
+        "free": "free"
+      },
+      "noExpiry": "No expiry date",
+      "daysLeft": "{count} days left",
+      "upgrade": {
+        "title": "Need more storage?",
+        "description": "Starter from {monthly}/month or {yearly}/year.",
+        "cta": "View plans"
+      },
+      "expired": {
+        "title": "Your plan has expired",
+        "description": "You're currently on free limits only. Existing data stays available — renew to get the full quota again.",
+        "cta": "Renew"
+      }
     },
     "plans": {
       "title": "Plans",
       "subtitle": "Pick a plan that fits you. One-time payment via PayPal.",
       "period": {
         "monthly": "Monthly",
-        "yearly": "Yearly",
-        "save": "save 2 months"
+        "yearly": "Yearly"
       },
+      "recommended": "Recommended",
+      "perMonth": "/month",
+      "yearlyOption": "or {price}/year ({discount}% saved)",
       "features": {
         "storage": "{bytes} storage",
         "files": "{count} files",
-        "notes": "{count} notes"
+        "notes": "{count} notes",
+        "search": "Semantic search and MCP access",
+        "privacy": "No ads, no training usage"
       },
-      "upgrade": "Upgrade",
       "currentBadge": "Current plan"
     },
     "invoices": {
       "title": "Invoices",
+      "description": "PDF downloads for all previous payments. Invoice numbers follow the LK-YYYY-NNNN format.",
       "empty": "No invoices yet — you're on the Free plan.",
-      "number": "Invoice number",
-      "issuedAt": "Date",
-      "amount": "Amount",
+      "issuedAtLabel": "Issued {date}",
+      "amountLabel": "{amount}",
+      "status": {
+        "paid": "Paid",
+        "open": "Open",
+        "void": "Voided",
+        "draft": "Draft"
+      },
       "download": "Download PDF"
     },
     "success": {
-      "title": "Payment successful",
+      "capturing": {
+        "title": "Confirming payment…",
+        "description": "We're fetching PayPal confirmation and activating your plan. This usually takes 1–3 seconds."
+      },
+      "title": "Payment confirmed",
       "body": "Your plan is active. The invoice is available in your billing documents.",
-      "backToDashboard": "Back to dashboard"
+      "backToDashboard": "Back to dashboard",
+      "backToBilling": "Back to billing",
+      "openInvoice": "Open invoice",
+      "contactSupport": "Contact support",
+      "errorTitle": "Something went wrong",
+      "errors": {
+        "missingToken": "PayPal did not include an order token.",
+        "captureFailed": "Payment could not be confirmed.",
+        "network": "Network error"
+      }
     },
     "errors": {
       "createOrderFailed": "PayPal order failed.",

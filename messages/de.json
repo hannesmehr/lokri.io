@@ -284,6 +284,10 @@
       "search": {
         "queryTooShort": "Suchanfrage zu kurz — mindestens {min} Zeichen.",
         "embeddingFailed": "Anfrage konnte nicht embedded werden."
+      },
+      "billing": {
+        "captureFailed": "Zahlung konnte nicht bestätigt werden.",
+        "network": "Netzwerkfehler. Bitte erneut versuchen."
       }
     }
   },
@@ -1033,7 +1037,7 @@
           "regionRequired": "Region *",
           "regionPlaceholder": "eu-central-1 / auto (R2)",
           "endpoint": "Endpoint (R2/B2/MinIO)",
-          "endpointPlaceholder": "https://<id>.r2.cloudflarestorage.com",
+          "endpointPlaceholder": "https://account-id.r2.cloudflarestorage.com",
           "accessKeyId": "Access Key ID",
           "accessKeyIdRequired": "Access Key ID *",
           "secretAccessKey": "Secret Access Key",
@@ -1388,47 +1392,96 @@
   },
 
   "billing": {
-    "title": "Billing",
-    "subtitle": "Plan, Rechnungen und Zahlungen.",
-    "navigation": {
-      "overview": "Übersicht",
-      "plans": "Pläne",
-      "invoices": "Rechnungen"
+    "layout": {
+      "title": "Billing",
+      "subtitle": "Plan, Rechnungen und Zahlungen.",
+      "navigation": {
+        "overview": "Übersicht",
+        "plans": "Pläne",
+        "invoices": "Rechnungen"
+      }
     },
-    "currentPlan": {
-      "title": "Aktueller Plan",
-      "expires": "läuft am {date} ab",
-      "renewed": "zuletzt verlängert {date}",
-      "freePlan": "Free — kein aktives Abo."
+    "overview": {
+      "currentPlanLabel": "Aktueller Plan",
+      "currentPlanDescription": "{storage} Speicher · {files} Files · {notes} Notes",
+      "changePlan": "Plan ändern",
+      "cancelled": {
+        "title": "Bestellung abgebrochen",
+        "description": "Du wurdest von PayPal ohne Zahlung zurückgeleitet. Dein Plan ist unverändert."
+      },
+      "kpis": {
+        "status": "Status",
+        "expiresAt": "Läuft bis",
+        "renewedAt": "Zuletzt verlängert"
+      },
+      "status": {
+        "active": "aktiv",
+        "expired": "abgelaufen",
+        "free": "free"
+      },
+      "noExpiry": "Keine Ablaufzeit",
+      "daysLeft": "{count} Tage übrig",
+      "upgrade": {
+        "title": "Mehr Speicher gefällig?",
+        "description": "Starter ab {monthly}/Monat oder {yearly}/Jahr.",
+        "cta": "Pläne ansehen"
+      },
+      "expired": {
+        "title": "Dein Plan ist abgelaufen",
+        "description": "Du nutzt aktuell nur Free-Limits. Bestehende Daten bleiben erhalten — verlängere, um wieder das volle Kontingent zu bekommen.",
+        "cta": "Verlängern"
+      }
     },
     "plans": {
       "title": "Pläne",
       "subtitle": "Wähle einen Plan, der zu dir passt. Einmal-Zahlung via PayPal.",
       "period": {
         "monthly": "Monatlich",
-        "yearly": "Jährlich",
-        "save": "spare 2 Monate"
+        "yearly": "Jährlich"
       },
+      "recommended": "Empfohlen",
+      "perMonth": "/Monat",
+      "yearlyOption": "oder {price}/Jahr ({discount}% gespart)",
       "features": {
         "storage": "{bytes} Speicher",
         "files": "{count} Files",
-        "notes": "{count} Notes"
+        "notes": "{count} Notes",
+        "search": "Semantische Suche und MCP-Zugriff",
+        "privacy": "Keine Werbung, keine Trainingsnutzung"
       },
-      "upgrade": "Upgraden",
       "currentBadge": "Aktueller Plan"
     },
     "invoices": {
       "title": "Rechnungen",
+      "description": "PDF-Download aller bisherigen Zahlungen. Die Rechnungsnummern folgen dem Format LK-YYYY-NNNN.",
       "empty": "Noch keine Rechnungen — du bist auf dem Free-Plan.",
-      "number": "Rechnungsnummer",
-      "issuedAt": "Datum",
-      "amount": "Betrag",
+      "issuedAtLabel": "Ausgestellt {date}",
+      "amountLabel": "{amount}",
+      "status": {
+        "paid": "Bezahlt",
+        "open": "Offen",
+        "void": "Storniert",
+        "draft": "Entwurf"
+      },
       "download": "PDF herunterladen"
     },
     "success": {
-      "title": "Zahlung erfolgreich",
+      "capturing": {
+        "title": "Zahlung wird bestätigt…",
+        "description": "Wir holen die Bestätigung von PayPal und aktivieren deinen Plan. Das dauert in der Regel 1–3 Sekunden."
+      },
+      "title": "Zahlung bestätigt",
       "body": "Dein Plan ist aktiviert. Die Rechnung findest du in den Rechnungsunterlagen.",
-      "backToDashboard": "Zum Dashboard"
+      "backToDashboard": "Zum Dashboard",
+      "backToBilling": "Zurück zu Billing",
+      "openInvoice": "Rechnung öffnen",
+      "contactSupport": "Support anschreiben",
+      "errorTitle": "Etwas ist schiefgelaufen",
+      "errors": {
+        "missingToken": "PayPal hat keinen Order-Token mitgeliefert.",
+        "captureFailed": "Zahlung konnte nicht bestätigt werden.",
+        "network": "Netzwerkfehler"
+      }
     },
     "errors": {
       "createOrderFailed": "PayPal-Bestellung fehlgeschlagen.",
