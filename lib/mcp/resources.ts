@@ -182,7 +182,10 @@ export function registerResources(server: McpServer): void {
         .limit(1);
       if (!file) throw new Error(`File not found: ${id}`);
 
-      const provider = await getProviderForFile(file.storageProviderId);
+      const provider = await getProviderForFile(
+        file.storageProviderId,
+        ownerAccountId,
+      );
       const { content } = await provider.get(file.storageKey);
       const isTextual =
         file.mimeType.startsWith("text/") ||

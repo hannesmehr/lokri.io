@@ -207,6 +207,7 @@ export const auth = betterAuth({
               try {
                 const provider = await getProviderForFile(
                   f.storageProviderId,
+                  m.accountId,
                 );
                 await provider.delete(f.storageKey);
               } catch (err) {

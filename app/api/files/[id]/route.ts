@@ -74,14 +74,23 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
 
     // Delete from object storage first. If that 404s it's fine (idempotent);
     // any other failure aborts so we don't get orphaned DB rows.
-    const provider = await getProviderForFile(existing.storageProviderId);
+    const provider = await getProviderForFile(
+      existing.storageProviderId,
+      ownerAccountId,
+    );
     await provider.delete(existing.storageKey);
 
     // DB cascades file_chunks.
-    await db.delete(files).where(eq(files.id, id));
-    await applyQuotaDelta(ownerAccountId, {
-      bytes: -existing.sizeBytes,
-      files: -1,
+    await db.transaction(async (tx) => {
+      await tx.delete(files).where(eq(files.id, id));
+      await applyQuotaDelta(
+        ownerAccountId,
+        {
+          bytes: -existing.sizeBytes,
+          files: -1,
+        },
+        tx,
+      );
     });
 
     return new NextResponse(null, { status: 204 });

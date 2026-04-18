@@ -18,7 +18,10 @@ export async function GET(_req: NextRequest, { params }: Params) {
     const file = await findOwnedFile(ownerAccountId, id);
     if (!file) return notFound();
 
-    const provider = await getProviderForFile(file.storageProviderId);
+    const provider = await getProviderForFile(
+      file.storageProviderId,
+      ownerAccountId,
+    );
     const { content, mimeType } = await provider.get(file.storageKey);
 
     const headers = new Headers({

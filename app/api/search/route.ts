@@ -1,4 +1,4 @@
-import { and, cosineDistance, desc, eq, gt, sql } from "drizzle-orm";
+import { and, cosineDistance, desc, eq, gt, isNotNull, sql } from "drizzle-orm";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import {
@@ -51,7 +51,10 @@ export async function POST(req: NextRequest) {
 
     // ----- Notes -----
     const noteSim = sql<number>`1 - (${cosineDistance(notes.embedding, embedding)})`;
-    const noteConditions = [eq(notes.ownerAccountId, ownerAccountId)];
+    const noteConditions = [
+      eq(notes.ownerAccountId, ownerAccountId),
+      isNotNull(notes.embedding),
+    ];
     if (spaceId) noteConditions.push(eq(notes.spaceId, spaceId));
     if (minSimilarity > 0) noteConditions.push(gt(noteSim, minSimilarity));
 
@@ -70,7 +73,10 @@ export async function POST(req: NextRequest) {
 
     // ----- File chunks (scoped via files join) -----
     const chunkSim = sql<number>`1 - (${cosineDistance(fileChunks.embedding, embedding)})`;
-    const chunkConditions = [eq(files.ownerAccountId, ownerAccountId)];
+    const chunkConditions = [
+      eq(files.ownerAccountId, ownerAccountId),
+      isNotNull(fileChunks.embedding),
+    ];
     if (spaceId) chunkConditions.push(eq(files.spaceId, spaceId));
     if (minSimilarity > 0) chunkConditions.push(gt(chunkSim, minSimilarity));
 

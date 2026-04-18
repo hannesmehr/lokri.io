@@ -1,5 +1,4 @@
 import { eq } from "drizzle-orm";
-import { headers } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import {
@@ -12,6 +11,7 @@ import {
 import { ApiAuthError, requireSessionWithAccount } from "@/lib/api/session";
 import { db } from "@/lib/db";
 import { orders, plans } from "@/lib/db/schema";
+import { resolveAppOrigin } from "@/lib/origin";
 import { createPayPalOrder } from "@/lib/paypal";
 import { limit, rateLimitResponse } from "@/lib/rate-limit";
 
@@ -61,10 +61,7 @@ export async function POST(req: NextRequest) {
       })
       .returning({ id: orders.id });
 
-    const h = await headers();
-    const proto = h.get("x-forwarded-proto") ?? "http";
-    const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
-    const origin = `${proto}://${host}`;
+    const origin = resolveAppOrigin();
 
     const paypal = await createPayPalOrder({
       orderId: orderRow.id,

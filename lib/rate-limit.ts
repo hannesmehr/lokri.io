@@ -50,6 +50,7 @@ const REDIS_TOKEN =
   process.env.UPSTASH_REDIS_REST_TOKEN ?? process.env.KV_REST_API_TOKEN;
 
 const ENABLED = Boolean(REDIS_URL && REDIS_TOKEN);
+const STRICT_IN_PRODUCTION = process.env.NODE_ENV === "production";
 
 if (!ENABLED && process.env.NODE_ENV === "production") {
   console.warn(
@@ -175,6 +176,7 @@ export interface LimitResult {
   remaining: number;
   /** Epoch ms when the window rolls over. */
   reset: number;
+  reason?: "disabled" | "exceeded";
 }
 
 /**
@@ -187,7 +189,16 @@ export async function limit(
 ): Promise<LimitResult> {
   const limiter = limiters[name];
   if (!limiter) {
-    return { ok: true, limit: 0, remaining: 0, reset: 0 };
+    if (STRICT_IN_PRODUCTION && name !== "globalIp") {
+      return {
+        ok: false,
+        limit: 0,
+        remaining: 0,
+        reset: Date.now() + 60_000,
+        reason: "disabled",
+      };
+    }
+    return { ok: true, limit: 0, remaining: 0, reset: 0, reason: "disabled" };
   }
   const res = await limiter.limit(identifier);
   return {
@@ -195,6 +206,7 @@ export async function limit(
     limit: res.limit,
     remaining: res.remaining,
     reset: res.reset,
+    reason: res.success ? undefined : "exceeded",
   };
 }
 
@@ -203,14 +215,17 @@ export async function limit(
  * plus `Retry-After` for broad client support.
  */
 export function rateLimitResponse(result: LimitResult): Response {
+  const disabled = result.reason === "disabled";
   const retrySeconds = Math.max(1, Math.ceil((result.reset - Date.now()) / 1000));
   return new Response(
     JSON.stringify({
-      error: "Rate limit exceeded",
+      error: disabled
+        ? "Rate limiting unavailable"
+        : "Rate limit exceeded",
       retryAfterSeconds: retrySeconds,
     }),
     {
-      status: 429,
+      status: disabled ? 503 : 429,
       headers: {
         "content-type": "application/json",
         "retry-after": String(retrySeconds),

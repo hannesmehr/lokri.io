@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { fileChunks, files } from "@/lib/db/schema";
 import { chunkText, embedTexts } from "@/lib/embeddings";
 import { mimeTypeFromFilename } from "@/lib/mime";
-import { applyQuotaDelta, checkQuota } from "@/lib/quota";
+import { checkQuota, reserveQuota } from "@/lib/quota";
 import type { BrowsableProvider } from "@/lib/storage";
 import { extractText } from "@/lib/text-extract";
 
@@ -80,18 +80,31 @@ export async function importExternalKey(
       };
     }
 
-    const [row] = await db
-      .insert(files)
-      .values({
-        ownerAccountId: ctx.ownerAccountId,
-        spaceId: ctx.spaceId,
-        filename,
-        mimeType: mime,
-        sizeBytes: content.byteLength,
-        storageProviderId: ctx.providerId,
-        storageKey,
-      })
-      .returning({ id: files.id });
+    const row = await db.transaction(async (tx) => {
+      const quota = await reserveQuota(
+        ctx.ownerAccountId,
+        {
+          bytes: content.byteLength,
+          files: 1,
+        },
+        tx,
+      );
+      if (!quota.ok) throw new Error(`QUOTA:${quota.reason}`);
+
+      const [created] = await tx
+        .insert(files)
+        .values({
+          ownerAccountId: ctx.ownerAccountId,
+          spaceId: ctx.spaceId,
+          filename,
+          mimeType: mime,
+          sizeBytes: content.byteLength,
+          storageProviderId: ctx.providerId,
+          storageKey,
+        })
+        .returning({ id: files.id });
+      return created;
+    });
 
     try {
       const text = await extractText(content, mime);
@@ -118,13 +131,15 @@ export async function importExternalKey(
       );
     }
 
-    await applyQuotaDelta(ctx.ownerAccountId, {
-      bytes: content.byteLength,
-      files: 1,
-    });
-
     return { key: relativeKey, status: "imported", fileId: row.id };
   } catch (err) {
+    if (err instanceof Error && err.message.startsWith("QUOTA:")) {
+      return {
+        key: relativeKey,
+        status: "skipped_quota",
+        reason: err.message.slice("QUOTA:".length),
+      };
+    }
     const reason = err instanceof Error ? err.message : "Unknown error";
     return { key: relativeKey, status: "failed", reason };
   }

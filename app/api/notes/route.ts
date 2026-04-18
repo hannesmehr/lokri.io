@@ -14,7 +14,7 @@ import { ApiAuthError, requireSessionWithAccount } from "@/lib/api/session";
 import { db } from "@/lib/db";
 import { notes } from "@/lib/db/schema";
 import { embedText } from "@/lib/embeddings";
-import { applyQuotaDelta, checkQuota } from "@/lib/quota";
+import { reserveQuota } from "@/lib/quota";
 import { limit, rateLimitResponse } from "@/lib/rate-limit";
 
 const listQuerySchema = z.object({
@@ -77,30 +77,35 @@ export async function POST(req: NextRequest) {
       if (!space) return apiError("Space not found", 404);
     }
 
-    const quotaCheck = await checkQuota(ownerAccountId, { notes: 1 });
-    if (!quotaCheck.ok) return paymentRequired(quotaCheck.reason);
-
     // Embed the full note body. For very long notes we could chunk here too,
     // but the spec models notes as single-embedding entities.
     const embedInput = `${parsed.data.title}\n\n${parsed.data.content}`;
     const { embedding, model } = await embedText(embedInput, ownerAccountId);
 
-    const [note] = await db
-      .insert(notes)
-      .values({
-        ownerAccountId,
-        spaceId: parsed.data.spaceId ?? null,
-        title: parsed.data.title,
-        contentText: parsed.data.content,
-        embedding,
-        embeddingModel: model,
-      })
-      .returning();
+    const note = await db.transaction(async (tx) => {
+      const quotaCheck = await reserveQuota(ownerAccountId, { notes: 1 }, tx);
+      if (!quotaCheck.ok) throw new Error(`QUOTA:${quotaCheck.reason}`);
 
-    await applyQuotaDelta(ownerAccountId, { notes: 1 });
+      const [created] = await tx
+        .insert(notes)
+        .values({
+          ownerAccountId,
+          spaceId: parsed.data.spaceId ?? null,
+          title: parsed.data.title,
+          contentText: parsed.data.content,
+          embedding,
+          embeddingModel: model,
+        })
+        .returning();
+
+      return created;
+    });
 
     return NextResponse.json({ note }, { status: 201 });
   } catch (err) {
+    if (err instanceof Error && err.message.startsWith("QUOTA:")) {
+      return paymentRequired(err.message.slice("QUOTA:".length));
+    }
     if (err instanceof ApiAuthError) return unauthorized(err.message);
     return serverError(err);
   }

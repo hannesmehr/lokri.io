@@ -80,12 +80,62 @@ pnpm dev              # Dev-Server
 pnpm build            # Production-Build
 pnpm start            # Production-Server starten
 pnpm lint             # ESLint
+pnpm test             # Regression-Tests (node:test via tsx)
 pnpm db:generate      # Drizzle-Migration aus Schema-Änderung erzeugen
 pnpm db:migrate       # Migrations anwenden
 pnpm db:push          # Schema direkt pushen (nur Dev)
 pnpm db:studio        # Drizzle Studio
 pnpm db:seed          # Free-Plan seeden
+pnpm ops:reconcile-paypal  # Captured Orders/Invoices nachziehen
 ```
+
+## Betrieb & Sicherheit
+
+### Regression-Tests
+
+Das Repo enthält einen kleinen Satz von Regression-Tests für sicherheits- und
+konsistenzkritische Helpers:
+
+```bash
+pnpm test
+```
+
+Aktuell abgedeckt:
+
+- kanonische Origin-Auflösung
+- generische 500er in Production
+- Billing-Fenster-Berechnung bei Verlängerungen
+
+### Ops-Alerts
+
+Kritische, aber nicht immer request-blockierende Betriebsprobleme werden als
+strukturierte Log-Zeilen mit Prefix `"[ops-alert]"` geschrieben. Beispiele:
+
+- fehlgeschlagene Invoice-Reconciliation
+- fehlgeschlagene Billing-Repair-Läufe
+- andere bewusst markierte Konsistenzprobleme
+
+Empfehlung für Prod: diese Logs in Vercel / deinem Log-Backend gezielt filtern
+und alarmieren.
+
+### Billing-Reconciliation
+
+Captured PayPal-Orders können nachträglich auf einen konsistenten Zielzustand
+gezogen werden (Account-Plan + Invoice):
+
+```bash
+pnpm ops:reconcile-paypal
+```
+
+Der Job:
+
+- scannt `orders.status = "captured"` mit vorhandener `payment_id`
+- zieht `owner_accounts.plan_*` auf den erwarteten Zustand nach
+- erzeugt fehlende Invoices idempotent anhand von `payment_id`
+- loggt Fehler als `ops-alert`
+
+Das Script ist sicher wiederholbar und eignet sich für manuelle Ops-Läufe oder
+einen späteren Cron/Automation-Job.
 
 ## MCP in KI-Clients einrichten
 

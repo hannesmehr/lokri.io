@@ -1,6 +1,5 @@
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { Key, Plug } from "lucide-react";
-import { headers } from "next/headers";
 import {
   Card,
   CardContent,
@@ -11,20 +10,14 @@ import {
 import { requireSessionWithAccount } from "@/lib/api/session";
 import { db } from "@/lib/db";
 import { apiTokens, spaces } from "@/lib/db/schema";
+import { resolveAppOrigin } from "@/lib/origin";
 import { McpInstructions } from "./_mcp-instructions";
 import { TokenList } from "./_token-list";
 import { TokenCreateDialog } from "./_token-create-dialog";
 
-async function resolveOrigin(): Promise<string> {
-  const h = await headers();
-  const proto = h.get("x-forwarded-proto") ?? "http";
-  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
-  return `${proto}://${host}`;
-}
-
 export default async function McpPage() {
   const { ownerAccountId } = await requireSessionWithAccount();
-  const origin = await resolveOrigin();
+  const origin = resolveAppOrigin();
 
   const [tokens, spaceRows] = await Promise.all([
     db

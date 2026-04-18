@@ -62,6 +62,11 @@ export function zodError(err: ZodError) {
 
 export function serverError(err: unknown) {
   console.error("[api] server error:", err);
-  const message = err instanceof Error ? err.message : "Internal server error";
+  const message =
+    process.env.NODE_ENV === "production"
+      ? "Internal server error"
+      : err instanceof Error
+        ? err.message
+        : "Internal server error";
   return apiError(message, 500);
 }

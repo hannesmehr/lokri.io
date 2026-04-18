@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { files, notes, spaces } from "@/lib/db/schema";
+import { files, notes, spaces, storageProviders } from "@/lib/db/schema";
 
 /**
  * Owner-scoped lookups. All of these return `null` when the row doesn't
@@ -36,6 +36,23 @@ export async function findOwnedFile(ownerAccountId: string, fileId: string) {
     .select()
     .from(files)
     .where(and(eq(files.id, fileId), eq(files.ownerAccountId, ownerAccountId)))
+    .limit(1);
+  return row ?? null;
+}
+
+export async function findOwnedStorageProvider(
+  ownerAccountId: string,
+  providerId: string,
+) {
+  const [row] = await db
+    .select()
+    .from(storageProviders)
+    .where(
+      and(
+        eq(storageProviders.id, providerId),
+        eq(storageProviders.ownerAccountId, ownerAccountId),
+      ),
+    )
     .limit(1);
   return row ?? null;
 }

@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { ownerAccounts, plans, usageQuota } from "@/lib/db/schema";
 
 const FREE_PLAN_ID = "free";
+type QuotaExecutor = Pick<typeof db, "insert" | "update" | "execute">;
 
 export interface QuotaDelta {
   /** Bytes to add (negative to subtract). */
@@ -23,8 +24,14 @@ export interface QuotaStatus {
   maxNotes: number;
 }
 
-async function ensureQuotaRow(ownerAccountId: string): Promise<void> {
-  await db.insert(usageQuota).values({ ownerAccountId }).onConflictDoNothing();
+async function ensureQuotaRow(
+  ownerAccountId: string,
+  executor: QuotaExecutor = db,
+): Promise<void> {
+  await executor
+    .insert(usageQuota)
+    .values({ ownerAccountId })
+    .onConflictDoNothing();
 }
 
 /**
@@ -152,8 +159,9 @@ export async function checkQuota(
 export async function applyQuotaDelta(
   ownerAccountId: string,
   delta: QuotaDelta,
+  executor: QuotaExecutor = db,
 ): Promise<void> {
-  await ensureQuotaRow(ownerAccountId);
+  await ensureQuotaRow(ownerAccountId, executor);
 
   const bytesDelta = delta.bytes ?? 0;
   const filesDelta = delta.files ?? 0;
@@ -161,7 +169,7 @@ export async function applyQuotaDelta(
 
   if (bytesDelta === 0 && filesDelta === 0 && notesDelta === 0) return;
 
-  await db
+  await executor
     .update(usageQuota)
     .set({
       usedBytes: sql`GREATEST(0, ${usageQuota.usedBytes} + ${bytesDelta})`,
@@ -170,4 +178,81 @@ export async function applyQuotaDelta(
       updatedAt: new Date(),
     })
     .where(eq(usageQuota.ownerAccountId, ownerAccountId));
+}
+
+/**
+ * Atomically reserves positive quota inside a transaction / statement.
+ *
+ * This closes the race where two concurrent requests both pass `checkQuota`
+ * against the same snapshot and together overshoot the plan limit.
+ */
+export async function reserveQuota(
+  ownerAccountId: string,
+  delta: QuotaDelta,
+  executor: QuotaExecutor = db,
+): Promise<QuotaCheckResult> {
+  await ensureQuotaRow(ownerAccountId, executor);
+
+  const bytesDelta = delta.bytes ?? 0;
+  const filesDelta = delta.files ?? 0;
+  const notesDelta = delta.notes ?? 0;
+
+  if (bytesDelta < 0 || filesDelta < 0 || notesDelta < 0) {
+    throw new Error("reserveQuota only supports non-negative deltas.");
+  }
+  if (bytesDelta === 0 && filesDelta === 0 && notesDelta === 0) {
+    return { ok: true };
+  }
+
+  const result = await executor.execute(sql`
+    WITH limits AS (
+      SELECT
+        uq.owner_account_id,
+        uq.used_bytes,
+        uq.files_count,
+        uq.notes_count,
+        CASE
+          WHEN oa.plan_id <> ${FREE_PLAN_ID}
+            AND (oa.plan_expires_at IS NULL OR oa.plan_expires_at < now())
+          THEN fp.max_bytes
+          ELSE cp.max_bytes
+        END AS max_bytes,
+        CASE
+          WHEN oa.plan_id <> ${FREE_PLAN_ID}
+            AND (oa.plan_expires_at IS NULL OR oa.plan_expires_at < now())
+          THEN fp.max_files
+          ELSE cp.max_files
+        END AS max_files,
+        CASE
+          WHEN oa.plan_id <> ${FREE_PLAN_ID}
+            AND (oa.plan_expires_at IS NULL OR oa.plan_expires_at < now())
+          THEN fp.max_notes
+          ELSE cp.max_notes
+        END AS max_notes
+      FROM usage_quota uq
+      INNER JOIN owner_accounts oa ON oa.id = uq.owner_account_id
+      INNER JOIN plans cp ON cp.id = oa.plan_id
+      INNER JOIN plans fp ON fp.id = ${FREE_PLAN_ID}
+      WHERE uq.owner_account_id = ${ownerAccountId}
+    )
+    UPDATE usage_quota uq
+    SET
+      used_bytes = uq.used_bytes + ${bytesDelta},
+      files_count = uq.files_count + ${filesDelta},
+      notes_count = uq.notes_count + ${notesDelta},
+      updated_at = now()
+    FROM limits
+    WHERE
+      uq.owner_account_id = limits.owner_account_id
+      AND limits.used_bytes + ${bytesDelta} <= limits.max_bytes
+      AND limits.files_count + ${filesDelta} <= limits.max_files
+      AND limits.notes_count + ${notesDelta} <= limits.max_notes
+    RETURNING uq.owner_account_id
+  `);
+
+  const rows = Array.isArray((result as { rows?: unknown[] }).rows)
+    ? ((result as { rows: unknown[] }).rows ?? [])
+    : [];
+  if (rows.length > 0) return { ok: true };
+  return checkQuota(ownerAccountId, delta);
 }

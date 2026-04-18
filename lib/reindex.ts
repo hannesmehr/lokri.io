@@ -26,7 +26,10 @@ type FileRow = typeof filesTable.$inferSelect;
  */
 export async function reindexFile(file: FileRow): Promise<ReindexResult> {
   try {
-    const provider = await getProviderForFile(file.storageProviderId);
+    const provider = await getProviderForFile(
+      file.storageProviderId,
+      file.ownerAccountId,
+    );
     const { content } = await provider.get(file.storageKey);
 
     const text = await extractText(content, file.mimeType);
@@ -41,8 +44,10 @@ export async function reindexFile(file: FileRow): Promise<ReindexResult> {
     }
 
     const chunks = chunkText(text);
-    await db.delete(fileChunks).where(eq(fileChunks.fileId, file.id));
     if (chunks.length === 0) {
+      await db.transaction(async (tx) => {
+        await tx.delete(fileChunks).where(eq(fileChunks.fileId, file.id));
+      });
       return {
         fileId: file.id,
         filename: file.filename,
@@ -51,15 +56,18 @@ export async function reindexFile(file: FileRow): Promise<ReindexResult> {
       };
     }
     const { embeddings, model } = await embedTexts(chunks, file.ownerAccountId);
-    await db.insert(fileChunks).values(
-      chunks.map((c, i) => ({
-        fileId: file.id,
-        chunkIndex: i,
-        contentText: c,
-        embedding: embeddings[i],
-        embeddingModel: model,
-      })),
-    );
+    await db.transaction(async (tx) => {
+      await tx.delete(fileChunks).where(eq(fileChunks.fileId, file.id));
+      await tx.insert(fileChunks).values(
+        chunks.map((c, i) => ({
+          fileId: file.id,
+          chunkIndex: i,
+          contentText: c,
+          embedding: embeddings[i],
+          embeddingModel: model,
+        })),
+      );
+    });
     return {
       fileId: file.id,
       filename: file.filename,

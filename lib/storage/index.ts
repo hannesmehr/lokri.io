@@ -70,20 +70,32 @@ export async function getProviderForNewUpload(
  */
 export async function getProviderForFile(
   providerId: string | null,
+  ownerAccountId?: string,
 ): Promise<StorageProvider> {
   if (!providerId) return vercelBlob();
-  return loadProvider(providerId);
+  return loadProvider(providerId, ownerAccountId);
 }
 
-async function loadProvider(providerId: string): Promise<StorageProvider> {
-  const [row] = await db
+async function loadProvider(
+  providerId: string,
+  ownerAccountId?: string,
+): Promise<StorageProvider> {
+  const rows = await db
     .select({
       type: storageProviders.type,
       configEncrypted: storageProviders.configEncrypted,
     })
     .from(storageProviders)
-    .where(eq(storageProviders.id, providerId))
+    .where(
+      ownerAccountId
+        ? and(
+            eq(storageProviders.id, providerId),
+            eq(storageProviders.ownerAccountId, ownerAccountId),
+          )
+        : eq(storageProviders.id, providerId),
+    )
     .limit(1);
+  const [row] = rows;
   if (!row) {
     throw new Error(`Storage provider not found: ${providerId}`);
   }
@@ -200,8 +212,9 @@ export function getStorageProvider(): StorageProvider {
 
 /** @deprecated — old single-provider API. Kept so old callers still build. */
 export async function loadStorageContext(
-  _ownerAccountId: string,
+  ownerAccountId: string,
 ): Promise<never> {
+  void ownerAccountId;
   throw new Error(
     "loadStorageContext is deprecated — switch to getProviderForNewUpload / getProviderForFile.",
   );

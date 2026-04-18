@@ -2,6 +2,7 @@ import { desc, eq } from "drizzle-orm";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { ApiAuthError, requireSessionWithAccount } from "@/lib/api/session";
+import { findOwnedStorageProvider } from "@/lib/api/ownership";
 import {
   parseJsonBody,
   serverError,
@@ -38,6 +39,14 @@ export async function POST(req: NextRequest) {
     const json = await parseJsonBody(req, 64 * 1024);
     const parsed = createBodySchema.safeParse(json);
     if (!parsed.success) return zodError(parsed.error);
+
+    if (parsed.data.storageProviderId) {
+      const provider = await findOwnedStorageProvider(
+        ownerAccountId,
+        parsed.data.storageProviderId,
+      );
+      if (!provider) return unauthorized("Storage provider not found.");
+    }
 
     const [space] = await db
       .insert(spaces)

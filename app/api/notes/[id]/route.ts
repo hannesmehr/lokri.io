@@ -121,8 +121,10 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
     const existing = await findOwnedNote(ownerAccountId, id);
     if (!existing) return notFound();
 
-    await db.delete(notes).where(eq(notes.id, id));
-    await applyQuotaDelta(ownerAccountId, { notes: -1 });
+    await db.transaction(async (tx) => {
+      await tx.delete(notes).where(eq(notes.id, id));
+      await applyQuotaDelta(ownerAccountId, { notes: -1 }, tx);
+    });
     return new NextResponse(null, { status: 204 });
   } catch (err) {
     if (err instanceof ApiAuthError) return unauthorized(err.message);

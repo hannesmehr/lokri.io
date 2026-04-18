@@ -16,7 +16,7 @@ import {
 } from "@/lib/db/schema";
 import { chunkText, embedText, embedTexts } from "@/lib/embeddings";
 import { extractText } from "@/lib/text-extract";
-import { applyQuotaDelta, checkQuota } from "@/lib/quota";
+import { checkQuota, reserveQuota } from "@/lib/quota";
 import { limit, rateLimitResponse } from "@/lib/rate-limit";
 import { getProviderForNewUpload } from "@/lib/storage";
 
@@ -156,20 +156,26 @@ async function importLokriExport(
         `${n.title}\n\n${n.contentText}`,
         ownerAccountId,
       );
-      await db.insert(notesTable).values({
-        ownerAccountId,
-        spaceId: n.spaceId ? (idMap.get(n.spaceId) ?? null) : null,
-        title: n.title,
-        contentText: n.contentText,
-        embedding,
-        embeddingModel: model,
+      await db.transaction(async (tx) => {
+        const quota = await reserveQuota(ownerAccountId, { notes: 1 }, tx);
+        if (!quota.ok) throw new Error(`QUOTA:${quota.reason}`);
+        await tx.insert(notesTable).values({
+          ownerAccountId,
+          spaceId: n.spaceId ? (idMap.get(n.spaceId) ?? null) : null,
+          title: n.title,
+          contentText: n.contentText,
+          embedding,
+          embeddingModel: model,
+        });
       });
-      await applyQuotaDelta(ownerAccountId, { notes: 1 });
       summary.notesCreated++;
     } catch (err) {
       summary.skipped.push({
         path: `notes/${n.id}.md`,
-        reason: `embed failed: ${(err as Error).message}`,
+        reason:
+          err instanceof Error && err.message.startsWith("QUOTA:")
+            ? `quota: ${err.message.slice("QUOTA:".length)}`
+            : `embed failed: ${(err as Error).message}`,
       });
     }
   }
@@ -267,20 +273,26 @@ async function importMarkdownVault(
         `${title}\n\n${clean}`,
         ownerAccountId,
       );
-      await db.insert(notesTable).values({
-        ownerAccountId,
-        spaceId,
-        title,
-        contentText: clean,
-        embedding,
-        embeddingModel: model,
+      await db.transaction(async (tx) => {
+        const quota = await reserveQuota(ownerAccountId, { notes: 1 }, tx);
+        if (!quota.ok) throw new Error(`QUOTA:${quota.reason}`);
+        await tx.insert(notesTable).values({
+          ownerAccountId,
+          spaceId,
+          title,
+          contentText: clean,
+          embedding,
+          embeddingModel: model,
+        });
       });
-      await applyQuotaDelta(ownerAccountId, { notes: 1 });
       summary.notesCreated++;
     } catch (err) {
       summary.skipped.push({
         path,
-        reason: `embed failed: ${(err as Error).message}`,
+        reason:
+          err instanceof Error && err.message.startsWith("QUOTA:")
+            ? `quota: ${err.message.slice("QUOTA:".length)}`
+            : `embed failed: ${(err as Error).message}`,
       });
     }
   }
@@ -331,49 +343,75 @@ async function importFiles(
         content: bytes,
         mimeType: entry.mimeType,
       });
-      const [row] = await db
-        .insert(filesTable)
-        .values({
-          ownerAccountId,
-          spaceId: entry.spaceId,
-          filename: entry.filename,
-          mimeType: entry.mimeType,
-          sizeBytes: put.sizeBytes,
-          storageProviderId: providerId,
-          storageKey: put.storageKey,
-        })
-        .returning({ id: filesTable.id });
-
-      // Auto-extract+chunk+embed so search works immediately. Handles
-      // text/*, JSON, PDF, DOCX; skips binary types.
       try {
-        const text = await extractText(bytes, entry.mimeType);
-        if (text && text.length > 0) {
-          const chunks = chunkText(text);
-          if (chunks.length > 0) {
-            const { embeddings, model } = await embedTexts(chunks, ownerAccountId);
-            await db.insert(fileChunks).values(
-              chunks.map((c, i) => ({
-                fileId: row.id,
-                chunkIndex: i,
-                contentText: c,
-                embedding: embeddings[i],
-                embeddingModel: model,
-              })),
-            );
+        const row = await db.transaction(async (tx) => {
+          const quota = await reserveQuota(
+            ownerAccountId,
+            {
+              bytes: put.sizeBytes,
+              files: 1,
+            },
+            tx,
+          );
+          if (!quota.ok) throw new Error(`QUOTA:${quota.reason}`);
+
+          const [created] = await tx
+            .insert(filesTable)
+            .values({
+              ownerAccountId,
+              spaceId: entry.spaceId,
+              filename: entry.filename,
+              mimeType: entry.mimeType,
+              sizeBytes: put.sizeBytes,
+              storageProviderId: providerId,
+              storageKey: put.storageKey,
+            })
+            .returning({ id: filesTable.id });
+          return created;
+        });
+
+        // Auto-extract+chunk+embed so search works immediately. Handles
+        // text/*, JSON, PDF, DOCX; skips binary types.
+        try {
+          const text = await extractText(bytes, entry.mimeType);
+          if (text && text.length > 0) {
+            const chunks = chunkText(text);
+            if (chunks.length > 0) {
+              const { embeddings, model } = await embedTexts(chunks, ownerAccountId);
+              await db.insert(fileChunks).values(
+                chunks.map((c, i) => ({
+                  fileId: row.id,
+                  chunkIndex: i,
+                  contentText: c,
+                  embedding: embeddings[i],
+                  embeddingModel: model,
+                })),
+              );
+            }
           }
+        } catch (err) {
+          console.error(
+            `[import] extract/embed failed for ${entry.archivePath}, file kept without chunks:`,
+            err,
+          );
         }
+        summary.filesCreated++;
       } catch (err) {
-        console.error(
-          `[import] extract/embed failed for ${entry.archivePath}, file kept without chunks:`,
-          err,
-        );
+        await provider.delete(put.storageKey).catch((cleanupErr) => {
+          console.error(
+            `[import] cleanup failed for orphaned object ${put.storageKey}:`,
+            cleanupErr,
+          );
+        });
+        if (err instanceof Error && err.message.startsWith("QUOTA:")) {
+          summary.skipped.push({
+            path: entry.archivePath,
+            reason: `quota: ${err.message.slice("QUOTA:".length)}`,
+          });
+          continue;
+        }
+        throw err;
       }
-      await applyQuotaDelta(ownerAccountId, {
-        bytes: put.sizeBytes,
-        files: 1,
-      });
-      summary.filesCreated++;
     } catch (err) {
       summary.skipped.push({
         path: entry.archivePath,

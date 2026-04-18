@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import JSZip from "jszip";
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import { serverError, unauthorized } from "@/lib/api/errors";
 import { ApiAuthError, requireSessionWithAccount } from "@/lib/api/session";
 import { db } from "@/lib/db";
@@ -32,7 +32,7 @@ import { getProviderForFile } from "@/lib/storage";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-export async function GET(_req: NextRequest) {
+export async function GET() {
   try {
     const { session, ownerAccountId } = await requireSessionWithAccount();
 
@@ -121,7 +121,10 @@ export async function GET(_req: NextRequest) {
     const filesFolder = zip.folder("files");
     for (const f of files) {
       try {
-        const provider = await getProviderForFile(f.storageProviderId);
+        const provider = await getProviderForFile(
+          f.storageProviderId,
+          ownerAccountId,
+        );
         const { content } = await provider.get(f.storageKey);
         filesFolder?.file(`${f.id}-${f.filename}`, Buffer.from(content));
       } catch (err) {

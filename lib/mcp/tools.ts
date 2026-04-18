@@ -7,13 +7,13 @@
  * return a loud error rather than silently operating on a wrong account.
  */
 
-import { and, cosineDistance, desc, eq, inArray, sql, type AnyColumn, type SQL } from "drizzle-orm";
+import { and, cosineDistance, desc, eq, inArray, isNotNull, sql, type AnyColumn, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { db } from "@/lib/db";
 import { fileChunks, files, notes, spaces } from "@/lib/db/schema";
 import { chunkText, embedText, embedTexts } from "@/lib/embeddings";
-import { applyQuotaDelta, checkQuota } from "@/lib/quota";
+import { applyQuotaDelta, checkQuota, reserveQuota } from "@/lib/quota";
 import { reindexFile } from "@/lib/reindex";
 import {
   getProviderForFile,
@@ -87,11 +87,6 @@ function spaceInScope(scope: string[] | null, spaceId: string): boolean {
   return scope.includes(spaceId);
 }
 
-/** Back-compat shim for tools that only need the account id. */
-function requireOwnerAccountId(extra: ToolExtra): string {
-  return requireAuth(extra).ownerAccountId;
-}
-
 function ok(data: unknown): ToolResult {
   return {
     content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
@@ -148,6 +143,7 @@ export function registerTools(server: McpServer): void {
           and(
             eq(notes.ownerAccountId, ownerAccountId),
             eq(notes.mcpHidden, false),
+            isNotNull(notes.embedding),
             ...(noteScope ? [noteScope] : []),
           ),
         )
@@ -169,6 +165,7 @@ export function registerTools(server: McpServer): void {
           and(
             eq(files.ownerAccountId, ownerAccountId),
             eq(files.mcpHidden, false),
+            isNotNull(fileChunks.embedding),
             ...(fileScope ? [fileScope] : []),
           ),
         )
@@ -447,31 +444,33 @@ export function registerTools(server: McpServer): void {
         if (!space) return toolError(`Space not found: ${space_id}`);
       }
 
-      const quota = await checkQuota(ownerAccountId, { notes: 1 });
-      if (!quota.ok) return toolError(`Quota exceeded: ${quota.reason}`);
-
       const { embedding, model } = await embedText(
         `${title}\n\n${content}`,
         ownerAccountId,
       );
-      const [row] = await db
-        .insert(notes)
-        .values({
-          ownerAccountId,
-          spaceId: space_id ?? null,
-          title,
-          contentText: content,
-          embedding,
-          embeddingModel: model,
-        })
-        .returning({
-          id: notes.id,
-          title: notes.title,
-          spaceId: notes.spaceId,
-          createdAt: notes.createdAt,
-        });
+      const row = await db.transaction(async (tx) => {
+        const quota = await reserveQuota(ownerAccountId, { notes: 1 }, tx);
+        if (!quota.ok) throw new Error(`QUOTA:${quota.reason}`);
 
-      await applyQuotaDelta(ownerAccountId, { notes: 1 });
+        const [created] = await tx
+          .insert(notes)
+          .values({
+            ownerAccountId,
+            spaceId: space_id ?? null,
+            title,
+            contentText: content,
+            embedding,
+            embeddingModel: model,
+          })
+          .returning({
+            id: notes.id,
+            title: notes.title,
+            spaceId: notes.spaceId,
+            createdAt: notes.createdAt,
+          });
+
+        return created;
+      });
       return ok({ note: row });
     },
   );
@@ -553,18 +552,22 @@ export function registerTools(server: McpServer): void {
       if (ro) return ro;
       const { ownerAccountId, spaceScope } = auth;
       const noteScope = scopeCondition(notes.spaceId, spaceScope);
-      const [row] = await db
-        .delete(notes)
-        .where(
-          and(
-            eq(notes.id, id),
-            eq(notes.ownerAccountId, ownerAccountId),
-            ...(noteScope ? [noteScope] : []),
-          ),
-        )
-        .returning({ id: notes.id });
+      const row = await db.transaction(async (tx) => {
+        const [deleted] = await tx
+          .delete(notes)
+          .where(
+            and(
+              eq(notes.id, id),
+              eq(notes.ownerAccountId, ownerAccountId),
+              ...(noteScope ? [noteScope] : []),
+            ),
+          )
+          .returning({ id: notes.id });
+        if (!deleted) return null;
+        await applyQuotaDelta(ownerAccountId, { notes: -1 }, tx);
+        return deleted;
+      });
       if (!row) return toolError(`Note not found: ${id}`);
-      await applyQuotaDelta(ownerAccountId, { notes: -1 });
       return ok({ deleted: row.id });
     },
   );
@@ -605,7 +608,10 @@ export function registerTools(server: McpServer): void {
         .limit(1);
       if (!file || file.mcpHidden) return toolError(`File not found: ${id}`);
 
-      const provider = await getProviderForFile(file.storageProviderId);
+      const provider = await getProviderForFile(
+        file.storageProviderId,
+        ownerAccountId,
+      );
       const { content } = await provider.get(file.storageKey);
       return ok({
         id: file.id,
@@ -671,12 +677,6 @@ export function registerTools(server: McpServer): void {
         if (!space) return toolError(`Space not found: ${space_id}`);
       }
 
-      const quota = await checkQuota(ownerAccountId, {
-        bytes: content.byteLength,
-        files: 1,
-      });
-      if (!quota.ok) return toolError(`Quota exceeded: ${quota.reason}`);
-
       const { provider, providerId } = await getProviderForNewUpload(
         ownerAccountId,
         space_id ?? null,
@@ -688,57 +688,79 @@ export function registerTools(server: McpServer): void {
         mimeType: mime_type,
       });
 
-      const [row] = await db
-        .insert(files)
-        .values({
-          ownerAccountId,
-          spaceId: space_id ?? null,
-          filename,
-          mimeType: mime_type,
-          sizeBytes: putResult.sizeBytes,
-          storageProviderId: providerId,
-          storageKey: putResult.storageKey,
-        })
-        .returning({
-          id: files.id,
-          filename: files.filename,
-          mimeType: files.mimeType,
-          sizeBytes: files.sizeBytes,
-          spaceId: files.spaceId,
-          createdAt: files.createdAt,
+      try {
+        const row = await db.transaction(async (tx) => {
+          const quota = await reserveQuota(
+            ownerAccountId,
+            {
+              bytes: putResult.sizeBytes,
+              files: 1,
+            },
+            tx,
+          );
+          if (!quota.ok) throw new Error(`QUOTA:${quota.reason}`);
+
+          const [created] = await tx
+            .insert(files)
+            .values({
+              ownerAccountId,
+              spaceId: space_id ?? null,
+              filename,
+              mimeType: mime_type,
+              sizeBytes: putResult.sizeBytes,
+              storageProviderId: providerId,
+              storageKey: putResult.storageKey,
+            })
+            .returning({
+              id: files.id,
+              filename: files.filename,
+              mimeType: files.mimeType,
+              sizeBytes: files.sizeBytes,
+              spaceId: files.spaceId,
+              createdAt: files.createdAt,
+            });
+          return created;
         });
 
-      const isTextual =
-        mime_type.startsWith("text/") || mime_type === "application/json";
-      if (isTextual) {
-        try {
-          const text = content.toString("utf-8");
-          const chunks = chunkText(text);
-          if (chunks.length > 0) {
-            const { embeddings, model } = await embedTexts(chunks, ownerAccountId);
-            await db.insert(fileChunks).values(
-              chunks.map((c, i) => ({
-                fileId: row.id,
-                chunkIndex: i,
-                contentText: c,
-                embedding: embeddings[i],
-                embeddingModel: model,
-              })),
+        const isTextual =
+          mime_type.startsWith("text/") || mime_type === "application/json";
+        if (isTextual) {
+          try {
+            const text = content.toString("utf-8");
+            const chunks = chunkText(text);
+            if (chunks.length > 0) {
+              const { embeddings, model } = await embedTexts(chunks, ownerAccountId);
+              await db.insert(fileChunks).values(
+                chunks.map((c, i) => ({
+                  fileId: row.id,
+                  chunkIndex: i,
+                  contentText: c,
+                  embedding: embeddings[i],
+                  embeddingModel: model,
+                })),
+              );
+            }
+          } catch (err) {
+            console.error(
+              `[mcp/upload_file] embedding failed for ${row.id}, stored without chunks:`,
+              err,
             );
           }
-        } catch (err) {
-          console.error(
-            `[mcp/upload_file] embedding failed for ${row.id}, stored without chunks:`,
-            err,
-          );
         }
-      }
 
-      await applyQuotaDelta(ownerAccountId, {
-        bytes: putResult.sizeBytes,
-        files: 1,
-      });
-      return ok({ file: row });
+        return ok({ file: row });
+      } catch (err) {
+        await provider.delete(putResult.storageKey).catch((cleanupErr) => {
+          console.error(
+            `[mcp/upload_file] cleanup failed for orphaned object ${putResult.storageKey}:`,
+            cleanupErr,
+          );
+        });
+        if (err instanceof Error && err.message.startsWith("QUOTA:")) {
+          return toolError(`Quota exceeded: ${err.message.slice("QUOTA:".length)}`);
+        }
+        throw err;
+      }
     },
   );
 
@@ -776,12 +798,21 @@ export function registerTools(server: McpServer): void {
         .limit(1);
       if (!existing) return toolError(`File not found: ${id}`);
 
-      const provider = await getProviderForFile(existing.storageProviderId);
+      const provider = await getProviderForFile(
+        existing.storageProviderId,
+        ownerAccountId,
+      );
       await provider.delete(existing.storageKey);
-      await db.delete(files).where(eq(files.id, id));
-      await applyQuotaDelta(ownerAccountId, {
-        bytes: -existing.sizeBytes,
-        files: -1,
+      await db.transaction(async (tx) => {
+        await tx.delete(files).where(eq(files.id, id));
+        await applyQuotaDelta(
+          ownerAccountId,
+          {
+            bytes: -existing.sizeBytes,
+            files: -1,
+          },
+          tx,
+        );
       });
       return ok({ deleted: existing.id });
     },
@@ -891,11 +922,20 @@ export function registerTools(server: McpServer): void {
         if (!quota.ok) return toolError(`Quota exceeded: ${quota.reason}`);
       }
 
-      const provider = await getProviderForFile(existing.storageProviderId);
+      const provider = await getProviderForFile(
+        existing.storageProviderId,
+        ownerAccountId,
+      );
+      let putResult:
+        | {
+            storageKey: string;
+            sizeBytes: number;
+          }
+        | undefined;
       try {
         // Re-put. For vercel-blob + S3 this writes at the same storage key.
         // For GitHub (read-only) we bail out here with a clear error.
-        await provider.put({
+        putResult = await provider.put({
           ownerAccountId,
           filename: existing.filename,
           content,
@@ -907,43 +947,84 @@ export function registerTools(server: McpServer): void {
         );
       }
 
-      await db
-        .update(files)
-        .set({
-          sizeBytes: content.byteLength,
-          mimeType: nextMime,
-        })
-        .where(eq(files.id, id));
-
-      // Refresh chunks — same path as the REST reindex route.
-      await db.delete(fileChunks).where(eq(fileChunks.fileId, id));
+      const nextStorageKey = putResult?.storageKey ?? existing.storageKey;
+      const nextSizeBytes = putResult?.sizeBytes ?? content.byteLength;
+      const nextSizeDelta = nextSizeBytes - existing.sizeBytes;
       const isTextual =
         nextMime.startsWith("text/") || nextMime === "application/json";
-      if (isTextual) {
-        try {
-          const text = content.toString("utf-8");
-          const chunks = chunkText(text);
-          if (chunks.length > 0) {
-            const { embeddings, model } = await embedTexts(chunks, ownerAccountId);
-            await db.insert(fileChunks).values(
-              chunks.map((c, i) => ({
+
+      try {
+        let chunkRows: Array<{
+          fileId: string;
+          chunkIndex: number;
+          contentText: string;
+          embedding: number[] | null;
+          embeddingModel: string;
+        }> = [];
+
+        if (isTextual) {
+          try {
+            const text = content.toString("utf-8");
+            const chunks = chunkText(text);
+            if (chunks.length > 0) {
+              const { embeddings, model } = await embedTexts(chunks, ownerAccountId);
+              chunkRows = chunks.map((c, i) => ({
                 fileId: id,
                 chunkIndex: i,
                 contentText: c,
                 embedding: embeddings[i],
                 embeddingModel: model,
-              })),
-            );
+              }));
+            }
+          } catch (err) {
+            console.error(`[mcp/update_file] reindex failed for ${id}:`, err);
           }
-        } catch (err) {
-          console.error(`[mcp/update_file] reindex failed for ${id}:`, err);
         }
-      }
 
-      if (sizeDelta !== 0) {
-        await applyQuotaDelta(ownerAccountId, { bytes: sizeDelta });
+        await db.transaction(async (tx) => {
+          await tx
+            .update(files)
+            .set({
+              sizeBytes: nextSizeBytes,
+              mimeType: nextMime,
+              storageKey: nextStorageKey,
+            })
+            .where(eq(files.id, id));
+
+          await tx.delete(fileChunks).where(eq(fileChunks.fileId, id));
+          if (chunkRows.length > 0) {
+            await tx.insert(fileChunks).values(chunkRows);
+          }
+          if (nextSizeDelta > 0) {
+            const quota = await reserveQuota(
+              ownerAccountId,
+              { bytes: nextSizeDelta },
+              tx,
+            );
+            if (!quota.ok) throw new Error(`QUOTA:${quota.reason}`);
+          } else if (nextSizeDelta < 0) {
+            await applyQuotaDelta(ownerAccountId, { bytes: nextSizeDelta }, tx);
+          }
+        });
+
+        if (nextStorageKey !== existing.storageKey) {
+          await provider.delete(existing.storageKey);
+        }
+        return ok({ id, sizeBytes: nextSizeBytes, mimeType: nextMime });
+      } catch (err) {
+        if (err instanceof Error && err.message.startsWith("QUOTA:")) {
+          return toolError(`Quota exceeded: ${err.message.slice("QUOTA:".length)}`);
+        }
+        if (putResult && nextStorageKey !== existing.storageKey) {
+          await provider.delete(nextStorageKey).catch((cleanupErr) => {
+            console.error(
+              `[mcp/update_file] cleanup failed for orphaned object ${nextStorageKey}:`,
+              cleanupErr,
+            );
+          });
+        }
+        throw err;
       }
-      return ok({ id, sizeBytes: content.byteLength, mimeType: nextMime });
     },
   );
 

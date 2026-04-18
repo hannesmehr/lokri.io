@@ -9,6 +9,7 @@ import {
   zodError,
 } from "@/lib/api/errors";
 import { findOwnedSpace } from "@/lib/api/ownership";
+import { findOwnedStorageProvider } from "@/lib/api/ownership";
 import { ApiAuthError, requireSessionWithAccount } from "@/lib/api/session";
 import { db } from "@/lib/db";
 import { spaces } from "@/lib/db/schema";
@@ -52,6 +53,14 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     const json = await parseJsonBody(req, 64 * 1024);
     const parsed = patchBodySchema.safeParse(json);
     if (!parsed.success) return zodError(parsed.error);
+
+    if (parsed.data.storageProviderId) {
+      const provider = await findOwnedStorageProvider(
+        ownerAccountId,
+        parsed.data.storageProviderId,
+      );
+      if (!provider) return unauthorized("Storage provider not found.");
+    }
 
     const [updated] = await db
       .update(spaces)

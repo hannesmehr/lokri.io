@@ -14,7 +14,7 @@ import { ApiAuthError, requireSessionWithAccount } from "@/lib/api/session";
 import { db } from "@/lib/db";
 import { fileChunks, files } from "@/lib/db/schema";
 import { chunkText, embedTexts } from "@/lib/embeddings";
-import { applyQuotaDelta, checkQuota } from "@/lib/quota";
+import { reserveQuota } from "@/lib/quota";
 import { limit, rateLimitResponse } from "@/lib/rate-limit";
 import { getProviderForNewUpload } from "@/lib/storage";
 import { extractText } from "@/lib/text-extract";
@@ -98,12 +98,6 @@ export async function POST(req: NextRequest) {
       if (!space) return apiError("Space not found", 404);
     }
 
-    const quotaCheck = await checkQuota(ownerAccountId, {
-      bytes: file.size,
-      files: 1,
-    });
-    if (!quotaCheck.ok) return paymentRequired(quotaCheck.reason);
-
     const content = Buffer.from(await file.arrayBuffer());
     const mimeType = file.type || "application/octet-stream";
     const { provider, providerId } = await getProviderForNewUpload(
@@ -119,90 +113,109 @@ export async function POST(req: NextRequest) {
       targetPrefix,
     });
 
-    // When `target_prefix` is provided (D&D), the storage key is determin-
-    // istic — if the user drops the same filename twice, S3 overwrites
-    // the object, and we must likewise replace the DB row to avoid
-    // ghost duplicates. `fileChunks` is ON DELETE CASCADE so old chunks
-    // vanish with the old row. Quota correction via negative delta.
-    if (providerId && targetPrefix !== undefined) {
-      const existing = await db
-        .select({ id: files.id, sizeBytes: files.sizeBytes })
-        .from(files)
-        .where(
-          and(
-            eq(files.ownerAccountId, ownerAccountId),
-            eq(files.storageProviderId, providerId),
-            eq(files.storageKey, putResult.storageKey),
-          ),
-        );
-      if (existing.length > 0) {
-        await db.delete(files).where(
-          and(
-            eq(files.ownerAccountId, ownerAccountId),
-            eq(files.storageProviderId, providerId),
-            eq(files.storageKey, putResult.storageKey),
-          ),
-        );
-        const freed = existing.reduce((n, r) => n + r.sizeBytes, 0);
-        if (freed > 0) {
-          await applyQuotaDelta(ownerAccountId, {
-            bytes: -freed,
-            files: -existing.length,
-          });
-        }
-      }
-    }
-
-    const [row] = await db
-      .insert(files)
-      .values({
-        ownerAccountId,
-        spaceId,
-        filename: file.name,
-        mimeType,
-        sizeBytes: putResult.sizeBytes,
-        storageProviderId: providerId,
-        storageKey: putResult.storageKey,
-      })
-      .returning();
-
-    // Text extraction — handles text/*, JSON, PDF, DOCX. Non-extractable
-    // types (images, archives) are stored without chunks.
     try {
-      const text = await extractText(content, mimeType);
-      if (text && text.length > 0) {
-        const chunks = chunkText(text);
-        if (chunks.length > 0) {
-          const { embeddings, model } = await embedTexts(chunks, ownerAccountId);
-          await db.insert(fileChunks).values(
-            chunks.map((c, i) => ({
-              fileId: row.id,
-              chunkIndex: i,
-              contentText: c,
-              embedding: embeddings[i],
-              embeddingModel: model,
-            })),
-          );
+      // When `target_prefix` is provided (D&D), the storage key is determin-
+      // istic — if the user drops the same filename twice, S3 overwrites
+      // the object, and we must likewise replace the DB row to avoid
+      // ghost duplicates. `fileChunks` is ON DELETE CASCADE so old chunks
+      // vanish with the old row. Quota correction via negative delta.
+      const row = await db.transaction(async (tx) => {
+        let existingFreedBytes = 0;
+        let existingFreedFiles = 0;
+        if (providerId && targetPrefix !== undefined) {
+          const existing = await tx
+            .select({ id: files.id, sizeBytes: files.sizeBytes })
+            .from(files)
+            .where(
+              and(
+                eq(files.ownerAccountId, ownerAccountId),
+                eq(files.storageProviderId, providerId),
+                eq(files.storageKey, putResult.storageKey),
+              ),
+            );
+          if (existing.length > 0) {
+            await tx.delete(files).where(
+              and(
+                eq(files.ownerAccountId, ownerAccountId),
+                eq(files.storageProviderId, providerId),
+                eq(files.storageKey, putResult.storageKey),
+              ),
+            );
+            existingFreedBytes = existing.reduce((n, r) => n + r.sizeBytes, 0);
+            existingFreedFiles = existing.length;
+          }
         }
+
+        const quotaCheck = await reserveQuota(
+          ownerAccountId,
+          {
+            bytes: putResult.sizeBytes - existingFreedBytes,
+            files: 1 - existingFreedFiles,
+          },
+          tx,
+        );
+        if (!quotaCheck.ok) throw new Error(`QUOTA:${quotaCheck.reason}`);
+
+        const [created] = await tx
+          .insert(files)
+          .values({
+            ownerAccountId,
+            spaceId,
+            filename: file.name,
+            mimeType,
+            sizeBytes: putResult.sizeBytes,
+            storageProviderId: providerId,
+            storageKey: putResult.storageKey,
+          })
+          .returning();
+
+        return created;
+      });
+
+      // Text extraction — handles text/*, JSON, PDF, DOCX. Non-extractable
+      // types (images, archives) are stored without chunks.
+      try {
+        const text = await extractText(content, mimeType);
+        if (text && text.length > 0) {
+          const chunks = chunkText(text);
+          if (chunks.length > 0) {
+            const { embeddings, model } = await embedTexts(chunks, ownerAccountId);
+            await db.insert(fileChunks).values(
+              chunks.map((c, i) => ({
+                fileId: row.id,
+                chunkIndex: i,
+                contentText: c,
+                embedding: embeddings[i],
+                embeddingModel: model,
+              })),
+            );
+          }
+        }
+      } catch (embedErr) {
+        // Don't fail the upload if extraction/embedding fails — log and
+        // continue. File stays stored + listable; future re-index job can
+        // pick it up.
+        console.error(
+          `[api/files] extract/embed failed for ${row.id}, stored without chunks:`,
+          embedErr,
+        );
       }
-    } catch (embedErr) {
-      // Don't fail the upload if extraction/embedding fails — log and
-      // continue. File stays stored + listable; future re-index job can
-      // pick it up.
-      console.error(
-        `[api/files] extract/embed failed for ${row.id}, stored without chunks:`,
-        embedErr,
-      );
+
+      // No public URL — clients download via `/api/files/<id>/content`, which
+      // proxies through this server after an ownership check.
+      return NextResponse.json({ file: row }, { status: 201 });
+    } catch (err) {
+      await provider.delete(putResult.storageKey).catch((cleanupErr) => {
+        console.error(
+          `[api/files] cleanup failed for orphaned object ${putResult.storageKey}:`,
+          cleanupErr,
+        );
+      });
+      if (err instanceof Error && err.message.startsWith("QUOTA:")) {
+        return paymentRequired(err.message.slice("QUOTA:".length));
+      }
+      throw err;
     }
-
-    await applyQuotaDelta(ownerAccountId, {
-      bytes: putResult.sizeBytes,
-      files: 1,
-    });
-
-    // No public URL — clients download via `/api/files/<id>/content`, which
-    // proxies through this server after an ownership check.
-    return NextResponse.json({ file: row }, { status: 201 });
   } catch (err) {
     if (err instanceof ApiAuthError) return unauthorized(err.message);
     return serverError(err);
