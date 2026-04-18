@@ -850,6 +850,95 @@
     "mcp": {
       "title": "MCP",
       "subtitle": "Verbinde Claude Desktop, ChatGPT, Cursor oder andere MCP-Clients mit deinem lokri-Account.",
+      "page": {
+        "title": "MCP",
+        "subtitle": "Verbinde Claude Desktop, ChatGPT, Cursor oder andere MCP-Clients mit deinem lokri-Account."
+      },
+      "legacyTokens": {
+        "title": "Legacy-Bearer-Tokens",
+        "description": "Statische Tokens für Skripte und CLI-Integrationen. Moderne Clients nutzen stattdessen OAuth (siehe unten).",
+        "empty": "Noch keine Tokens. Erstelle einen für deinen ersten Client.",
+        "readOnly": "read-only",
+        "spaceScope": "{count} Space",
+        "spaceScopePlural": "{count} Spaces",
+        "teamWide": "team-wide",
+        "createdAt": "Erstellt {date}",
+        "lastUsedAt": "zuletzt genutzt {datetime}",
+        "neverUsed": "nie genutzt",
+        "revoke": "Widerrufen",
+        "revokeConfirm": "Token \"{name}\" widerrufen? Clients verlieren sofort den Zugriff.",
+        "revokeFailed": "Konnte Token nicht widerrufen.",
+        "revoked": "Token widerrufen."
+      },
+      "tokenCreate": {
+        "newButton": "Neuer Token",
+        "dialogTitle": "Neuer MCP-Token",
+        "dialogSubtitle": "Gib dem Token einen Namen und entscheide, welchen Zugriff der Client bekommt.",
+        "createdTitle": "Token erstellt",
+        "createdSubtitle": "Kopiere den Token jetzt — er wird danach nicht mehr angezeigt.",
+        "oneTimeTitle": "Nur einmal sichtbar",
+        "oneTimeWarning": "Nach dem Schließen kann dieser Token nicht erneut angezeigt werden. Speichere ihn in deiner KI-Client-Konfiguration oder einem Passwortmanager.",
+        "name": "Name",
+        "namePlaceholder": "z.B. Claude Desktop",
+        "scope": "Sichtbarkeit",
+        "scopeAll": "Alle Spaces",
+        "scopeAllHint": "voller Account-Zugriff",
+        "scopeSelected": "Nur ausgewählte",
+        "scopeSelectedHintNone": "noch keine Spaces",
+        "scopeSelectedHintCount": "{count} verfügbar",
+        "scopeEmpty": "Du hast noch keine Spaces angelegt. Erstelle zuerst einen Space, damit du ihn hier zuweisen kannst.",
+        "scopeTypeTitle": "Token-Typ",
+        "scopeTypePersonal": "Persönlich",
+        "scopeTypePersonalHint": "Wird widerrufen, wenn du das Team verlässt.",
+        "scopeTypeTeam": "Team-weit",
+        "scopeTypeTeamHint": "Bleibt gültig bis manuell widerrufen.",
+        "scopeTypeNote": "Persönliche Tokens werden deaktiviert, wenn du das Team verlässt. Team-weite Tokens bleiben bestehen.",
+        "readOnly": "Read-only",
+        "readOnlyHint": "Der Client kann lesen und suchen, aber nichts anlegen, verändern oder löschen.",
+        "submit": "Token erstellen",
+        "submitting": "Erstellen…",
+        "copy": "In Zwischenablage kopieren",
+        "close": "Schließen",
+        "copied": "Token kopiert.",
+        "errors": {
+          "generic": "Konnte Token nicht erstellen.",
+          "selectAtLeastOne": "Wähle mindestens einen Space — oder nimm „alle Spaces“."
+        }
+      },
+      "oauth": {
+        "title": "OAuth 2.1 aktiv.",
+        "body": "Clients discovern lokri über /.well-known/oauth-protected-resource, registrieren sich per DCR (RFC 7591) und tauschen PKCE-Codes gegen Access-Tokens. Du musst keinen Token manuell kopieren — die Tokens oben sind für Skripte und CLI der Legacy-Pfad."
+      },
+      "instructions": {
+        "title": "Client einrichten",
+        "subtitle": "Copy-&-Paste-Snippets für Claude Desktop, ChatGPT, Cursor.",
+        "shared": {
+          "copy": "Kopieren",
+          "copied": "Kopiert",
+          "copiedToast": "In die Zwischenablage kopiert.",
+          "endpoint": "Endpoint",
+          "discovery": "Discovery"
+        },
+        "claudeDesktop": {
+          "title": "Claude Desktop",
+          "badge": "via mcp-remote-Bridge (OAuth)",
+          "intro": "Einmalig npm install -g mcp-remote.",
+          "bridgeNote": "Die Config-Datei erlaubt Claude Desktop weiterhin nur stdio-Subprozesse. mcp-remote bridged zu HTTP und übernimmt die OAuth-Discovery selbst. Kein --header und kein Token nötig.",
+          "copyLabel": "claude_desktop_config.json"
+        },
+        "chatgpt": {
+          "title": "ChatGPT (Developer Tools)",
+          "intro": "MCP-Connector anlegen.",
+          "fallbackNote": "ChatGPT discovert OAuth automatisch. Falls ein statischer Bearer erwartet wird, nutze einen Token aus MCP-Tokens oben.",
+          "copyLabel": "Connector-Settings"
+        },
+        "cursor": {
+          "title": "Cursor / Codex",
+          "intro": "In ~/.cursor/mcp.json bzw. der Codex-MCP-Config.",
+          "fallbackNote": "Cursor unterstützt OAuth-Discovery. Falls das nicht verfügbar ist, trage einen Authorization: Bearer lk_…-Header ein.",
+          "copyLabel": "mcp.json"
+        }
+      },
       "tokens": {
         "title": "Legacy-Bearer-Tokens",
         "description": "Statische Tokens für Skripte und CLI-Integrationen. Moderne Clients nutzen stattdessen OAuth (siehe unten).",
@@ -891,10 +980,6 @@
           "generic": "Konnte Token nicht erstellen.",
           "selectAtLeastOne": "Wähle mindestens einen Space — oder nimm „alle Spaces“."
         }
-      },
-      "instructions": {
-        "title": "Client einrichten",
-        "subtitle": "Copy-&-Paste-Snippets für Claude Desktop, ChatGPT, Cursor."
       }
     },
     "storage": {
