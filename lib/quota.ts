@@ -1,6 +1,11 @@
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { ownerAccounts, plans, usageQuota } from "@/lib/db/schema";
+import {
+  ownerAccountMembers,
+  ownerAccounts,
+  plans,
+  usageQuota,
+} from "@/lib/db/schema";
 
 const FREE_PLAN_ID = "free";
 type QuotaExecutor = Pick<typeof db, "insert" | "update" | "execute">;
@@ -57,6 +62,7 @@ export async function getQuota(ownerAccountId: string): Promise<QuotaStatus> {
       maxBytes: plans.maxBytes,
       maxFiles: plans.maxFiles,
       maxNotes: plans.maxNotes,
+      isSeatBased: plans.isSeatBased,
     })
     .from(usageQuota)
     .innerJoin(ownerAccounts, eq(ownerAccounts.id, usageQuota.ownerAccountId))
@@ -73,18 +79,35 @@ export async function getQuota(ownerAccountId: string): Promise<QuotaStatus> {
   const expired =
     !isFree && row.planExpiresAt !== null && row.planExpiresAt < new Date();
   // Also treat paid plans with no expiry set at all as expired (safe default).
+  // Seat-based plans (team) don't go through the standard PayPal-capture
+  // flow yet, so they have NULL expiry by design — skip the free-fallback
+  // for them. Billing-automation will revisit once subscriptions land.
   const needsFallback =
-    !isFree && (row.planExpiresAt === null || expired);
+    !isFree &&
+    !row.isSeatBased &&
+    (row.planExpiresAt === null || expired);
 
   if (!needsFallback) {
+    // Seat multiplication for team-plan accounts: active seat count
+    // multiplies the per-seat base limits. Current semantics counts every
+    // member as a seat (no revoked_at on `owner_account_members` yet —
+    // removal is a hard delete).
+    let seatMultiplier = 1;
+    if (row.isSeatBased) {
+      const [seatRow] = await db
+        .select({ n: sql<number>`count(*)::int` })
+        .from(ownerAccountMembers)
+        .where(eq(ownerAccountMembers.ownerAccountId, ownerAccountId));
+      seatMultiplier = Math.max(1, Number(seatRow?.n ?? 1));
+    }
     return {
       planId: row.planId,
       usedBytes: row.usedBytes,
       filesCount: row.filesCount,
       notesCount: row.notesCount,
-      maxBytes: row.maxBytes,
-      maxFiles: row.maxFiles,
-      maxNotes: row.maxNotes,
+      maxBytes: row.maxBytes * seatMultiplier,
+      maxFiles: row.maxFiles * seatMultiplier,
+      maxNotes: row.maxNotes * seatMultiplier,
     };
   }
 

@@ -16,7 +16,8 @@ import { TokenList } from "./_token-list";
 import { TokenCreateDialog } from "./_token-create-dialog";
 
 export default async function McpPage() {
-  const { ownerAccountId } = await requireSessionWithAccount();
+  const { ownerAccountId, accountType, role } =
+    await requireSessionWithAccount();
   const origin = resolveAppOrigin();
 
   const [tokens, spaceRows] = await Promise.all([
@@ -25,6 +26,7 @@ export default async function McpPage() {
         id: apiTokens.id,
         name: apiTokens.name,
         tokenPrefix: apiTokens.tokenPrefix,
+        scopeType: apiTokens.scopeType,
         spaceScope: apiTokens.spaceScope,
         readOnly: apiTokens.readOnly,
         lastUsedAt: apiTokens.lastUsedAt,
@@ -71,7 +73,11 @@ export default async function McpPage() {
                 </CardDescription>
               </div>
             </div>
-            <TokenCreateDialog spaces={spaceRows} />
+            <TokenCreateDialog
+              spaces={spaceRows}
+              accountType={accountType}
+              role={role}
+            />
           </div>
         </CardHeader>
         <CardContent className="relative">

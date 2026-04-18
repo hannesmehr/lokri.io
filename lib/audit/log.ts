@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { auditEvents } from "@/lib/db/schema";
+import { ipFromHeaders } from "@/lib/rate-limit";
 
 /**
  * Minimal audit-event writer.
@@ -45,4 +46,25 @@ export async function logAuditEvent(input: AuditLogInput): Promise<void> {
     // actual operation. We surface to console so ops alerts pick it up.
     console.error("[audit] insert failed:", err, { input });
   }
+}
+
+/**
+ * Request-bound audit logger. Returns a partially-applied `log()` that
+ * injects IP + User-Agent from the incoming request. Cheap — the
+ * outer function is called once per route, the inner `log()` once per
+ * audit event. Route handlers don't have to drag headers through
+ * service layers.
+ */
+export function getAuditLogger(request: Request | { headers: Headers }) {
+  const headers =
+    "headers" in request && request.headers instanceof Headers
+      ? request.headers
+      : (request as Request).headers;
+  const ipAddress = ipFromHeaders(headers);
+  const userAgent = headers.get("user-agent");
+  return function log(
+    input: Omit<AuditLogInput, "ipAddress" | "userAgent">,
+  ): Promise<void> {
+    return logAuditEvent({ ...input, ipAddress, userAgent });
+  };
 }

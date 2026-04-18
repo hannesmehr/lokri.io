@@ -1,5 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
+import { requireSessionWithAccount } from "@/lib/api/session";
 import { SectionNav } from "../profile/_section-nav";
 
 export default async function SettingsLayout({
@@ -8,23 +9,25 @@ export default async function SettingsLayout({
   children: ReactNode;
 }) {
   const t = await getTranslations("settings");
+  const { accountType } = await requireSessionWithAccount();
+
+  const items = [
+    { href: "/settings", label: t("navigation.general") },
+    { href: "/settings/mcp", label: t("navigation.mcp") },
+    { href: "/settings/storage", label: t("navigation.storage") },
+    { href: "/settings/embedding-key", label: t("navigation.embeddingKey") },
+  ];
+  if (accountType === "team") {
+    items.push({ href: "/settings/team", label: t("navigation.team") });
+  }
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="font-display text-4xl leading-tight">{t("title")}</h1>
         <p className="mt-1 text-sm text-muted-foreground">{t("subtitle")}</p>
       </div>
-      <SectionNav
-        items={[
-          { href: "/settings", label: t("navigation.general") },
-          { href: "/settings/mcp", label: t("navigation.mcp") },
-          { href: "/settings/storage", label: t("navigation.storage") },
-          {
-            href: "/settings/embedding-key",
-            label: t("navigation.embeddingKey"),
-          },
-        ]}
-      />
+      <SectionNav items={items} />
       {children}
     </div>
   );

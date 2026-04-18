@@ -3,12 +3,15 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import {
   apiError,
+  authErrorResponse,
+  forbidden,
   parseJsonBody,
   serverError,
-  unauthorized,
   zodError,
 } from "@/lib/api/errors";
 import { ApiAuthError, requireSessionWithAccount } from "@/lib/api/session";
+import { canCreateTeamTokens } from "@/lib/auth/roles";
+import { logAuditEvent } from "@/lib/audit/log";
 import { db } from "@/lib/db";
 import { apiTokens, spaces } from "@/lib/db/schema";
 import { limit, rateLimitResponse } from "@/lib/rate-limit";
@@ -24,6 +27,12 @@ const createBodySchema = z.object({
   space_scope: z.array(z.string().uuid()).max(50).optional(),
   /** Optional — if true, mutation tools refuse. Default false. */
   read_only: z.boolean().optional(),
+  /**
+   * `personal` (default) — token is bound to the creating user and dies
+   * with their membership. `team` — account-scoped, survives member churn
+   * (only owner/admin may create).
+   */
+  scope_type: z.enum(["personal", "team"]).optional().default("personal"),
 });
 
 export async function GET() {
@@ -35,6 +44,8 @@ export async function GET() {
         id: apiTokens.id,
         name: apiTokens.name,
         tokenPrefix: apiTokens.tokenPrefix,
+        scopeType: apiTokens.scopeType,
+        createdByUserId: apiTokens.createdByUserId,
         spaceScope: apiTokens.spaceScope,
         readOnly: apiTokens.readOnly,
         lastUsedAt: apiTokens.lastUsedAt,
@@ -52,14 +63,15 @@ export async function GET() {
 
     return NextResponse.json({ tokens: rows });
   } catch (err) {
-    if (err instanceof ApiAuthError) return unauthorized(err.message);
+    if (err instanceof ApiAuthError) return authErrorResponse(err);
     return serverError(err);
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const { ownerAccountId } = await requireSessionWithAccount();
+    const { ownerAccountId, session, role, accountType } =
+      await requireSessionWithAccount();
     const rl = await limit("tokenCreate", `u:${ownerAccountId}`);
     if (!rl.ok) return rateLimitResponse(rl);
 
@@ -67,11 +79,14 @@ export async function POST(req: NextRequest) {
     const parsed = createBodySchema.safeParse(json);
     if (!parsed.success) return zodError(parsed.error);
 
-    // Validate space_scope IDs — every one must be owned by this account.
-    // This is crucial: without the check, a malicious client could smuggle
-    // foreign UUIDs into their token and bypass ownership filters later
-    // (though the tools *also* re-check ownership via ownerAccountId, so
-    // this is defence in depth — the API boundary rejects bogus IDs early).
+    // Only team-accounts have the "team" scope notion — on personal
+    // accounts we silently coerce to `personal`.
+    const scopeType: "personal" | "team" =
+      accountType === "team" ? parsed.data.scope_type : "personal";
+    if (scopeType === "team" && !canCreateTeamTokens(role)) {
+      return forbidden("Only owner/admin may create team-wide tokens.");
+    }
+
     let scope: string[] | null = null;
     if (parsed.data.space_scope && parsed.data.space_scope.length > 0) {
       const ids = [...new Set(parsed.data.space_scope)];
@@ -86,7 +101,7 @@ export async function POST(req: NextRequest) {
         );
       if (owned.length !== ids.length) {
         return apiError(
-          "Einer oder mehrere Space-IDs gehören nicht zu diesem Account.",
+          "One or more space ids do not belong to this account.",
           400,
         );
       }
@@ -102,6 +117,11 @@ export async function POST(req: NextRequest) {
         name: parsed.data.name,
         tokenHash: hash,
         tokenPrefix: prefix,
+        scopeType,
+        // Personal tokens are tied to the creator for member-removal
+        // clean-up. Team tokens leave this null so removing the creator
+        // doesn't accidentally nuke a team-wide token.
+        createdByUserId: scopeType === "personal" ? session.user.id : null,
         spaceScope: scope,
         readOnly: parsed.data.read_only ?? false,
       })
@@ -109,18 +129,32 @@ export async function POST(req: NextRequest) {
         id: apiTokens.id,
         name: apiTokens.name,
         tokenPrefix: apiTokens.tokenPrefix,
+        scopeType: apiTokens.scopeType,
         spaceScope: apiTokens.spaceScope,
         readOnly: apiTokens.readOnly,
         createdAt: apiTokens.createdAt,
       });
 
-    // `token` is returned ONCE — clients must copy it now.
+    await logAuditEvent({
+      ownerAccountId,
+      actorUserId: session.user.id,
+      action: "token.created",
+      targetType: "token",
+      targetId: row.id,
+      metadata: {
+        name: row.name,
+        scopeType: row.scopeType,
+        readOnly: row.readOnly ?? false,
+        spaceScopeCount: scope?.length ?? 0,
+      },
+    });
+
     return NextResponse.json(
       { token: { ...row, plaintext } },
       { status: 201 },
     );
   } catch (err) {
-    if (err instanceof ApiAuthError) return unauthorized(err.message);
+    if (err instanceof ApiAuthError) return authErrorResponse(err);
     return serverError(err);
   }
 }

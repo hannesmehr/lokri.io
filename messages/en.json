@@ -485,6 +485,12 @@
       "create": {
         "title": "New MCP token",
         "subtitle": "Name the token and decide what access the client should have.",
+        "scopeTypeTitle": "Token type",
+        "scopeTypePersonal": "Personal",
+        "scopeTypePersonalHint": "Revoked when you leave the team.",
+        "scopeTypeTeam": "Team-wide",
+        "scopeTypeTeamHint": "Stays valid until manually revoked.",
+        "scopeTypeNote": "Personal tokens are revoked when you leave the team. Team-wide tokens persist.",
         "createdTitle": "Token created",
         "createdSubtitle": "Copy the token now — it will not be shown again.",
         "oneTimeWarning": "After closing this dialog the token cannot be shown again. Save it in your AI client configuration or a password manager.",
@@ -598,7 +604,78 @@
     },
     "team": {
       "title": "Team",
-      "subtitle": "Members, roles, and settings for this team."
+      "subtitle": "Members, roles, and settings for this team.",
+      "nav": {
+        "overview": "Overview",
+        "members": "Members"
+      },
+      "overview": {
+        "nameLabel": "Team name",
+        "nameSave": "Save",
+        "nameSaved": "Team name updated.",
+        "memberCount": "{count, plural, one {# member} other {# members}}",
+        "seatsUsed": "{count, plural, one {# seat used} other {# seats used}}",
+        "planLabel": "Plan",
+        "planStatic": "Team (beta, manual billing)",
+        "dangerTitle": "Danger zone",
+        "dangerDescription": "The team and all its data will be permanently deleted."
+      },
+      "delete": {
+        "button": "Delete team",
+        "title": "Delete team {name}",
+        "intro": "This removes all members, spaces, notes, files, and tokens of this team. The action cannot be undone.",
+        "confirmPrompt": "Type {name} to confirm.",
+        "confirmPlaceholder": "Team name",
+        "submit": "Delete permanently",
+        "submitting": "Deleting…",
+        "success": "Team deleted.",
+        "mismatch": "The entered name does not match."
+      },
+      "members": {
+        "title": "Members",
+        "inviteButton": "Invite member",
+        "table": {
+          "name": "Name",
+          "email": "Email",
+          "role": "Role",
+          "joined": "Joined",
+          "actions": "Actions"
+        },
+        "remove": "Remove",
+        "removeConfirm": "Remove {name} from the team? Personal tokens for this member will be revoked.",
+        "removed": "Member removed.",
+        "roleChanged": "Role updated.",
+        "selfBadge": "You",
+        "ownerBadge": "Owner",
+        "cannotDemoteOwner": "The sole owner cannot be demoted.",
+        "cannotRemoveOwner": "The owner cannot be removed.",
+        "cannotRemoveSelf": "You cannot remove yourself."
+      },
+      "invites": {
+        "pendingTitle": "Pending invitations",
+        "empty": "No pending invitations.",
+        "invitedBy": "invited by {name}",
+        "expiresAt": "valid until {date}",
+        "revoke": "Revoke",
+        "revokeConfirm": "Revoke the invitation to {email}?",
+        "revoked": "Invitation revoked."
+      },
+      "invite": {
+        "title": "Invite member",
+        "description": "Send an email invitation. The recipient accepts via a magic link (valid for 7 days).",
+        "email": "Email address",
+        "emailPlaceholder": "name@company.com",
+        "role": "Role",
+        "submit": "Send invitation",
+        "submitting": "Sending…",
+        "success": "Invitation sent to {email}.",
+        "errors": {
+          "alreadyMember": "This email is already a member of the team.",
+          "alreadyInvited": "There is already an open invitation for this email.",
+          "invalidRole": "Invalid role.",
+          "generic": "Invitation could not be sent."
+        }
+      }
     }
   },
 
@@ -714,6 +791,49 @@
       "title": "Coming soon",
       "tagline": "The GDPR-compliant MCP gateway for your AI clients.",
       "loginCta": "Sign in"
+    }
+  },
+
+  "accountSwitcher": {
+    "trigger": "Switch account",
+    "activeBadge": "active",
+    "teamBadge": "Team",
+    "personalBadge": "Personal",
+    "createTeam": "Create team",
+    "teamSettings": "Team settings",
+    "switching": "Switching…",
+    "switchError": "Could not switch account.",
+    "createDialog": {
+      "title": "New team",
+      "description": "Give the team a name. You can invite members after creation.",
+      "name": "Team name",
+      "namePlaceholder": "e.g. Engineering",
+      "submit": "Create team",
+      "submitting": "Creating…",
+      "errors": {
+        "disabled": "Team creation is not enabled for your account.",
+        "generic": "Could not create team."
+      }
+    }
+  },
+
+  "invites": {
+    "accept": {
+      "title": "Invitation to {teamName}",
+      "subtitle": "{inviterName} invited you as {role}.",
+      "submit": "Accept invitation",
+      "submitting": "Joining…",
+      "successToast": "Welcome to {teamName}.",
+      "needsLogin": "Sign in or register to accept this invitation.",
+      "loginButton": "Sign in",
+      "registerButton": "Register",
+      "errors": {
+        "invalidToken": "This invitation link is invalid or already accepted.",
+        "expired": "This invitation link has expired. Ask for a new one.",
+        "emailMismatch": "This invitation belongs to a different email address. Sign in with the invited address or sign out.",
+        "alreadyMember": "You're already a member of this team.",
+        "generic": "The invitation could not be accepted."
+      }
     }
   },
 

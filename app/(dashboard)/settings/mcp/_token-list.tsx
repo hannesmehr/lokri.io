@@ -9,6 +9,7 @@ interface Token {
   id: string;
   name: string;
   tokenPrefix: string;
+  scopeType?: "personal" | "team" | string | null;
   spaceScope: string[] | null;
   readOnly: boolean;
   lastUsedAt: Date | string | null;
@@ -63,6 +64,11 @@ export function TokenList({ tokens }: { tokens: Token[] }) {
                 <span className="rounded border border-indigo-500/30 bg-indigo-500/10 px-1.5 py-0.5 text-[10px] font-medium text-indigo-700 dark:text-indigo-300">
                   {t.spaceScope.length} Space
                   {t.spaceScope.length === 1 ? "" : "s"}
+                </span>
+              ) : null}
+              {t.scopeType === "team" ? (
+                <span className="rounded border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-300">
+                  team-wide
                 </span>
               ) : null}
             </div>

@@ -24,6 +24,11 @@ Context Protocol.
   Cookie-basiert, ohne URL-Prefix. Emails werden in der Sprache des Empfängers
   versendet (`users.preferred_locale`). Impressum + Datenschutz bleiben aus
   rechtlichen Gründen deutschsprachig.
+- **Teams** — Beta. Mehrere User in einem Owner-Account (owner/admin/member/
+  viewer), Magic-Link-Einladung per E-Mail, Account-Switcher im Header,
+  seat-basierte Quota (Team-Plan: 5 GB pro Seat). Team-Erstellung ist
+  gatet via `users.can_create_teams` — Freischaltung siehe `docs/OPS.md`.
+  Automatisches Billing via PayPal Subscriptions ist Roadmap-Punkt.
 
 ## Tech-Stack
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -22,26 +23,44 @@ interface SpaceOption {
   name: string;
 }
 
-export function TokenCreateDialog({ spaces }: { spaces: SpaceOption[] }) {
+type Role = "owner" | "admin" | "member" | "viewer";
+
+export function TokenCreateDialog({
+  spaces,
+  accountType,
+  role,
+}: {
+  spaces: SpaceOption[];
+  accountType: "personal" | "team";
+  role: Role;
+}) {
   const router = useRouter();
+  const t = useTranslations("settings.mcp.create");
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [readOnly, setReadOnly] = useState(false);
   const [scopeMode, setScopeMode] = useState<"all" | "selected">("all");
+  const [scopeType, setScopeType] = useState<"personal" | "team">("personal");
   const [selectedSpaces, setSelectedSpaces] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [plaintext, setPlaintext] = useState<string | null>(null);
 
+  // Only team accounts expose the choice; only owner/admin may mint
+  // team-scoped tokens. Members/viewers silently get personal-scope.
+  const canPickTeamScope =
+    accountType === "team" && (role === "owner" || role === "admin");
+
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (scopeMode === "selected" && selectedSpaces.size === 0) {
-      toast.error("Wähle mindestens einen Space — oder nimm „alle Spaces“.");
+      toast.error(t("errors.selectAtLeastOne"));
       return;
     }
     setLoading(true);
     const payload: Record<string, unknown> = {
       name,
       read_only: readOnly,
+      scope_type: scopeType,
     };
     if (scopeMode === "selected") {
       payload.space_scope = [...selectedSpaces];
@@ -192,6 +211,29 @@ export function TokenCreateDialog({ spaces }: { spaces: SpaceOption[] }) {
               ) : null}
             </div>
 
+            {canPickTeamScope ? (
+              <div className="space-y-2">
+                <Label>{t("scopeTypeTitle")}</Label>
+                <div className="flex gap-1 rounded-lg border bg-muted/40 p-1 text-xs">
+                  <ScopeTypeTab
+                    active={scopeType === "personal"}
+                    onClick={() => setScopeType("personal")}
+                    label={t("scopeTypePersonal")}
+                    hint={t("scopeTypePersonalHint")}
+                  />
+                  <ScopeTypeTab
+                    active={scopeType === "team"}
+                    onClick={() => setScopeType("team")}
+                    label={t("scopeTypeTeam")}
+                    hint={t("scopeTypeTeamHint")}
+                  />
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  {t("scopeTypeNote")}
+                </p>
+              </div>
+            ) : null}
+
             {/* Read-only ---------------------------------------------- */}
             <label className="flex items-start gap-2 rounded-md border p-3 text-sm">
               <input
@@ -218,6 +260,34 @@ export function TokenCreateDialog({ spaces }: { spaces: SpaceOption[] }) {
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+/** Small tab-style pair used for scope-type (personal/team) selector. */
+function ScopeTypeTab({
+  active,
+  onClick,
+  label,
+  hint,
+}: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+  hint: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={
+        active
+          ? "flex flex-1 flex-col items-start gap-0.5 rounded-md bg-background px-3 py-2 shadow-sm"
+          : "flex flex-1 flex-col items-start gap-0.5 rounded-md px-3 py-2 text-muted-foreground transition-colors hover:text-foreground"
+      }
+    >
+      <span className="font-medium">{label}</span>
+      <span className="text-[11px] text-muted-foreground">{hint}</span>
+    </button>
   );
 }
 

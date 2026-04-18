@@ -9,6 +9,7 @@ export type TeamErrorCode =
   | "CREATE_DISABLED" // user.can_create_teams === false
   | "NAME_REQUIRED"
   | "NAME_TOO_LONG"
+  | "NAME_MISMATCH" // delete-confirm name doesn't match
   | "NOT_FOUND" // team doesn't exist or user isn't a member
   | "FORBIDDEN" // role insufficient
   | "ALREADY_MEMBER"
@@ -36,6 +37,46 @@ export function teamErrorStatus(code: TeamErrorCode): number {
       return 409;
     case "NAME_REQUIRED":
     case "NAME_TOO_LONG":
+    case "NAME_MISMATCH":
+      return 400;
+    default:
+      return 400;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Invite-specific errors. Separate class so the UI can switch on an
+// `InviteError` without parsing strings.
+// ---------------------------------------------------------------------------
+
+export type InviteErrorCode =
+  | "INVALID_TOKEN"
+  | "EXPIRED"
+  | "EMAIL_MISMATCH"
+  | "ALREADY_MEMBER" // user already sits in the team via a different invite / direct add
+  | "ALREADY_INVITED" // another pending invite for this email in this team
+  | "INVALID_ROLE"; // owner is not a valid invite role; unknown strings also rejected
+
+export class InviteError extends Error {
+  readonly code: InviteErrorCode;
+
+  constructor(code: InviteErrorCode, message?: string) {
+    super(message ?? code);
+    this.name = "InviteError";
+    this.code = code;
+  }
+}
+
+export function inviteErrorStatus(code: InviteErrorCode): number {
+  switch (code) {
+    case "INVALID_TOKEN":
+    case "EXPIRED":
+    case "EMAIL_MISMATCH":
+      return 400;
+    case "ALREADY_MEMBER":
+    case "ALREADY_INVITED":
+      return 409;
+    case "INVALID_ROLE":
       return 400;
     default:
       return 400;

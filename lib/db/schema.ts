@@ -537,6 +537,22 @@ export const apiTokens = pgTable(
     tokenHash: text("token_hash").notNull().unique(),
     tokenPrefix: text("token_prefix").notNull(), // e.g. "lk_abc..."
     /**
+     * `personal` = bound to the creating user; revoked automatically when
+     * that user is removed from the team. `team` = account-scoped, survives
+     * member churn (only `owner`/`admin` may create). Legacy tokens default
+     * to `personal` (backfilled via migration 0014).
+     */
+    scopeType: text("scope_type").notNull().default("personal"),
+    /**
+     * Set for `scope_type = 'personal'` tokens so we can revoke the exact
+     * rows when the member leaves. Null for team-scoped tokens and for
+     * pre-0014 rows where the attribution was lost (those stay valid but
+     * can't be auto-revoked on member removal).
+     */
+    createdByUserId: text("created_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    /**
      * Null / empty = token has access to all spaces. Otherwise an array of
      * space UUIDs the token may read/write. Tools enforce this on every
      * call via the owner-account-scoped query.
