@@ -1,5 +1,6 @@
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { Key, Plug } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import {
   Card,
   CardContent,
@@ -16,6 +17,9 @@ import { TokenList } from "./_token-list";
 import { TokenCreateDialog } from "./_token-create-dialog";
 
 export default async function McpPage() {
+  const tPage = await getTranslations("settings.mcp.page");
+  const tLegacy = await getTranslations("settings.mcp.legacyTokens");
+  const tInstructions = await getTranslations("settings.mcp.instructions");
   const { ownerAccountId, accountType, role } =
     await requireSessionWithAccount();
   const origin = resolveAppOrigin();
@@ -50,27 +54,24 @@ export default async function McpPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="font-display text-4xl leading-tight">MCP</h1>
+        <h1 className="text-4xl font-semibold tracking-tight leading-tight">
+          {tPage("title")}
+        </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Verbinde Claude Desktop, ChatGPT, Cursor oder andere MCP-Clients mit
-          deinem lokri-Account.
+          {tPage("subtitle")}
         </p>
       </div>
 
-      <Card className="overflow-hidden relative">
-        <div className="absolute right-0 top-0 h-24 w-24 rounded-full bg-gradient-to-br from-indigo-500/15 to-fuchsia-500/10 blur-2xl" />
-        <CardHeader className="relative">
+      <Card>
+        <CardHeader>
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br from-indigo-500/15 to-fuchsia-500/15 text-indigo-700 dark:text-indigo-300">
+              <div className="grid h-9 w-9 place-items-center rounded-lg border bg-muted text-foreground">
                 <Key className="h-4 w-4" />
               </div>
               <div>
-                <CardTitle>Legacy-Bearer-Tokens</CardTitle>
-                <CardDescription>
-                  Statische Tokens für Skripte und CLI-Integrationen. Moderne
-                  Clients nutzen stattdessen OAuth (siehe unten).
-                </CardDescription>
+                <CardTitle>{tLegacy("title")}</CardTitle>
+                <CardDescription>{tLegacy("description")}</CardDescription>
               </div>
             </div>
             <TokenCreateDialog
@@ -80,7 +81,7 @@ export default async function McpPage() {
             />
           </div>
         </CardHeader>
-        <CardContent className="relative">
+        <CardContent>
           <TokenList tokens={tokens} />
         </CardContent>
       </Card>
@@ -88,14 +89,12 @@ export default async function McpPage() {
       <Card>
         <CardHeader>
           <div className="flex items-center gap-3">
-            <div className="grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br from-emerald-500/15 to-teal-500/15 text-emerald-700 dark:text-emerald-400">
+            <div className="grid h-9 w-9 place-items-center rounded-lg border bg-muted text-foreground">
               <Plug className="h-4 w-4" />
             </div>
             <div>
-              <CardTitle>Client einrichten</CardTitle>
-              <CardDescription>
-                Copy-&amp;-Paste-Snippets für Claude Desktop, ChatGPT, Cursor.
-              </CardDescription>
+              <CardTitle>{tInstructions("title")}</CardTitle>
+              <CardDescription>{tInstructions("subtitle")}</CardDescription>
             </div>
           </div>
         </CardHeader>

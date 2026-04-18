@@ -35,7 +35,7 @@ export function TokenCreateDialog({
   role: Role;
 }) {
   const router = useRouter();
-  const t = useTranslations("settings.mcp.create");
+  const t = useTranslations("settings.mcp.tokenCreate");
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [readOnly, setReadOnly] = useState(false);
@@ -72,8 +72,10 @@ export function TokenCreateDialog({
     });
     setLoading(false);
     if (!res.ok) {
-      const data = await res.json().catch(() => ({ error: "Fehler" }));
-      toast.error(data.error || "Konnte Token nicht erstellen.");
+      const body = await res.json().catch(() => ({}));
+      // Shared Phase-2 pattern: prefer structured API codes, fall back to raw error text.
+      const message = body?.error ?? t("errors.generic");
+      toast.error(message);
       return;
     }
     const { token } = await res.json();
@@ -102,7 +104,7 @@ export function TokenCreateDialog({
   function copyToClipboard() {
     if (!plaintext) return;
     void navigator.clipboard.writeText(plaintext);
-    toast.success("Token kopiert.");
+    toast.success(t("copied"));
   }
 
   return (
@@ -113,27 +115,25 @@ export function TokenCreateDialog({
         else setOpen(true);
       }}
     >
-      <DialogTrigger render={<Button>Neuer Token</Button>} />
+      <DialogTrigger render={<Button>{t("newButton")}</Button>} />
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>
-            {plaintext ? "Token erstellt" : "Neuer MCP-Token"}
+            {plaintext ? t("createdTitle") : t("dialogTitle")}
           </DialogTitle>
           <DialogDescription>
             {plaintext
-              ? "Kopiere den Token jetzt — er wird danach nicht mehr angezeigt."
-              : "Gib dem Token einen Namen und entscheide, welchen Zugriff der Client bekommt."}
+              ? t("createdSubtitle")
+              : t("dialogSubtitle")}
           </DialogDescription>
         </DialogHeader>
 
         {plaintext ? (
           <div className="space-y-4">
             <Alert>
-              <AlertTitle>Nur einmal sichtbar</AlertTitle>
+              <AlertTitle>{t("oneTimeTitle")}</AlertTitle>
               <AlertDescription>
-                Nach dem Schließen kann dieser Token nicht erneut angezeigt
-                werden. Speichere ihn in deiner KI-Client-Konfiguration oder
-                einem Passwortmanager.
+                {t("oneTimeWarning")}
               </AlertDescription>
             </Alert>
             <pre className="rounded-md border bg-muted/50 p-3 text-xs break-all whitespace-pre-wrap">
@@ -141,22 +141,22 @@ export function TokenCreateDialog({
             </pre>
             <DialogFooter className="gap-2">
               <Button type="button" onClick={copyToClipboard}>
-                In Zwischenablage kopieren
+                {t("copy")}
               </Button>
               <Button type="button" variant="outline" onClick={closeAndReset}>
-                Schließen
+                {t("close")}
               </Button>
             </DialogFooter>
           </div>
         ) : (
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="token-name">Name</Label>
+              <Label htmlFor="token-name">{t("name")}</Label>
               <Input
                 id="token-name"
                 required
                 maxLength={100}
-                placeholder="z.B. Claude Desktop"
+                placeholder={t("namePlaceholder")}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 autoComplete="off"
@@ -165,30 +165,29 @@ export function TokenCreateDialog({
 
             {/* Scope --------------------------------------------------- */}
             <div className="space-y-2">
-              <Label>Sichtbarkeit</Label>
+              <Label>{t("scope")}</Label>
               <div className="flex gap-1 rounded-lg border bg-muted/40 p-1 text-xs">
                 <ScopeTab
                   active={scopeMode === "all"}
                   onClick={() => setScopeMode("all")}
-                  label="Alle Spaces"
-                  hint="voller Account-Zugriff"
+                  label={t("scopeAll")}
+                  hint={t("scopeAllHint")}
                 />
                 <ScopeTab
                   active={scopeMode === "selected"}
                   onClick={() => setScopeMode("selected")}
-                  label="Nur ausgewählte"
+                  label={t("scopeSelected")}
                   hint={
                     spaces.length === 0
-                      ? "noch keine Spaces"
-                      : `${spaces.length} verfügbar`
+                      ? t("scopeSelectedHintNone")
+                      : t("scopeSelectedHintCount", { count: spaces.length })
                   }
                 />
               </div>
               {scopeMode === "selected" ? (
                 spaces.length === 0 ? (
                   <p className="text-xs text-muted-foreground">
-                    Du hast noch keine Spaces angelegt. Erstelle zuerst einen
-                    Space, damit du ihn hier zuweisen kannst.
+                    {t("scopeEmpty")}
                   </p>
                 ) : (
                   <div className="max-h-48 space-y-1 overflow-y-auto rounded-md border p-2">
@@ -243,17 +242,16 @@ export function TokenCreateDialog({
                 onChange={(e) => setReadOnly(e.target.checked)}
               />
               <div>
-                <div className="font-medium">Read-only</div>
+                <div className="font-medium">{t("readOnly")}</div>
                 <div className="text-xs text-muted-foreground">
-                  Der Client kann lesen & suchen, aber nichts anlegen,
-                  verändern oder löschen.
+                  {t("readOnlyHint")}
                 </div>
               </div>
             </label>
 
             <DialogFooter>
               <Button type="submit" disabled={loading || !name}>
-                {loading ? "Erstellen…" : "Token erstellen"}
+                {loading ? t("submitting") : t("submit")}
               </Button>
             </DialogFooter>
           </form>

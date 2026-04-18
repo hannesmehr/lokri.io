@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -17,75 +18,78 @@ interface Token {
 }
 
 export function TokenList({ tokens }: { tokens: Token[] }) {
+  const t = useTranslations("settings.mcp.legacyTokens");
   const router = useRouter();
   const [pending, setPending] = useState<string | null>(null);
 
   async function revoke(id: string, name: string) {
-    if (!confirm(`Token "${name}" widerrufen? Clients verlieren sofort den Zugriff.`))
+    if (!confirm(t("revokeConfirm", { name })))
       return;
     setPending(id);
     const res = await fetch(`/api/tokens/${id}`, { method: "DELETE" });
     setPending(null);
     if (!res.ok) {
-      toast.error("Konnte Token nicht widerrufen.");
+      toast.error(t("revokeFailed"));
       return;
     }
-    toast.success("Token widerrufen.");
+    toast.success(t("revoked"));
     router.refresh();
   }
 
   if (tokens.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
-        Noch keine Tokens. Erstelle einen für deinen ersten Client.
+        {t("empty")}
       </p>
     );
   }
 
   return (
     <div className="space-y-2">
-      {tokens.map((t) => (
+      {tokens.map((token) => (
         <div
-          key={t.id}
-          className="flex items-center justify-between gap-4 rounded-md border p-3"
+          key={token.id}
+          className="flex items-start justify-between gap-4 rounded-md border p-3"
         >
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-baseline gap-2">
-              <div className="font-medium">{t.name}</div>
-              <code className="text-xs text-muted-foreground">
-                {t.tokenPrefix}…
+              <div className="font-medium">{token.name}</div>
+              <code className="font-mono text-xs text-muted-foreground">
+                {token.tokenPrefix}…
               </code>
-              {t.readOnly ? (
-                <span className="rounded border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-300">
-                  read-only
+              {token.readOnly ? (
+                <span className="rounded border bg-muted px-1.5 py-0.5 text-[10px] font-medium text-foreground">
+                  {t("readOnly")}
                 </span>
               ) : null}
-              {t.spaceScope && t.spaceScope.length > 0 ? (
-                <span className="rounded border border-indigo-500/30 bg-indigo-500/10 px-1.5 py-0.5 text-[10px] font-medium text-indigo-700 dark:text-indigo-300">
-                  {t.spaceScope.length} Space
-                  {t.spaceScope.length === 1 ? "" : "s"}
+              {token.spaceScope && token.spaceScope.length > 0 ? (
+                <span className="rounded border bg-muted px-1.5 py-0.5 text-[10px] font-medium text-foreground">
+                  {token.spaceScope.length === 1
+                    ? t("spaceScope", { count: token.spaceScope.length })
+                    : t("spaceScopePlural", { count: token.spaceScope.length })}
                 </span>
               ) : null}
-              {t.scopeType === "team" ? (
-                <span className="rounded border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-300">
-                  team-wide
+              {token.scopeType === "team" ? (
+                <span className="rounded border bg-muted px-1.5 py-0.5 text-[10px] font-medium text-foreground">
+                  {t("teamWide")}
                 </span>
               ) : null}
             </div>
-            <div className="text-xs text-muted-foreground">
-              Erstellt {new Date(t.createdAt).toLocaleDateString("de-DE")} ·{" "}
-              {t.lastUsedAt
-                ? `zuletzt genutzt ${new Date(t.lastUsedAt).toLocaleString("de-DE")}`
-                : "nie genutzt"}
+            <div className="mt-1 font-mono text-xs text-muted-foreground">
+              {t("createdAt", { date: new Date(token.createdAt).toLocaleDateString("de-DE") })} ·{" "}
+              {token.lastUsedAt
+                ? t("lastUsedAt", { datetime: new Date(token.lastUsedAt).toLocaleString("de-DE") })
+                : t("neverUsed")}
             </div>
           </div>
           <Button
             variant="ghost"
             size="sm"
-            disabled={pending === t.id}
-            onClick={() => revoke(t.id, t.name)}
+            disabled={pending === token.id}
+            onClick={() => revoke(token.id, token.name)}
+            className="gap-1.5 text-destructive hover:text-destructive"
           >
-            Widerrufen
+            {t("revoke")}
           </Button>
         </div>
       ))}
