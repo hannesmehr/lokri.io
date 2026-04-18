@@ -1,4 +1,5 @@
 import { and, desc, eq } from "drizzle-orm";
+import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { requireSessionWithAccount } from "@/lib/api/session";
 import { db } from "@/lib/db";
@@ -11,6 +12,7 @@ export default async function NoteEditPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const tDetail = await getTranslations("notes.detail");
   const { ownerAccountId } = await requireSessionWithAccount();
   const { id } = await params;
 
@@ -31,15 +33,16 @@ export default async function NoteEditPage({
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <h1 className="font-display line-clamp-2 text-3xl leading-tight sm:text-4xl">
+          <h1 className="line-clamp-2 text-3xl font-semibold tracking-tight leading-tight sm:text-4xl">
             {note.title}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Zuletzt aktualisiert:{" "}
-            {new Date(note.updatedAt).toLocaleString("de-DE")}
+            {tDetail("updatedAt", {
+              datetime: new Date(note.updatedAt).toLocaleString("de-DE"),
+            })}
           </p>
         </div>
-        <NoteDeleteButton id={note.id} />
+        <NoteDeleteButton id={note.id} title={note.title} />
       </div>
       <NoteEditorForm
         noteId={note.id}

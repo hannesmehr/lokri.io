@@ -1,4 +1,5 @@
 import { desc, eq } from "drizzle-orm";
+import { getTranslations } from "next-intl/server";
 import { requireSessionWithAccount } from "@/lib/api/session";
 import { db } from "@/lib/db";
 import { spaces } from "@/lib/db/schema";
@@ -9,6 +10,7 @@ export default async function NewNotePage({
 }: {
   searchParams: Promise<{ spaceId?: string }>;
 }) {
+  const t = await getTranslations("notes.editor");
   const { ownerAccountId } = await requireSessionWithAccount();
   const { spaceId } = await searchParams;
 
@@ -20,7 +22,9 @@ export default async function NewNotePage({
 
   return (
     <div className="space-y-6">
-      <h1 className="font-display text-4xl leading-tight">Neue Note</h1>
+      <h1 className="text-4xl font-semibold tracking-tight leading-tight">
+        {t("newTitle")}
+      </h1>
       <NoteEditorForm
         initialSpaceId={spaceId ?? null}
         spaces={spacesList}

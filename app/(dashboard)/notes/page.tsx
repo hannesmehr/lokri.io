@@ -1,6 +1,7 @@
 import { and, desc, eq } from "drizzle-orm";
 import { ChevronRight, Plus, StickyNote } from "lucide-react";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +16,9 @@ export default async function NotesPage({
 }: {
   searchParams: Promise<{ spaceId?: string }>;
 }) {
+  const t = await getTranslations("notes.list");
+  const tEmpty = await getTranslations("notes.empty");
+  const tActions = await getTranslations("notes.actions");
   const { ownerAccountId } = await requireSessionWithAccount();
   const { spaceId } = await searchParams;
 
@@ -55,14 +59,16 @@ export default async function NotesPage({
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="font-display text-4xl leading-tight">Notes</h1>
+            <h1 className="text-4xl font-semibold tracking-tight leading-tight">
+              {t("title")}
+            </h1>
             {activeSpace ? (
               <Badge variant="secondary" className="gap-1">
                 {activeSpace.name}
                 <Link
                   href="/notes"
                   className="opacity-60 hover:opacity-100"
-                  aria-label="Filter entfernen"
+                  aria-label={t("clearFilter")}
                 >
                   ×
                 </Link>
@@ -71,8 +77,8 @@ export default async function NotesPage({
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
             {activeSpace
-              ? `Notes aus dem Space "${activeSpace.name}".`
-              : "Alle Notes deines Accounts."}
+              ? t("subtitleFiltered", { name: activeSpace.name })
+              : t("subtitleAll")}
           </p>
         </div>
         <Button
@@ -80,7 +86,7 @@ export default async function NotesPage({
           render={
             <Link href={newHref}>
               <Plus className="h-4 w-4" />
-              Neue Note
+              {t("new")}
             </Link>
           }
         />
@@ -92,11 +98,8 @@ export default async function NotesPage({
             <div className="mb-2 grid h-12 w-12 place-items-center rounded-full bg-muted text-muted-foreground">
               <StickyNote className="h-6 w-6" />
             </div>
-            <CardTitle>Noch keine Notes</CardTitle>
-            <CardDescription>
-              Notes werden automatisch semantisch indiziert und über MCP
-              durchsuchbar.
-            </CardDescription>
+            <CardTitle>{tEmpty("title")}</CardTitle>
+            <CardDescription>{tEmpty("body")}</CardDescription>
           </CardHeader>
         </Card>
       ) : (
@@ -110,7 +113,7 @@ export default async function NotesPage({
                 href={`/notes/${n.id}`}
                 className="flex min-w-0 flex-1 items-center gap-4"
               >
-                <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-indigo-500/15 to-fuchsia-500/15 text-indigo-700 dark:text-indigo-300">
+                <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border bg-muted text-foreground">
                   <StickyNote className="h-4 w-4" />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -118,15 +121,15 @@ export default async function NotesPage({
                     <span className="truncate font-medium">{n.title}</span>
                     {n.mcpHidden ? (
                       <span className="shrink-0 rounded border bg-muted/50 px-1.5 py-0.5 text-[10px] text-muted-foreground">
-                        für MCP ausgeblendet
+                        {tActions("hiddenFromMcp")}
                       </span>
                     ) : null}
                   </div>
-                  <div className="line-clamp-1 text-xs text-muted-foreground">
+                  <div className="line-clamp-2 text-xs text-muted-foreground">
                     {n.contentText.replace(/\s+/g, " ").slice(0, 140)}
                   </div>
                 </div>
-                <div className="shrink-0 text-xs text-muted-foreground">
+                <div className="shrink-0 font-mono text-xs text-muted-foreground">
                   {formatRelative(n.updatedAt)}
                 </div>
               </Link>
