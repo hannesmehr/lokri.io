@@ -37,7 +37,7 @@ export default async function ComingSoonPage() {
           </span>
           {t("title")}
         </div>
-        <h1 className="mt-6 font-display text-5xl leading-[1.05] sm:text-6xl">
+        <h1 className="mt-6 text-5xl font-semibold tracking-tight leading-[1.05] sm:text-6xl">
           lokri.<span className="italic text-brand">io</span>
         </h1>
         <p className="mt-4 text-sm text-muted-foreground sm:text-base">

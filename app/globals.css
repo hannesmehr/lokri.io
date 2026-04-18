@@ -179,12 +179,9 @@
     @apply bg-background text-foreground;
   }
   /*
-   * `.font-display` — Legacy-Klasse aus Phase 0 (zeigte auf Instrument
-   * Serif). In Phase 1 intern auf Sans umgebogen: semibold + tight
-   * tracking, damit Headings visuell sofort modern aussehen, ohne
-   * dass die 37 Call-Sites einzeln angefasst werden müssen. Der Phase-2-
-   * Rollout entfernt die Klasse überall und ersetzt sie durch
-   * font-semibold/text-tighter je nach Kontext.
+   * `.font-display` wird nach dem Admin-Redesign entfernt. Im User-Scope
+   * wird die Klasse nicht mehr genutzt; aktuell bleibt sie nur als
+   * Back-compat-Helfer für verbleibende Admin-Call-Sites bestehen.
    */
   .font-display {
     font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;

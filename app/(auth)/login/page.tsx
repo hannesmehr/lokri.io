@@ -46,7 +46,7 @@ export default function LoginPage() {
   return (
     <Card className="backdrop-blur-sm">
       <CardHeader>
-        <CardTitle className="font-display text-3xl leading-tight">
+        <CardTitle className="text-3xl font-semibold tracking-tight leading-tight">
           {t("title")}
         </CardTitle>
         <CardDescription>{t("subtitle")}</CardDescription>
