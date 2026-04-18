@@ -2,6 +2,9 @@ import { eq, sql } from "drizzle-orm";
 import { getTranslations } from "next-intl/server";
 import { notFound, redirect } from "next/navigation";
 import {
+  Badge,
+} from "@/components/ui/badge";
+import {
   Card,
   CardContent,
   CardDescription,
@@ -41,31 +44,38 @@ export default async function TeamOverviewPage() {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>{t("nameLabel")}</CardTitle>
+          <CardDescription>{t("eyebrow")}</CardDescription>
+          <CardTitle className="text-2xl font-semibold tracking-tight">
+            {t("title")}
+          </CardTitle>
+          <CardDescription>{t("subtitle")}</CardDescription>
         </CardHeader>
         <CardContent>
-          <TeamNameForm
-            teamId={team.id}
-            initialName={team.name}
-            canEdit={role === "owner" || role === "admin"}
-          />
+          <div className="space-y-4 rounded-xl border bg-muted/30 p-4">
+            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+              <div className="space-y-1">
+                <p className="text-sm font-medium">{t("nameLabel")}</p>
+                <p className="text-sm text-muted-foreground">
+                  {t("nameDescription")}
+                </p>
+              </div>
+              <Badge variant="outline" className="font-mono text-xs">
+                {team.planId}
+              </Badge>
+            </div>
+            <TeamNameForm
+              teamId={team.id}
+              initialName={team.name}
+              canEdit={role === "owner" || role === "admin"}
+            />
+            <div className="flex flex-col gap-2 border-t pt-4 text-sm text-muted-foreground sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
+              <span>{t("memberCount", { count: memberCount })}</span>
+              <span>{t("seatCount", { count: memberCount })}</span>
+              <span>{t("roleLabel", { role })}</span>
+            </div>
+          </div>
         </CardContent>
       </Card>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardDescription>{t("memberCount", { count: memberCount })}</CardDescription>
-            <CardTitle>{t("seatsUsed", { count: memberCount })}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardDescription>{t("planLabel")}</CardDescription>
-            <CardTitle>{t("planStatic")}</CardTitle>
-          </CardHeader>
-        </Card>
-      </div>
 
       {role === "owner" ? (
         <TeamDeleteCard teamId={team.id} teamName={team.name} />

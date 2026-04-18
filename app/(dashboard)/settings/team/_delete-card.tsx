@@ -32,8 +32,9 @@ export function TeamDeleteCard({
   teamName: string;
 }) {
   const router = useRouter();
-  const tOv = useTranslations("settings.team.overview");
   const tDel = useTranslations("settings.team.delete");
+  const tConfirm = useTranslations("confirmDialogs.delete");
+  const tTeamErrors = useTranslations("errors.api.team");
   const [open, setOpen] = useState(false);
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
@@ -53,8 +54,14 @@ export function TeamDeleteCard({
     if (!res.ok) {
       setBusy(false);
       const body = await res.json().catch(() => ({}));
-      const code = body?.details?.code;
-      toast.error(code === "NAME_MISMATCH" ? tDel("mismatch") : (body?.error ?? tDel("mismatch")));
+      const suffix = body?.details?.code
+        ? String(body.details.code).split(".").pop()
+        : null;
+      const message =
+        suffix && tTeamErrors.has(suffix)
+          ? tTeamErrors(suffix)
+          : body?.error ?? tDel("mismatch");
+      toast.error(message);
       return;
     }
     toast.success(tDel("success"));
@@ -71,11 +78,15 @@ export function TeamDeleteCard({
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-destructive">
             <AlertTriangle className="h-4 w-4" />
-            {tOv("dangerTitle")}
+            {tDel("eyebrow")}
           </CardTitle>
-          <CardDescription>{tOv("dangerDescription")}</CardDescription>
+          <CardDescription>{tDel("dangerDescription")}</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-3">
+          <div className="space-y-1 text-sm text-muted-foreground">
+            <p>{tDel("intro")}</p>
+            <p>{tDel("storageHint")}</p>
+          </div>
           <Button variant="destructive" onClick={() => setOpen(true)}>
             {tDel("button")}
           </Button>
@@ -85,10 +96,15 @@ export function TeamDeleteCard({
       <Dialog open={open} onOpenChange={(v) => (v ? setOpen(true) : setOpen(false))}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{tDel("title", { name: teamName })}</DialogTitle>
-            <DialogDescription>{tDel("intro")}</DialogDescription>
+            <DialogTitle>{tConfirm("title")}</DialogTitle>
+            <DialogDescription>
+              {tDel("confirmDescription", { name: teamName })}
+            </DialogDescription>
           </DialogHeader>
           <form onSubmit={submit} className="space-y-4">
+            <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-muted-foreground">
+              {tDel("warning")}
+            </div>
             <div className="space-y-2">
               <Label htmlFor="confirm-name">
                 {tDel("confirmPrompt", { name: teamName })}
@@ -103,6 +119,14 @@ export function TeamDeleteCard({
               />
             </div>
             <DialogFooter>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setOpen(false)}
+                disabled={busy}
+              >
+                {tConfirm("cancel")}
+              </Button>
               <Button
                 type="submit"
                 variant="destructive"

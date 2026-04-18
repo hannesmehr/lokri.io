@@ -16,7 +16,7 @@ export function SectionNav({
 }) {
   const pathname = usePathname();
   return (
-    <nav className="flex items-center gap-1 overflow-x-auto overflow-y-hidden border-b text-sm">
+    <nav className="flex flex-wrap items-center gap-1 border-b pb-1 text-sm">
       {items.map((item) => {
         const active =
           pathname === item.href ||
@@ -26,7 +26,7 @@ export function SectionNav({
             key={item.href}
             href={item.href}
             className={cn(
-              "relative whitespace-nowrap px-3 py-2 transition-colors",
+              "relative rounded-md px-3 py-2 transition-colors",
               active
                 ? "text-foreground"
                 : "text-muted-foreground hover:text-foreground",
@@ -34,7 +34,7 @@ export function SectionNav({
           >
             {item.label}
             {active ? (
-              <span className="absolute inset-x-3 -bottom-px h-0.5 rounded-full bg-gradient-to-r from-indigo-500 to-fuchsia-500" />
+              <span className="absolute inset-x-3 -bottom-px h-0.5 rounded-full bg-foreground" />
             ) : null}
           </Link>
         );

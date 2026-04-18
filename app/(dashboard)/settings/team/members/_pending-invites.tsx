@@ -39,7 +39,7 @@ export function PendingInvites({
     });
     setBusy(null);
     if (!res.ok) {
-      toast.error(t("revoked"));
+      toast.error(t("revokeFailed"));
       return;
     }
     toast.success(t("revoked"));
@@ -51,11 +51,11 @@ export function PendingInvites({
   }
 
   return (
-    <ul className="divide-y">
+    <ul className="divide-y rounded-xl border">
       {invites.map((inv) => (
         <li
           key={inv.id}
-          className="flex flex-wrap items-center gap-3 py-3 text-sm"
+          className="flex flex-wrap items-center gap-3 px-4 py-3 text-sm"
         >
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
@@ -73,7 +73,7 @@ export function PendingInvites({
           </div>
           <Button
             size="sm"
-            variant="ghost"
+            variant="outline"
             disabled={busy === inv.id}
             onClick={() => void revoke(inv)}
           >

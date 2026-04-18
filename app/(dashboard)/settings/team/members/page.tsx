@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -33,7 +34,11 @@ export default async function TeamMembersPage() {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>{tMembers("title")}</CardTitle>
+          <CardDescription>{tMembers("eyebrow")}</CardDescription>
+          <CardTitle className="text-2xl font-semibold tracking-tight">
+            {tMembers("title")}
+          </CardTitle>
+          <CardDescription>{tMembers("subtitle")}</CardDescription>
         </CardHeader>
         <CardContent>
           <MembersTable
@@ -52,7 +57,9 @@ export default async function TeamMembersPage() {
       {canManage ? (
         <Card>
           <CardHeader>
+            <CardDescription>{tInvites("eyebrow")}</CardDescription>
             <CardTitle>{tInvites("pendingTitle")}</CardTitle>
+            <CardDescription>{tInvites("pendingDescription")}</CardDescription>
           </CardHeader>
           <CardContent>
             <PendingInvites

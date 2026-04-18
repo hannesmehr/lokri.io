@@ -19,6 +19,7 @@ export function TeamNameForm({
 }) {
   const router = useRouter();
   const t = useTranslations("settings.team.overview");
+  const tTeamErrors = useTranslations("errors.api.team");
   const tErr = useTranslations("errors.common");
   const [name, setName] = useState(initialName);
   const [busy, setBusy] = useState(false);
@@ -36,7 +37,16 @@ export function TeamNameForm({
     });
     setBusy(false);
     if (!res.ok) {
-      toast.error(tErr("unknown"));
+      const body = await res.json().catch(() => ({}));
+      const suffix =
+        typeof body?.details?.code === "string"
+          ? body.details.code.split(".").pop() ?? null
+          : null;
+      const message =
+        suffix && tTeamErrors.has(suffix)
+          ? tTeamErrors(suffix)
+          : body?.error ?? tErr("unknown");
+      toast.error(message);
       return;
     }
     toast.success(t("nameSaved"));
@@ -44,14 +54,15 @@ export function TeamNameForm({
   }
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-3 sm:flex-row sm:items-end">
+    <form onSubmit={submit} className="flex flex-col gap-3 md:flex-row md:items-end">
       <Input
         value={name}
         onChange={(e) => setName(e.target.value)}
         maxLength={200}
         disabled={!canEdit || busy}
         autoComplete="off"
-        className="max-w-md"
+        className="max-w-xl border-muted-foreground/20 focus-visible:border-foreground/30"
+        aria-label={t("nameInputLabel")}
       />
       {canEdit ? (
         <Button type="submit" disabled={busy || name.trim() === initialName}>
