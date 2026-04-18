@@ -22,10 +22,6 @@ import { S3Provider, type S3Config } from "@/lib/storage/s3";
 
 export const runtime = "nodejs";
 
-const STORAGE_PROVIDER_MESSAGES = {
-  connectionFailed: "Verbindung zum Provider fehlgeschlagen.",
-} as const;
-
 const s3ConfigSchema = z.object({
   endpoint: z.string().url().optional(),
   region: z.string().min(1).max(50),
@@ -119,11 +115,7 @@ export async function POST(req: NextRequest) {
       try {
         await new S3Provider(cfg).testConnection();
       } catch {
-        return codedApiError(
-          400,
-          "storageProvider.connectionFailed",
-          STORAGE_PROVIDER_MESSAGES.connectionFailed,
-        );
+        return codedApiError(400, "storageProvider.connectionFailed");
       }
       configToEncrypt = cfg;
     } else {
@@ -132,13 +124,9 @@ export async function POST(req: NextRequest) {
         await new GitHubProvider(cfg).testConnection();
       } catch (err) {
         if (err instanceof GitHubProviderError) {
-          return codedApiError(400, err.code, err.message);
+          return codedApiError(400, err.code);
         }
-        return codedApiError(
-          400,
-          "storageProvider.connectionFailed",
-          STORAGE_PROVIDER_MESSAGES.connectionFailed,
-        );
+        return codedApiError(400, "storageProvider.connectionFailed");
       }
       configToEncrypt = cfg;
     }

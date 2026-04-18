@@ -47,15 +47,15 @@ export function apiError(
 export function codedApiError(
   status: number,
   code: string,
-  message: string,
   details?: Record<string, unknown>,
 ): NextResponse {
-  return apiError(message, status, {
+  return NextResponse.json({
+    details: {
     code,
-    message,
     status,
     ...(details ?? {}),
-  });
+    },
+  }, { status });
 }
 
 export function unauthorized(message = "Unauthorized") {
@@ -85,7 +85,6 @@ export function authErrorResponse(err: {
       {
         error: {
           code: err.code,
-          message: err.message,
           status: err.status,
         },
       },

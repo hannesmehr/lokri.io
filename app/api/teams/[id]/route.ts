@@ -133,7 +133,6 @@ export async function DELETE(req: NextRequest, { params }: Params) {
       return codedApiError(
         teamErrorStatus("team.nameMismatch"),
         "team.nameMismatch",
-        "Der eingetippte Name stimmt nicht überein.",
       );
     }
 
@@ -195,7 +194,7 @@ export async function DELETE(req: NextRequest, { params }: Params) {
   } catch (err) {
     if (err instanceof ApiAuthError) return authErrorResponse(err);
     if (err instanceof TeamError) {
-      return codedApiError(teamErrorStatus(err.code), err.code, err.message);
+      return codedApiError(teamErrorStatus(err.code), err.code);
     }
     console.error("[api/teams.DELETE]", err);
     return serverError(err);

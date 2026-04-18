@@ -57,12 +57,7 @@ export async function createTeam(
     .limit(1);
   if (!user) throw new TeamError("team.notFound", "User not found");
   if (!user.canCreateTeams) {
-    // TODO(i18n-rollout): `message`-Fallback entfernen nach Phase-2-Abschluss.
-    // Frontend mappt dann konsequent code → t('errors.api.team.createDisabled').
-    throw new TeamError(
-      "team.createDisabled",
-      "Team-Erstellung ist derzeit nicht freigeschaltet.",
-    );
+    throw new TeamError("team.createDisabled");
   }
 
   const account = await db.transaction(async (tx) => {

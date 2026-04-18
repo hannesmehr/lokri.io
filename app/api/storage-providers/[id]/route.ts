@@ -10,11 +10,6 @@ import { files, storageProviders } from "@/lib/db/schema";
 
 export const runtime = "nodejs";
 
-const STORAGE_PROVIDER_MESSAGES = {
-  notFound: "Storage-Provider nicht gefunden.",
-  inUse: "Storage-Provider wird noch verwendet und kann nicht gelöscht werden.",
-} as const;
-
 type Params = { params: Promise<{ id: string }> };
 
 /**
@@ -37,11 +32,7 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
       )
       .limit(1);
     if (!existing) {
-      return codedApiError(
-        404,
-        "storageProvider.notFound",
-        STORAGE_PROVIDER_MESSAGES.notFound,
-      );
+      return codedApiError(404, "storageProvider.notFound");
     }
 
     // Count files still pointing at this provider.
@@ -53,12 +44,7 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
       ),
     );
     if (fileCount > 0) {
-      return codedApiError(
-        409,
-        "storageProvider.inUse",
-        STORAGE_PROVIDER_MESSAGES.inUse,
-        { fileCount },
-      );
+      return codedApiError(409, "storageProvider.inUse", { fileCount });
     }
 
     await db.delete(storageProviders).where(eq(storageProviders.id, id));

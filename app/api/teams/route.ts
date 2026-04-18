@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
       });
     } catch (err) {
       if (err instanceof TeamError) {
-        return codedApiError(teamErrorStatus(err.code), err.code, err.message);
+        return codedApiError(teamErrorStatus(err.code), err.code);
       }
       throw err;
     }

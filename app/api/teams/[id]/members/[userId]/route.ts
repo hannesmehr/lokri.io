@@ -42,7 +42,6 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       return codedApiError(
         teamErrorStatus("team.roleChangeForbidden"),
         "team.roleChangeForbidden",
-        "Nur Owner duerfen die Owner-Rolle vergeben.",
       );
     }
 
@@ -52,7 +51,6 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       return codedApiError(
         teamErrorStatus("team.selfRoleChange"),
         "team.selfRoleChange",
-        "Du kannst deine eigene Rolle hier nicht aendern.",
       );
     }
 
@@ -66,7 +64,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       return NextResponse.json({ ok: true });
     } catch (err) {
       if (err instanceof TeamError) {
-        return codedApiError(teamErrorStatus(err.code), err.code, err.message);
+        return codedApiError(teamErrorStatus(err.code), err.code);
       }
       throw err;
     }
@@ -89,7 +87,6 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
       return codedApiError(
         teamErrorStatus("team.selfRemove"),
         "team.selfRemove",
-        "Du kannst dich nicht selbst aus dem Team entfernen.",
       );
     }
     try {
@@ -101,7 +98,7 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
       return new NextResponse(null, { status: 204 });
     } catch (err) {
       if (err instanceof TeamError) {
-        return codedApiError(teamErrorStatus(err.code), err.code, err.message);
+        return codedApiError(teamErrorStatus(err.code), err.code);
       }
       throw err;
     }

@@ -66,12 +66,7 @@ export async function POST(req: NextRequest) {
     // but erroring here skips an unnecessary network round-trip.
     const allowed = ALLOWED_BYOK_MODELS[provider as EmbeddingProviderKind];
     if (!allowed || !allowed.has(model)) {
-      // TODO(i18n-rollout): `message`-Fallback entfernen nach Phase-2-Abschluss.
-      return codedApiError(
-        400,
-        "embeddingKey.verificationFailed",
-        "Embedding-Key konnte nicht verifiziert werden. Bitte prüfe ihn.",
-      );
+      return codedApiError(400, "embeddingKey.verificationFailed");
     }
 
     // Test before persisting — same story as storage providers: if the key
@@ -80,15 +75,9 @@ export async function POST(req: NextRequest) {
       await testEmbeddingKey(provider as EmbeddingProviderKind, model, apiKey);
     } catch (err) {
       if (err instanceof EmbeddingKeyError) {
-        // TODO(i18n-rollout): `message`-Fallback entfernen nach Phase-2-Abschluss.
-        return codedApiError(err.status, err.code, err.message);
+        return codedApiError(err.status, err.code);
       }
-      // TODO(i18n-rollout): `message`-Fallback entfernen nach Phase-2-Abschluss.
-      return codedApiError(
-        400,
-        "embeddingKey.verificationFailed",
-        "Embedding-Key konnte nicht verifiziert werden. Bitte prüfe ihn.",
-      );
+      return codedApiError(400, "embeddingKey.verificationFailed");
     }
 
     const configEncrypted = encryptJson({ apiKey });
@@ -142,12 +131,7 @@ export async function DELETE() {
       .limit(1);
 
     if (!existing) {
-      // TODO(i18n-rollout): `message`-Fallback entfernen nach Phase-2-Abschluss.
-      return codedApiError(
-        404,
-        "embeddingKey.notFound",
-        "Kein Embedding-Key hinterlegt.",
-      );
+      return codedApiError(404, "embeddingKey.notFound");
     }
 
     await db
