@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { requireSessionWithAccount } from "@/lib/api/session";
 import { db } from "@/lib/db";
 import { ownerAccounts, users } from "@/lib/db/schema";
@@ -86,6 +87,7 @@ export default async function DashboardLayout({
           </div>
           <div className="flex items-center gap-3">
             <SearchTrigger />
+            <ThemeToggle />
             <UserMenu
               user={{ name: session.user.name, email: session.user.email }}
               isAdmin={userRow?.isAdmin ?? false}

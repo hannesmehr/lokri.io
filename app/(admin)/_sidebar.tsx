@@ -13,6 +13,7 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 
 /**
@@ -69,6 +70,9 @@ export function AdminSidebar() {
           );
         })}
       </nav>
+      <div className="border-t border-amber-500/20 px-2 py-2">
+        <ThemeToggle variant="full" />
+      </div>
       <div className="border-t border-amber-500/20 px-4 py-3 text-[11px] text-muted-foreground">
         Nur für lokri-Admins. Aktionen werden im Audit-Log erfasst.
       </div>
