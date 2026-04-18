@@ -19,7 +19,8 @@ import {
   Upload,
   Video,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -76,6 +77,7 @@ function iconFor(filename: string) {
 }
 
 export function BucketBrowser({ spaceId, defaultProviderName }: Props) {
+  const t = useTranslations("spaces.browser");
   const [prefix, setPrefix] = useState("");
   const [data, setData] = useState<BrowseResult | null>(null);
   const [loading, setLoading] = useState(true);
@@ -94,26 +96,23 @@ export function BucketBrowser({ spaceId, defaultProviderName }: Props) {
   const supportsDirectories = source === "external";
   const readOnly = data?.readOnly ?? false;
 
-  const load = useCallback(
-    async (p: string) => {
-      setLoading(true);
-      setError(null);
-      setSelected(new Set());
-      const res = await fetch(
-        `/api/spaces/${spaceId}/browse?prefix=${encodeURIComponent(p)}`,
-      );
-      setLoading(false);
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({ error: "Fehler" }));
-        setError(body.error ?? `HTTP ${res.status}`);
-        return;
-      }
-      setData(await res.json());
-    },
-    [spaceId],
-  );
+  async function load(p: string) {
+    setLoading(true);
+    setError(null);
+    setSelected(new Set());
+    const res = await fetch(
+      `/api/spaces/${spaceId}/browse?prefix=${encodeURIComponent(p)}`,
+    );
+    setLoading(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({ error: t("loadFailed") }));
+      setError(body.error ?? `HTTP ${res.status}`);
+      return;
+    }
+    setData(await res.json());
+  }
 
-  const loadMore = useCallback(async () => {
+  async function loadMore() {
     if (!data?.nextContinuationToken) return;
     setLoadingMore(true);
     const url = new URL(`/api/spaces/${spaceId}/browse`, window.location.origin);
@@ -122,8 +121,8 @@ export function BucketBrowser({ spaceId, defaultProviderName }: Props) {
     const res = await fetch(url);
     setLoadingMore(false);
     if (!res.ok) {
-      const body = await res.json().catch(() => ({ error: "Fehler" }));
-      toast.error(body.error ?? "Paging fehlgeschlagen.");
+      const body = await res.json().catch(() => ({ error: t("pagingFailed") }));
+      toast.error(body.error ?? t("pagingFailed"));
       return;
     }
     const next: BrowseResult = await res.json();
@@ -136,11 +135,36 @@ export function BucketBrowser({ spaceId, defaultProviderName }: Props) {
           }
         : next,
     );
-  }, [data?.nextContinuationToken, prefix, spaceId]);
+  }
 
   useEffect(() => {
-    void load(prefix);
-  }, [prefix, load]);
+    let cancelled = false;
+
+    async function run() {
+      setLoading(true);
+      setError(null);
+      setSelected(new Set());
+      const res = await fetch(
+        `/api/spaces/${spaceId}/browse?prefix=${encodeURIComponent(prefix)}`,
+      );
+      if (cancelled) return;
+      setLoading(false);
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({ error: t("loadFailed") }));
+        if (cancelled) return;
+        setError(body.error ?? `HTTP ${res.status}`);
+        return;
+      }
+      const next = await res.json();
+      if (cancelled) return;
+      setData(next);
+    }
+
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [prefix, spaceId, t]);
 
   const segments = prefix.replace(/\/$/, "").split("/").filter(Boolean);
   const crumbPath = (i: number) => segments.slice(0, i + 1).join("/") + "/";
@@ -155,7 +179,7 @@ export function BucketBrowser({ spaceId, defaultProviderName }: Props) {
   async function copyUrl(entry: ObjectEntry) {
     const base = typeof window !== "undefined" ? window.location.origin : "";
     await navigator.clipboard.writeText(`${base}${downloadUrl(entry)}`);
-    toast.success("URL kopiert.");
+    toast.success(t("copyUrlSuccess"));
   }
 
   async function importKey(key: string) {
@@ -167,15 +191,15 @@ export function BucketBrowser({ spaceId, defaultProviderName }: Props) {
     });
     setBusyKey(null);
     if (!res.ok) {
-      const body = await res.json().catch(() => ({ error: "Fehler" }));
-      toast.error(body.error ?? "Import fehlgeschlagen.");
+      const body = await res.json().catch(() => ({ error: t("actions.importFailed") }));
+      toast.error(body.error ?? t("actions.importFailed"));
       return;
     }
     const body: { alreadyImported: boolean } = await res.json();
     toast.success(
       body.alreadyImported
-        ? "War schon importiert."
-        : "Importiert — wird jetzt indiziert + via MCP durchsuchbar.",
+        ? t("actions.alreadyImportedToast")
+        : t("actions.importSuccess"),
     );
     void load(prefix);
   }
@@ -189,11 +213,11 @@ export function BucketBrowser({ spaceId, defaultProviderName }: Props) {
     });
     setBusyKey(null);
     if (!res.ok) {
-      toast.error("Konnte Sichtbarkeit nicht ändern.");
+      toast.error(t("visibilityChangeFailed"));
       return;
     }
     toast.success(
-      hidden ? "Ausgeblendet (auch für MCP)." : "Wieder sichtbar.",
+      hidden ? t("actions.hideSuccess") : t("actions.unhideSuccess"),
     );
     void load(prefix);
   }
@@ -207,23 +231,25 @@ export function BucketBrowser({ spaceId, defaultProviderName }: Props) {
     });
     setBusyKey(null);
     if (!res.ok) {
-      toast.error("Konnte Sichtbarkeit nicht ändern.");
+      toast.error(t("visibilityChangeFailed"));
       return;
     }
-    toast.success(hidden ? "Für MCP ausgeblendet." : "Für MCP sichtbar.");
+    toast.success(
+      hidden ? t("actions.hideInternalSuccess") : t("actions.unhideInternalSuccess"),
+    );
     void load(prefix);
   }
 
   async function deleteInternal(fileId: string, name: string) {
-    if (!confirm(`"${name}" wirklich löschen?`)) return;
+    if (!confirm(t("actions.deleteConfirm", { name }))) return;
     setBusyKey(fileId);
     const res = await fetch(`/api/files/${fileId}`, { method: "DELETE" });
     setBusyKey(null);
     if (!res.ok) {
-      toast.error("Löschen fehlgeschlagen.");
+      toast.error(t("deleteFailed"));
       return;
     }
-    toast.success("Gelöscht.");
+    toast.success(t("deleted"));
     void load(prefix);
   }
 
@@ -232,15 +258,15 @@ export function BucketBrowser({ spaceId, defaultProviderName }: Props) {
     const res = await fetch(`/api/files/${fileId}/reindex`, { method: "POST" });
     setBusyKey(null);
     if (!res.ok) {
-      const body = await res.json().catch(() => ({ error: "Fehler" }));
-      toast.error(body.error ?? "Re-Index fehlgeschlagen.");
+      const body = await res.json().catch(() => ({ error: t("reindexFailed") }));
+      toast.error(body.error ?? t("reindexFailed"));
       return;
     }
     const body: { chunks: number } = await res.json();
     toast.success(
       body.chunks > 0
-        ? `Neu indiziert — ${body.chunks} Chunks embedded.`
-        : "Kein Text extrahierbar.",
+        ? t("reindexSuccess", { chunks: body.chunks })
+        : t("reindexNoText"),
     );
     void load(prefix);
   }
@@ -256,8 +282,8 @@ export function BucketBrowser({ spaceId, defaultProviderName }: Props) {
     });
     setBulkRunning(false);
     if (!res.ok) {
-      const body = await res.json().catch(() => ({ error: "Fehler" }));
-      toast.error(body.error ?? "Bulk-Import fehlgeschlagen.");
+      const body = await res.json().catch(() => ({ error: t("actions.bulkImportFailed") }));
+      toast.error(body.error ?? t("actions.bulkImportFailed"));
       return;
     }
     const body: {
@@ -278,9 +304,11 @@ export function BucketBrowser({ spaceId, defaultProviderName }: Props) {
         `${body.summary.skippedQuota} Quota übersprungen`,
       body.summary.failed && `${body.summary.failed} fehlgeschlagen`,
     ].filter(Boolean);
-    toast.success(`Bulk-Import: ${parts.join(", ") || "nichts zu tun"}`, {
+    toast.success(t("actions.bulkImportSummary", {
+      summary: parts.join(", ") || t("actions.bulkImportNothing"),
+    }), {
       description: body.summary.truncatedExpansion
-        ? "Limit 200 expandierte Dateien pro Batch erreicht — weitere Auswahl nötig."
+        ? t("actions.bulkImportTruncated")
         : undefined,
     });
     setSelected(new Set());
@@ -298,17 +326,23 @@ export function BucketBrowser({ spaceId, defaultProviderName }: Props) {
   async function uploadFiles(fileList: FileList | File[]) {
     const files = Array.from(fileList).filter((f) => f.size > 0);
     if (files.length === 0) {
-      toast.error("Keine gültigen Dateien (Ordner werden nicht unterstützt).");
+      toast.error(t("upload.noValidFiles"));
       return;
     }
     setUploading(true);
-    const toastId = toast.loading(`Lade 0/${files.length} hoch…`);
+    const toastId = toast.loading(
+      t("upload.loading", { current: 0, total: files.length }),
+    );
     let ok = 0;
     let failed = 0;
     const errors: string[] = [];
     for (let i = 0; i < files.length; i++) {
       const f = files[i];
-      toast.loading(`${i + 1}/${files.length} · ${f.name}`, { id: toastId });
+      toast.loading(t("upload.progress", {
+        current: i + 1,
+        total: files.length,
+        filename: f.name,
+      }), { id: toastId });
       const fd = new FormData();
       fd.set("file", f);
       fd.set("space_id", spaceId);
@@ -329,19 +363,21 @@ export function BucketBrowser({ spaceId, defaultProviderName }: Props) {
         }
       } catch (err) {
         failed++;
-        errors.push(`${f.name}: ${err instanceof Error ? err.message : "Netzwerkfehler"}`);
+        errors.push(
+          `${f.name}: ${err instanceof Error ? err.message : "Network error"}`,
+        );
       }
     }
     setUploading(false);
     if (failed === 0) {
-      toast.success(`${ok} Datei(en) hochgeladen.`, { id: toastId });
+      toast.success(t("upload.success", { count: ok }), { id: toastId });
     } else if (ok === 0) {
-      toast.error(`Upload fehlgeschlagen.`, {
+      toast.error(t("upload.failed"), {
         id: toastId,
         description: errors.slice(0, 2).join(" · "),
       });
     } else {
-      toast.warning(`${ok} hochgeladen, ${failed} fehlgeschlagen.`, {
+      toast.warning(t("upload.partial", { ok, failed }), {
         id: toastId,
         description: errors.slice(0, 2).join(" · "),
       });
@@ -372,7 +408,7 @@ export function BucketBrowser({ spaceId, defaultProviderName }: Props) {
     e.preventDefault();
     setDragDepth(0);
     if (uploading) {
-      toast.error("Warte bis der laufende Upload fertig ist.");
+      toast.error(t("upload.busy"));
       return;
     }
     void uploadFiles(e.dataTransfer.files);
@@ -403,8 +439,8 @@ export function BucketBrowser({ spaceId, defaultProviderName }: Props) {
     setBulkRunning(false);
     toast.success(
       hidden
-        ? `${keys.length} ausgeblendet.`
-        : `${keys.length} wieder sichtbar.`,
+        ? t("bulk.hideSuccess", { count: keys.length })
+        : t("bulk.unhideSuccess", { count: keys.length }),
     );
     setSelected(new Set());
     void load(prefix);
@@ -465,7 +501,7 @@ export function BucketBrowser({ spaceId, defaultProviderName }: Props) {
     <div
       className={cn(
         "relative space-y-3 rounded-lg transition-colors",
-        dragActive && "ring-2 ring-indigo-500 ring-offset-2 ring-offset-background",
+        dragActive && "ring-2 ring-foreground/25 ring-offset-2 ring-offset-background",
       )}
       onDragEnter={onDragEnter}
       onDragOver={onDragOver}
@@ -473,14 +509,14 @@ export function BucketBrowser({ spaceId, defaultProviderName }: Props) {
       onDrop={onDrop}
     >
       {dragActive ? (
-        <div className="pointer-events-none absolute inset-0 z-20 grid place-items-center rounded-lg bg-indigo-500/10 backdrop-blur-sm">
-          <div className="flex flex-col items-center gap-2 rounded-xl border border-indigo-500/40 bg-background/95 px-6 py-4 shadow-lg">
-            <Upload className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
-            <div className="text-sm font-medium">Dateien ablegen zum Hochladen</div>
+        <div className="pointer-events-none absolute inset-0 z-20 grid place-items-center rounded-lg bg-background/80 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-2 rounded-xl border bg-background/95 px-6 py-4 shadow-lg">
+            <Upload className="h-6 w-6 text-foreground" />
+            <div className="text-sm font-medium">{t("dropzone.title")}</div>
             <div className="text-xs text-muted-foreground">
               {source === "external"
-                ? "Landen im verbundenen Bucket und werden sofort indiziert."
-                : "Werden in diesem Space gespeichert und sofort indiziert."}
+                ? t("dropzone.hintExternal")
+                : t("dropzone.hintInternal")}
             </div>
           </div>
         </div>
@@ -488,7 +524,7 @@ export function BucketBrowser({ spaceId, defaultProviderName }: Props) {
       {uploading ? (
         <div className="pointer-events-none absolute right-2 top-2 z-20 flex items-center gap-1.5 rounded-md border bg-background/95 px-2 py-1 text-xs text-muted-foreground shadow-sm">
           <Loader2 className="h-3 w-3 animate-spin" />
-          Upload läuft…
+          {t("dropzone.uploading")}
         </div>
       ) : null}
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -503,10 +539,10 @@ export function BucketBrowser({ spaceId, defaultProviderName }: Props) {
           </button>
           {readOnly ? (
             <span
-              className="ml-2 inline-flex items-center rounded border border-slate-500/30 bg-slate-500/10 px-1.5 py-0.5 text-[10px] font-medium text-slate-700 dark:text-slate-300"
-              title="Quelle ist read-only — nur Import in lokri, keine Uploads/Löschungen."
+              className="ml-2 inline-flex items-center rounded border bg-muted px-1.5 py-0.5 text-[10px] font-medium text-foreground"
+              title={t("providerReadOnlyTitle")}
             >
-              read-only
+              {t("readOnly")}
             </span>
           ) : null}
           {segments.map((seg, i) => (
@@ -534,8 +570,8 @@ export function BucketBrowser({ spaceId, defaultProviderName }: Props) {
               <Eye className="h-3.5 w-3.5" />
             )}
             {showHidden
-              ? `Ausgeblendete verstecken (${hiddenCount})`
-              : `${hiddenCount} ausgeblendet — anzeigen`}
+              ? t("hiddenToggle", { count: hiddenCount })
+              : t("hiddenCount", { count: hiddenCount })}
           </button>
         ) : null}
       </div>
@@ -543,11 +579,11 @@ export function BucketBrowser({ spaceId, defaultProviderName }: Props) {
       {selected.size > 0 ? (
         <div className="sticky top-16 z-10 flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-card/95 px-4 py-2.5 shadow-sm backdrop-blur">
           <div className="text-sm">
-            <strong>{selected.size}</strong> ausgewählt
+            <strong>{t("bulk.selected", { count: selected.size })}</strong>
             {selectedImportableCount > 0 ? (
               <span className="text-muted-foreground">
                 {" · "}
-                {selectedImportableCount} importierbar
+                {t("bulk.importable", { count: selectedImportableCount })}
               </span>
             ) : null}
           </div>
@@ -559,7 +595,7 @@ export function BucketBrowser({ spaceId, defaultProviderName }: Props) {
                 ) : (
                   <Sparkles className="h-3.5 w-3.5" />
                 )}
-                {bulkRunning ? "Importiere…" : "Alle importieren"}
+                {bulkRunning ? t("bulk.importing") : t("bulk.importAll")}
               </Button>
             ) : null}
             <Button
@@ -569,7 +605,7 @@ export function BucketBrowser({ spaceId, defaultProviderName }: Props) {
               disabled={bulkRunning}
             >
               <EyeOff className="h-3.5 w-3.5" />
-              Ausblenden
+              {t("bulk.hide")}
             </Button>
             <Button
               size="sm"
@@ -578,7 +614,7 @@ export function BucketBrowser({ spaceId, defaultProviderName }: Props) {
               disabled={bulkRunning}
             >
               <Eye className="h-3.5 w-3.5" />
-              Einblenden
+              {t("bulk.unhide")}
             </Button>
             <Button
               size="sm"
@@ -586,7 +622,7 @@ export function BucketBrowser({ spaceId, defaultProviderName }: Props) {
               onClick={() => setSelected(new Set())}
               disabled={bulkRunning}
             >
-              Abwählen
+              {t("bulk.deselect")}
             </Button>
           </div>
         </div>
@@ -595,11 +631,22 @@ export function BucketBrowser({ spaceId, defaultProviderName }: Props) {
       {loading ? (
         <div className="flex items-center gap-2 rounded-md border border-dashed bg-muted/20 p-6 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
-          Lade Inhalt…
+          {t("loading")}
         </div>
       ) : error ? (
-        <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
-          {error}
+        <div className="rounded-xl border bg-card p-5">
+          <div className="flex items-start gap-3">
+            <div className="grid h-10 w-10 place-items-center rounded-lg border bg-muted text-foreground">
+              <FolderOpen className="h-5 w-5" />
+            </div>
+            <div className="space-y-1">
+              <div className="font-medium">{t("errorTitle")}</div>
+              <div className="text-sm text-muted-foreground">{error}</div>
+              <Button variant="outline" size="sm" onClick={() => void load(prefix)}>
+                {t("retry")}
+              </Button>
+            </div>
+          </div>
         </div>
       ) : !data ||
         (visibleDirectories.length === 0 && visibleObjects.length === 0) ? (
@@ -608,10 +655,10 @@ export function BucketBrowser({ spaceId, defaultProviderName }: Props) {
             <Upload className="mx-auto mb-2 h-6 w-6 opacity-50" />
           ) : null}
           {readOnly
-            ? "Dieser Pfad enthält keine sichtbaren Objekte (Quelle ist read-only)."
+            ? t("empty.readOnly")
             : source === "internal"
-              ? "Noch keine Dateien — zieh sie hier rein oder lade sie über die Files-Seite hoch."
-              : "Dieser Pfad enthält keine sichtbaren Objekte — Dateien hier ablegen, um sie in den Bucket hochzuladen."}
+              ? t("empty.internal")
+              : t("empty.external")}
         </div>
       ) : (
         <div className="divide-y rounded-md border">
@@ -621,9 +668,9 @@ export function BucketBrowser({ spaceId, defaultProviderName }: Props) {
               className="h-4 w-4"
               checked={allSelected}
               onChange={toggleAll}
-              aria-label="Alle auswählen"
+              aria-label={t("selectAll")}
             />
-            <span>{allVisibleKeys.length} Einträge</span>
+            <span>{t("entryCount", { count: allVisibleKeys.length })}</span>
           </div>
 
           {prefix && supportsDirectories ? (
@@ -635,6 +682,7 @@ export function BucketBrowser({ spaceId, defaultProviderName }: Props) {
                 setPrefix(parts.length ? parts.join("/") + "/" : "");
               }}
               className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+              aria-label={t("goUp")}
             >
               <span className="inline-block w-4" />
               <FolderOpen className="h-4 w-4" />
@@ -652,7 +700,7 @@ export function BucketBrowser({ spaceId, defaultProviderName }: Props) {
                 className={cn(
                   "flex items-center gap-3 px-4 py-2.5 text-sm transition-colors",
                   d.hidden && "opacity-50",
-                  selected_ && "bg-indigo-500/5",
+                  selected_ && "bg-muted/50",
                 )}
               >
                 <input
@@ -660,14 +708,14 @@ export function BucketBrowser({ spaceId, defaultProviderName }: Props) {
                   className="h-4 w-4 shrink-0"
                   checked={selected_}
                   onChange={() => toggleOne(d.key)}
-                  aria-label={`${shortName} auswählen`}
+                  aria-label={t("selectOne", { name: shortName })}
                 />
                 <button
                   type="button"
                   onClick={() => setPrefix(d.key)}
                   className="flex min-w-0 flex-1 items-center gap-3 text-left"
                 >
-                  <div className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                  <div className="grid h-8 w-8 shrink-0 place-items-center rounded-md border bg-muted text-foreground">
                     <Folder className="h-4 w-4" />
                   </div>
                   <span className="flex-1 truncate font-medium">
@@ -675,7 +723,7 @@ export function BucketBrowser({ spaceId, defaultProviderName }: Props) {
                   </span>
                   {d.hidden ? (
                     <span className="shrink-0 rounded border bg-muted/50 px-1.5 py-0.5 text-[10px] text-muted-foreground">
-                      ausgeblendet
+                      {t("hiddenBadge")}
                     </span>
                   ) : null}
                 </button>
@@ -686,7 +734,7 @@ export function BucketBrowser({ spaceId, defaultProviderName }: Props) {
                         type="button"
                         className="rounded-md px-2 py-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                         disabled={isBusy}
-                        aria-label="Verzeichnis-Aktionen"
+                        aria-label={t("directoryActions")}
                       >
                         {isBusy ? (
                           <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -710,23 +758,27 @@ export function BucketBrowser({ spaceId, defaultProviderName }: Props) {
                         );
                         setBusyKey(null);
                         if (!res.ok) {
-                          toast.error("Import fehlgeschlagen.");
+                          toast.error(t("actions.importFailed"));
                           return;
                         }
                         const body = await res.json();
                         const s = body.summary ?? {};
                         toast.success(
-                          `Rekursiv: ${s.imported ?? 0} importiert, ${s.alreadyImported ?? 0} schon da${
-                            s.skippedQuota
-                              ? `, ${s.skippedQuota} Quota übersprungen`
-                              : ""
-                          }`,
+                          t("actions.recursiveImportSummary", {
+                            imported: s.imported ?? 0,
+                            alreadyImported: s.alreadyImported ?? 0,
+                            quotaPart: s.skippedQuota
+                              ? t("actions.recursiveImportQuotaPart", {
+                                  count: s.skippedQuota,
+                                })
+                              : "",
+                          }),
                         );
                         void load(prefix);
                       }}
                     >
                       <Sparkles className="h-3.5 w-3.5" />
-                      Rekursiv importieren
+                      {t("actions.recursiveImport")}
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     {d.hidden ? (
@@ -734,14 +786,14 @@ export function BucketBrowser({ spaceId, defaultProviderName }: Props) {
                         onClick={() => toggleHiddenExternal(d.key, false)}
                       >
                         <Eye className="h-3.5 w-3.5" />
-                        Wieder einblenden
+                        {t("actions.unhide")}
                       </DropdownMenuItem>
                     ) : (
                       <DropdownMenuItem
                         onClick={() => toggleHiddenExternal(d.key, true)}
                       >
                         <EyeOff className="h-3.5 w-3.5" />
-                        Verzeichnis ausblenden
+                        {t("actions.hideDirectory")}
                       </DropdownMenuItem>
                     )}
                   </DropdownMenuContent>
@@ -761,7 +813,7 @@ export function BucketBrowser({ spaceId, defaultProviderName }: Props) {
                 className={cn(
                   "flex items-center gap-3 px-4 py-2.5 text-sm",
                   o.hidden && "opacity-50",
-                  selected_ && "bg-indigo-500/5",
+                  selected_ && "bg-muted/50",
                 )}
               >
                 <input
@@ -769,30 +821,30 @@ export function BucketBrowser({ spaceId, defaultProviderName }: Props) {
                   className="h-4 w-4 shrink-0"
                   checked={selected_}
                   onChange={() => toggleOne(o.key)}
-                  aria-label={`${name} auswählen`}
+                  aria-label={t("selectOne", { name })}
                 />
-                <div className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-gradient-to-br from-indigo-500/10 to-fuchsia-500/10 text-indigo-700 dark:text-indigo-300">
+                <div className="grid h-8 w-8 shrink-0 place-items-center rounded-md border bg-muted text-foreground">
                   <Icon className="h-4 w-4" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <span className="truncate font-medium">{name}</span>
                     {o.imported && o.kind === "external" ? (
-                      <span className="inline-flex shrink-0 items-center gap-0.5 rounded border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-300">
+                      <span className="inline-flex shrink-0 items-center gap-0.5 rounded border bg-muted px-1.5 py-0.5 text-[10px] font-medium text-foreground">
                         <Sparkles className="h-2.5 w-2.5" />
-                        importiert
+                        {t("actions.alreadyImported")}
                       </span>
                     ) : null}
                     {o.hidden ? (
                       <span className="shrink-0 rounded border bg-muted/50 px-1.5 py-0.5 text-[10px] text-muted-foreground">
-                        ausgeblendet
+                        {t("hiddenBadge")}
                       </span>
                     ) : null}
                   </div>
-                  <div className="text-xs text-muted-foreground">
+                  <div className="font-mono text-xs text-muted-foreground">
                     <span className="tabular-nums">{formatBytes(o.size)}</span>
                     {o.lastModified ? (
-                      <> · geändert {formatRelative(o.lastModified)}</>
+                      <> · {formatRelative(o.lastModified)}</>
                     ) : null}
                   </div>
                 </div>
@@ -801,7 +853,7 @@ export function BucketBrowser({ spaceId, defaultProviderName }: Props) {
                   target="_blank"
                   rel="noopener"
                   className="rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                  title="Öffnen"
+                  title={t("downloadTitle")}
                 >
                   <Download className="h-3.5 w-3.5" />
                 </a>
@@ -812,7 +864,7 @@ export function BucketBrowser({ spaceId, defaultProviderName }: Props) {
                         type="button"
                         className="rounded-md px-2 py-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                         disabled={isBusy}
-                        aria-label="Aktionen"
+                        aria-label={t("itemActions")}
                       >
                         {isBusy ? (
                           <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -826,19 +878,19 @@ export function BucketBrowser({ spaceId, defaultProviderName }: Props) {
                     {o.kind === "external" ? (
                       o.imported ? (
                         <DropdownMenuItem disabled>
-                          <Check className="h-3.5 w-3.5 text-emerald-500" />
-                          Bereits importiert
+                          <Check className="h-3.5 w-3.5" />
+                          {t("actions.alreadyImported")}
                         </DropdownMenuItem>
                       ) : (
                         <DropdownMenuItem onClick={() => importKey(o.key)}>
                           <Sparkles className="h-3.5 w-3.5" />
-                          In lokri importieren
+                          {t("actions.import")}
                         </DropdownMenuItem>
                       )
                     ) : null}
                     <DropdownMenuItem onClick={() => copyUrl(o)}>
                       <Download className="h-3.5 w-3.5" />
-                      URL kopieren
+                      {t("actions.copyUrl")}
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     {o.hidden ? (
@@ -851,7 +903,7 @@ export function BucketBrowser({ spaceId, defaultProviderName }: Props) {
                         }
                       >
                         <Eye className="h-3.5 w-3.5" />
-                        Wieder einblenden
+                        {t("actions.unhide")}
                       </DropdownMenuItem>
                     ) : (
                       <DropdownMenuItem
@@ -863,7 +915,7 @@ export function BucketBrowser({ spaceId, defaultProviderName }: Props) {
                         }
                       >
                         <EyeOff className="h-3.5 w-3.5" />
-                        Ausblenden (auch für MCP)
+                        {t("actions.hide")}
                       </DropdownMenuItem>
                     )}
                     {o.fileId ? (
@@ -873,14 +925,14 @@ export function BucketBrowser({ spaceId, defaultProviderName }: Props) {
                           onClick={() => reindexFile(o.fileId!)}
                         >
                           <Sparkles className="h-3.5 w-3.5" />
-                          Neu indizieren
+                          {t("actions.reindex")}
                         </DropdownMenuItem>
                         {o.kind === "internal" ? (
                           <DropdownMenuItem
                             onClick={() => deleteInternal(o.fileId!, name)}
                           >
                             <Trash2 className="h-3.5 w-3.5" />
-                            Löschen
+                            {t("actions.delete")}
                           </DropdownMenuItem>
                         ) : null}
                       </>
@@ -903,7 +955,7 @@ export function BucketBrowser({ spaceId, defaultProviderName }: Props) {
                 {loadingMore ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 ) : null}
-                {loadingMore ? "Lade…" : "Weitere laden"}
+                {loadingMore ? t("loadingMore") : t("retry")}
               </Button>
             </div>
           ) : null}
