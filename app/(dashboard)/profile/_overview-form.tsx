@@ -1,10 +1,12 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
+import { Loader2, Mail, UserRound } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth-client";
@@ -16,7 +18,7 @@ interface Props {
   emailVerified: boolean;
 }
 
-const MAX_IMAGE_BYTES = 2 * 1024 * 1024; // 2 MB
+const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
 
 async function fileToDataURL(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -34,11 +36,12 @@ export function ProfileOverviewForm({
   emailVerified,
 }: Props) {
   const router = useRouter();
+  const t = useTranslations("profile.overview");
+  const tToasts = useTranslations("toasts");
   const imageInput = useRef<HTMLInputElement>(null);
   const [name, setName] = useState(initialName);
   const [image, setImage] = useState<string | null>(initialImage);
   const [savingProfile, setSavingProfile] = useState(false);
-
   const [newEmail, setNewEmail] = useState("");
   const [emailError, setEmailError] = useState<string | null>(null);
   const [savingEmail, setSavingEmail] = useState(false);
@@ -50,25 +53,25 @@ export function ProfileOverviewForm({
       .split(" ")
       .filter(Boolean)
       .slice(0, 2)
-      .map((p) => p[0]?.toUpperCase() ?? "")
+      .map((part) => part[0]?.toUpperCase() ?? "")
       .join("") || email[0]?.toUpperCase() || "?";
 
   async function onImagePick(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > MAX_IMAGE_BYTES) {
-      toast.error("Bild ist zu groß (max 2 MB).");
+      toast.error(t("avatar.errors.tooLarge", { max: "2 MB" }));
       return;
     }
     if (!file.type.startsWith("image/")) {
-      toast.error("Bitte eine Bilddatei auswählen.");
+      toast.error(t("avatar.errors.invalidType"));
       return;
     }
     try {
       const url = await fileToDataURL(file);
       setImage(url);
     } catch {
-      toast.error("Bild konnte nicht gelesen werden.");
+      toast.error(t("avatar.errors.readFailed"));
     }
   }
 
@@ -82,10 +85,10 @@ export function ProfileOverviewForm({
     });
     setSavingProfile(false);
     if (error) {
-      toast.error(error.message ?? "Konnte Profil nicht speichern.");
+      toast.error(error.message ?? t("errors.updateFailed"));
       return;
     }
-    toast.success("Profil aktualisiert.");
+    toast.success(tToasts("success.updated"));
     router.refresh();
   }
 
@@ -94,11 +97,11 @@ export function ProfileOverviewForm({
     setEmailError(null);
     const target = newEmail.trim().toLowerCase();
     if (!target || !target.includes("@")) {
-      setEmailError("Gültige Email eingeben.");
+      setEmailError(t("email.errors.invalid"));
       return;
     }
     if (target === email.toLowerCase()) {
-      setEmailError("Das ist deine aktuelle Email.");
+      setEmailError(t("email.errors.sameAsCurrent"));
       return;
     }
     setSavingEmail(true);
@@ -108,130 +111,159 @@ export function ProfileOverviewForm({
     });
     setSavingEmail(false);
     if (error) {
-      setEmailError(error.message ?? "Konnte Email-Änderung nicht starten.");
+      setEmailError(error.message ?? t("email.errors.requestFailed"));
       return;
     }
-    toast.success(
-      "Bestätigungs-Link geschickt — klick den Link in der Mail an deine neue Adresse.",
-    );
+    toast.success(t("email.success", { email: target }));
     setNewEmail("");
   }
 
   return (
-    <div className="space-y-8">
-      {/* Profilbild + Name */}
-      <form onSubmit={saveProfile} className="space-y-4">
-        <div className="flex items-center gap-5">
-          <div className="relative">
-            {image ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={image}
-                alt=""
-                className="h-16 w-16 rounded-full border object-cover"
-              />
-            ) : (
-              <div className="grid h-16 w-16 place-items-center rounded-full bg-gradient-to-br from-indigo-500 to-fuchsia-500 text-xl font-semibold text-white">
-                {initials}
+    <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(18rem,1fr)]">
+      <Card>
+        <CardHeader>
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg border bg-muted text-foreground">
+              <UserRound className="h-4 w-4" />
+            </div>
+            <div>
+              <CardTitle>{t("profileCard.title")}</CardTitle>
+              <CardDescription>{t("profileCard.description")}</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={saveProfile} className="space-y-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+              <div className="relative">
+                {image ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={image}
+                    alt=""
+                    className="h-20 w-20 rounded-full border object-cover"
+                  />
+                ) : (
+                  <div className="grid h-20 w-20 place-items-center rounded-full bg-foreground text-xl font-semibold text-background">
+                    {initials}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <input
-              ref={imageInput}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={onImagePick}
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => imageInput.current?.click()}
-            >
-              Bild ändern
-            </Button>
-            {image ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setImage(null)}
-              >
-                Entfernen
+              <div className="flex flex-1 flex-col gap-3">
+                <input
+                  ref={imageInput}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={onImagePick}
+                />
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => imageInput.current?.click()}
+                  >
+                    {t("avatar.change")}
+                  </Button>
+                  {image ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => setImage(null)}
+                    >
+                      {t("avatar.remove")}
+                    </Button>
+                  ) : null}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {t("avatar.help", { max: "2 MB" })}
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="profile-name">{t("name.label")}</Label>
+              <Input
+                id="profile-name"
+                value={name}
+                maxLength={120}
+                onChange={(e) => setName(e.target.value)}
+                placeholder={t("name.placeholder")}
+              />
+              <p className="text-xs text-muted-foreground">{t("name.help")}</p>
+            </div>
+
+            <div className="flex justify-end">
+              <Button type="submit" disabled={!profileDirty || savingProfile}>
+                {savingProfile ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : null}
+                {savingProfile ? t("profileCard.saving") : t("profileCard.save")}
               </Button>
-            ) : null}
-            <p className="basis-full text-xs text-muted-foreground">
-              PNG oder JPG, max 2 MB. Wird als Data-URL gespeichert — keine
-              externen Anbieter.
-            </p>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg border bg-muted text-foreground">
+              <Mail className="h-4 w-4" />
+            </div>
+            <div>
+              <CardTitle>{t("email.title")}</CardTitle>
+              <CardDescription>{t("email.description")}</CardDescription>
+            </div>
           </div>
-        </div>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={requestEmailChange} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="current-email">{t("email.currentLabel")}</Label>
+              <Input id="current-email" value={email} readOnly disabled />
+              <p className="text-xs text-muted-foreground">
+                {emailVerified
+                  ? t("email.currentVerified")
+                  : t("email.currentUnverified")}
+              </p>
+            </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="profile-name">Name</Label>
-          <Input
-            id="profile-name"
-            value={name}
-            maxLength={120}
-            onChange={(e) => setName(e.target.value)}
-          />
-        </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-email">{t("email.newLabel")}</Label>
+              <Input
+                id="new-email"
+                type="email"
+                autoComplete="email"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                placeholder={t("email.placeholder")}
+              />
+              <p className="text-xs text-muted-foreground">
+                {t("email.help", { currentEmail: email })}
+              </p>
+              {emailError ? (
+                <p className="text-sm text-destructive" role="alert">
+                  {emailError}
+                </p>
+              ) : null}
+            </div>
 
-        <div className="flex justify-end">
-          <Button type="submit" disabled={!profileDirty || savingProfile}>
-            {savingProfile ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : null}
-            {savingProfile ? "Speichere…" : "Profil speichern"}
-          </Button>
-        </div>
-      </form>
-
-      {/* Email-Änderung */}
-      <form onSubmit={requestEmailChange} className="space-y-3 border-t pt-6">
-        <div className="flex items-baseline justify-between gap-4">
-          <div>
-            <h3 className="text-sm font-semibold">Email-Adresse</h3>
-            <p className="text-xs text-muted-foreground">
-              Aktuell:{" "}
-              <span className="font-medium text-foreground">{email}</span>
-              {emailVerified ? " · verifiziert" : " · nicht verifiziert"}
-            </p>
-          </div>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="new-email">Neue Email-Adresse</Label>
-          <Input
-            id="new-email"
-            type="email"
-            autoComplete="email"
-            value={newEmail}
-            onChange={(e) => setNewEmail(e.target.value)}
-            placeholder="neue@adresse.tld"
-          />
-          <p className="text-xs text-muted-foreground">
-            Wir schicken einen Bestätigungs-Link an die neue Adresse. Erst nach
-            dem Klick wird umgestellt — deine aktuelle Email bleibt bis dahin
-            aktiv.
-          </p>
-          {emailError ? (
-            <p className="text-sm text-destructive" role="alert">
-              {emailError}
-            </p>
-          ) : null}
-        </div>
-        <div className="flex justify-end">
-          <Button
-            type="submit"
-            variant="outline"
-            disabled={savingEmail || !newEmail.trim()}
-          >
-            {savingEmail ? "Sende Bestätigung…" : "Bestätigungs-Link senden"}
-          </Button>
-        </div>
-      </form>
+            <div className="flex justify-end">
+              <Button
+                type="submit"
+                variant="outline"
+                disabled={savingEmail || !newEmail.trim()}
+              >
+                {savingEmail ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : null}
+                {savingEmail ? t("email.sending") : t("email.submit")}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }
