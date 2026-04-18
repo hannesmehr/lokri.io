@@ -30,9 +30,11 @@ Context Protocol.
   gatet via `users.can_create_teams` — Freischaltung siehe `docs/OPS.md`.
   Automatisches Billing via PayPal Subscriptions ist Roadmap-Punkt.
 - **Admin-Dashboard** (`/admin`) — Gatet hinter `users.is_admin = true`.
-  User-Verwaltung (Flags/Disable/Force-Reset/Hard-Delete), Account-
-  Verwaltung (Plan + Quota-Override), Rechnungs-Liste + manueller Team-
-  Rechnungs-Wizard, globale Token-Übersicht mit Bulk-Revoke-Inaktive.
+  BI-KPIs + Charts (MRR, Signups, DAU/MAU, Revenue), User- und
+  Account-Verwaltung (inkl. Quota-Override), Rechnungs-Liste +
+  manueller Team-Rechnungs-Wizard, globale Token-Übersicht mit
+  Bulk-Revoke-Inaktive, Audit-Viewer mit CSV/JSON-Export,
+  System-Health (PayPal-Reconcile, DB-Metriken, Wartungs-Ops).
   OPS-Playbook + SQL-Fallbacks in `docs/OPS.md`.
 
 ## Tech-Stack

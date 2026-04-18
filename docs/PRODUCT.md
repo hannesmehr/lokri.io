@@ -161,11 +161,14 @@ Die folgenden Punkte sind bewusst offen gelassen und kommen später:
 
 ## Admin-Bereich
 
-Seit Teil 1 hat lokri ein internes Backoffice unter `/admin`, gatet
-hinter `users.is_admin = true`. Sichtbare Oberfläche (nicht der
+Seit Teil 1 + 2 hat lokri ein internes Backoffice unter `/admin`,
+gatet hinter `users.is_admin = true`. Sichtbare Oberfläche (nicht der
 öffentliche Produktumfang, aber für OPS-Runbooks relevant):
 
-- **Dashboard** — KPI-Kacheln, in Teil 2 kommen Charts + Revenue-Graph.
+- **Dashboard** — 4 klickbare KPI-Kacheln (User/Teams/MRR/Storage) +
+  6 Charts (Signups, MRR, Accounts-pro-Plan, Storage-Pie, DAU/MAU,
+  Umsatz). In-Process-TTL-Cache für alle Queries; Manual-Refresh-Button
+  invalidated den Cache.
 - **User** — Liste, Detail, Flags setzen (`is_admin`,
   `can_create_teams`, `preferred_locale`), Disable/Enable, Sessions
   beenden, Passwort-Reset triggern, Hard-Delete.
@@ -178,6 +181,13 @@ hinter `users.is_admin = true`. Sichtbare Oberfläche (nicht der
 - **Tokens** — globale Sicht auf `api_tokens`, Einzel-Revoke,
   **Bulk-Revoke-Inaktive** (Dry-Run + Apply, mit per-Account
   Audit-Event).
+- **Audit** — Viewer mit Volltext, Action-Filter, Actor/Account-Filter,
+  Zeitraum-Presets, CSV/JSON-Export, per-Event-Detail mit Quick-Links
+  für Drill-Downs.
+- **System** — Health-Board: PayPal-Reconcile-Tiles + Reconcile-Button,
+  Storage/Embedding/Token-Counts, DB-Tabellen-Größen, Wartungs-Ops
+  (Sessions-Purge, Invites-Cleanup, Locale-Backfill — jeweils mit
+  Dry-Run vor Apply).
 
 Jede mutierende Admin-Aktion schreibt ein `admin.*`-Audit-Event, das
 auf den betroffenen Owner-Account gescopet ist — User sehen also in

@@ -101,6 +101,112 @@ Audit-Event `admin.billing.manual_invoice_created` mit Diff.
 
 ---
 
+## Admin-Dashboard (Teil 2)
+
+Teil 2 fügt BI-Charts, den Audit-Viewer und ein System-Health-Board
+hinzu. Alle Zahlen kommen aus `lib/admin/stats.ts` und werden durch
+einen In-Process-TTL-Cache abgeschirmt (`lib/admin/stats-cache.ts`):
+60 s für Schnell-KPIs, 300 s für Zeitreihen/Top-Listen.
+
+### BI-Dashboard `/admin`
+
+Vier Klick-Kacheln + 6 Charts (Signups über Zeit, MRR, Accounts-pro-
+Plan, Storage-Provider-Pie, DAU+MAU-Roll, Monats-Umsatz).
+
+**MRR-Formel** (`getBusinessStats`):
+
+- Alle `owner_accounts` mit `plan_id ≠ 'free'` UND
+  (`plan_expires_at IS NULL` ODER `plan_expires_at > now()`).
+- Seat-basierte Plans (`isSeatBased = true`) werden mit der aktuellen
+  Member-Zahl des Accounts multipliziert; Preis-pro-Seat wird aus
+  `price_per_seat_monthly_cents` gezogen (yearly-Wert fällt auf
+  `/12`-Monatsnormalisierung zurück).
+- Flat-Rate-Plans: `price_monthly_cents` bzw.
+  `price_yearly_cents / 12`.
+- Ergebnis ist monatlich normalisiert.
+
+**Revenue-Kurven** (MRR-Verlauf und Monats-Umsatz) basieren auf
+`invoices.gross_cents`. Das ist eine **Approximation** der "echten" MRR
+je Monat (eine kanonische Kurve müsste den historischen Plan-Zustand
+jedes Accounts pro Monat rekonstruieren) — für MVP-Zwecke okay.
+
+**DAU/MAU-Definition**:
+
+- DAU = `DISTINCT sessions.user_id WHERE created_at ≥ now() - 1 day`
+- MAU = 30-Tage-Rolling-Fenster über die DAU-Werte (Approximation).
+- Limit: Short-lived Sessions / pushDown können über-/unter-zählen,
+  saubere Retention-Cohorts setzen regelmäßige Activity-Pings voraus —
+  steht als Platzhalter auf `/admin/stats/users`.
+
+Cache-Refresh manuell: Button rechts oben ruft
+`POST /api/admin/stats/invalidate-cache` ohne Prefix → räumt den
+kompletten In-Process-Cache. Für gezielte Invalidierung ist die Route
+`{ prefix: "kpi." }`-fähig.
+
+### KPI-Sub-Seiten
+
+Jede Dashboard-Kachel verlinkt auf eine Detail-Seite:
+
+- `/admin/stats/users` — Signup-Mini-KPIs, 90-Tage-Line, DAU/MAU-Status,
+  Retention-Placeholder.
+- `/admin/stats/accounts` — Personal/Team/Ø-Seats, Plan-Verteilung als
+  Bars, Seat-Histogramm, Top-20-Teams (nach Seats).
+- `/admin/stats/revenue` — MRR-Linie, Umsatz-Bars, Top-10 zahlende
+  Accounts, CSV-Export. Refund-Rate als Placeholder (wir tracken aktuell
+  nur Invoice-Status `paid`/`refunded`/`failed`, haben aber keine
+  historischen Refund-Einträge in der DB).
+- `/admin/stats/storage` — Provider-Pie + Tabelle, Top-10-Accounts nach
+  `used_bytes`, Quota-Auslastung als Placeholder.
+
+### Audit-Viewer `/admin/audit`
+
+- Volltext (Action/Target/Actor-Email), Filter: Action (Dropdown aus
+  distinct DB-Actions, 5 Min gecached), Actor-UserID, Account-UUID,
+  Zeitraum-Preset (1 h/24 h/7 Tage/30 Tage/Custom).
+- Badges: `admin.*` = amber, `login.*` = sky, Rest neutral.
+- CSV + JSON-Export (max 10k Default, 50k Hard-Cap).
+- Detail-Seite `/admin/audit/[id]` mit voller Metadata, voller
+  User-Agent-String und Quick-Links "mehr Events von Actor/Account/Action".
+
+**Typische Such-Queries:**
+
+| Frage                                     | Filter                                       |
+| ----------------------------------------- | -------------------------------------------- |
+| Wer hat das Team-Setting geändert?        | `q=role_changed`, Account-UUID setzen        |
+| Warum ist dieser User gesperrt?           | `q=admin.user.disabled`, Actor nachschauen   |
+| Hat der Admin bei Account X rumgepfuscht? | Account-UUID + Action-Dropdown `admin.*`     |
+| Welcher User hat sich verdächtig oft eingeloggt? | `action=login.success` + Actor-UserID |
+
+**Retention-Hinweis**: Events werden aktuell unbegrenzt aufbewahrt.
+Die Banner-Warnung oben auf der Seite macht das explizit. Automatische
+Retention-Policy ist Roadmap-Punkt.
+
+### System-Health `/admin/system`
+
+- **PayPal-Reconcile-Tiles**: hängende `created`-Orders (> 1 h),
+  `failed`-Orders, `captured`-Orders ohne Invoice. Button "Reconcile
+  jetzt ausführen" triggert den gleichen Sweep wie
+  `scripts/reconcile-paypal-orders.ts`. Bei Fehlern nach einem
+  PayPal-Capture (z.B. Mail-Versand crashte, Invoice-Erzeugung kam
+  nicht durch) — hier auf "Reconcile" klicken.
+- **Storage-Provider-Count / Embedding-Keys / aktive Tokens** als
+  Quick-Tiles (Connection-Test-Button ist Roadmap — macht aktuell je
+  Provider einen echten API-Call, der pro BYOK-Key Kosten verursacht).
+- **DB-Metriken**: `pg_total_relation_size` pro interessanter Tabelle +
+  `reltuples`-Approximation. Wenn `audit_events` irgendwann in Richtung
+  mehrere-GB geht, ist das der Alarm-Indikator für Retention.
+- **Wartungs-Operationen** (alle mit Dry-Run + Apply):
+  - Sessions-Purge (Default: älter als 90 Tage)
+  - Invites-Cleanup-Expired
+  - Users-Backfill-Default-Locale
+
+Alle Ops schreiben ein Event `admin.system.maintenance.<op>` in den
+Audit-Log, gescoped auf den Personal-Account des Actors (System-Events
+haben keine natürliche Heimat; Alternative wäre ein dedizierter
+System-Owner-Account — Roadmap).
+
+---
+
 ## Team-Features
 
 ### Einen Beta-User für Team-Erstellung freischalten
