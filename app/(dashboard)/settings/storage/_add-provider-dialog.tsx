@@ -1,6 +1,7 @@
 "use client";
 
 import { CheckCircle2, FolderGit2, HardDrive, Loader2, Plus } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -72,6 +73,8 @@ export function AddProviderDialog({
 }: {
   onCreated: (p: Provider) => void;
 }) {
+  const t = useTranslations("settings.storage.add");
+  const tErrors = useTranslations("errors.api.storageProvider");
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<ProviderType>("s3");
   const [s3Form, setS3Form] = useState<S3Form>(S3_INITIAL);
@@ -142,14 +145,28 @@ export function AddProviderDialog({
     });
     setSubmitting(false);
     if (!res.ok) {
-      const data = await res.json().catch(() => ({ error: "Fehler" }));
-      setError(data.error ?? "Speichern fehlgeschlagen.");
+      const body = await res.json().catch(() => ({}));
+      // Shared Phase-2 pattern: prefer structured API codes, fall back to raw error text.
+      const code = typeof body?.details?.code === "string" ? body.details.code : null;
+      const segments = code ? code.split(".") : [];
+      const candidate =
+        segments[0] === "storageProvider" && segments[1] === "github"
+          ? `${segments[1]}.${segments[2]}`
+          : segments.at(-1) ?? null;
+      const message =
+        candidate &&
+        (candidate.startsWith("github.")
+          ? tErrors.has(candidate)
+          : tErrors.has(candidate))
+          ? tErrors(candidate)
+          : body?.error ?? t("errors.generic");
+      setError(message);
       return;
     }
     const { provider } = await res.json();
     setSuccess(true);
     onCreated(provider);
-    toast.success(`Provider "${provider.name}" angelegt.`);
+    toast.success(t("created", { name: provider.name }));
     setTimeout(close, 900);
   }
 
@@ -159,18 +176,14 @@ export function AddProviderDialog({
         render={
           <Button variant="outline" size="sm">
             <Plus className="h-3.5 w-3.5" />
-            Neuer Provider
+            {t("button")}
           </Button>
         }
       />
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle>Neuer Storage-Provider</DialogTitle>
-          <DialogDescription>
-            S3-kompatibler Bucket oder ein GitHub-Repo (read-only). Wir testen
-            die Verbindung vor dem Speichern — falsche Credentials werden nicht
-            persistiert.
-          </DialogDescription>
+          <DialogTitle>{t("title")}</DialogTitle>
+          <DialogDescription>{t("subtitle")}</DialogDescription>
         </DialogHeader>
 
         {/* Tab-Switch */}
@@ -179,23 +192,22 @@ export function AddProviderDialog({
             active={tab === "s3"}
             onClick={() => setTab("s3")}
             icon={<HardDrive className="h-3.5 w-3.5" />}
-            label="S3-kompatibel"
-            hint="AWS, R2, B2, MinIO"
+            label={t("tabs.s3")}
+            hint={t("tabs.s3Hint")}
           />
           <TabButton
             active={tab === "github"}
             onClick={() => setTab("github")}
             icon={<FolderGit2 className="h-3.5 w-3.5" />}
-            label="GitHub"
-            hint="Repo read-only"
+            label={t("tabs.github")}
+            hint={t("tabs.githubHint")}
           />
         </div>
 
         <Alert>
-          <AlertTitle>Credentials bleiben verschlüsselt</AlertTitle>
+          <AlertTitle>{t("encryptionNote")}</AlertTitle>
           <AlertDescription className="text-xs">
-            Zugriffsdaten werden AES-256-GCM-verschlüsselt in der DB abgelegt
-            und niemals wieder im Klartext zurückgegeben.
+            {t("encryptionNote")}
           </AlertDescription>
         </Alert>
 
@@ -203,43 +215,43 @@ export function AddProviderDialog({
           {tab === "s3" ? (
             <>
               <Field
-                label="Name *"
+                label={t("fields.nameRequired")}
                 value={s3Form.name}
                 onChange={(v) => setS3Form({ ...s3Form, name: v })}
-                placeholder="z.B. Mein R2 Bucket"
+                placeholder={t("fields.namePlaceholderS3")}
                 autoComplete="off"
               />
               <div className="grid gap-3 sm:grid-cols-2">
                 <Field
-                  label="Bucket *"
+                  label={t("fields.bucketRequired")}
                   value={s3Form.bucket}
                   onChange={(v) => setS3Form({ ...s3Form, bucket: v })}
-                  placeholder="mein-lokri-bucket"
+                  placeholder={t("fields.bucketPlaceholder")}
                   autoComplete="off"
                 />
                 <Field
-                  label="Region *"
+                  label={t("fields.regionRequired")}
                   value={s3Form.region}
                   onChange={(v) => setS3Form({ ...s3Form, region: v })}
-                  placeholder="eu-central-1 / auto (R2)"
+                  placeholder={t("fields.regionPlaceholder")}
                   autoComplete="off"
                 />
                 <Field
-                  label="Endpoint (R2/B2/MinIO)"
+                  label={t("fields.endpoint")}
                   value={s3Form.endpoint}
                   onChange={(v) => setS3Form({ ...s3Form, endpoint: v })}
-                  placeholder="https://<id>.r2.cloudflarestorage.com"
+                  placeholder={t("fields.endpointPlaceholder")}
                   className="sm:col-span-2"
                   autoComplete="off"
                 />
                 <Field
-                  label="Access Key ID *"
+                  label={t("fields.accessKeyIdRequired")}
                   value={s3Form.accessKeyId}
                   onChange={(v) => setS3Form({ ...s3Form, accessKeyId: v })}
                   autoComplete="off"
                 />
                 <Field
-                  label="Secret Access Key *"
+                  label={t("fields.secretAccessKeyRequired")}
                   value={s3Form.secretAccessKey}
                   onChange={(v) =>
                     setS3Form({ ...s3Form, secretAccessKey: v })
@@ -248,10 +260,10 @@ export function AddProviderDialog({
                   autoComplete="off"
                 />
                 <Field
-                  label="Path Prefix (optional)"
+                  label={t("fields.pathPrefix")}
                   value={s3Form.pathPrefix}
                   onChange={(v) => setS3Form({ ...s3Form, pathPrefix: v })}
-                  placeholder="lokri/"
+                  placeholder={t("fields.pathPrefixPlaceholderS3")}
                   className="sm:col-span-2"
                   autoComplete="off"
                 />
@@ -265,49 +277,49 @@ export function AddProviderDialog({
                     setS3Form({ ...s3Form, forcePathStyle: e.target.checked })
                   }
                 />
-                <span>Path-Style erzwingen (für R2 / MinIO sinnvoll)</span>
+                <span>{t("fields.forcePathStyle")}</span>
               </label>
             </>
           ) : (
             <>
               <Field
-                label="Name *"
+                label={t("fields.nameRequired")}
                 value={ghForm.name}
                 onChange={(v) => setGhForm({ ...ghForm, name: v })}
-                placeholder="z.B. anthropic/docs"
+                placeholder={t("fields.namePlaceholderGithub")}
                 autoComplete="off"
               />
               <div className="grid gap-3 sm:grid-cols-2">
                 <Field
-                  label="Owner *"
+                  label={t("fields.ownerRequired")}
                   value={ghForm.owner}
                   onChange={(v) => setGhForm({ ...ghForm, owner: v })}
-                  placeholder="anthropics"
+                  placeholder={t("fields.ownerPlaceholder")}
                   autoComplete="off"
                 />
                 <Field
-                  label="Repository *"
+                  label={t("fields.repoRequired")}
                   value={ghForm.repo}
                   onChange={(v) => setGhForm({ ...ghForm, repo: v })}
-                  placeholder="claude-code"
+                  placeholder={t("fields.repoPlaceholder")}
                   autoComplete="off"
                 />
                 <Field
-                  label="Branch / Ref (optional)"
+                  label={t("fields.ref")}
                   value={ghForm.ref}
                   onChange={(v) => setGhForm({ ...ghForm, ref: v })}
-                  placeholder="leer = default branch"
+                  placeholder={t("fields.refPlaceholder")}
                   autoComplete="off"
                 />
                 <Field
-                  label="Path Prefix (optional)"
+                  label={t("fields.pathPrefix")}
                   value={ghForm.pathPrefix}
                   onChange={(v) => setGhForm({ ...ghForm, pathPrefix: v })}
-                  placeholder="docs/"
+                  placeholder={t("fields.pathPrefixPlaceholderGithub")}
                   autoComplete="off"
                 />
                 <Field
-                  label="Access Token (PAT)"
+                  label={t("fields.token")}
                   value={ghForm.accessToken}
                   onChange={(v) => setGhForm({ ...ghForm, accessToken: v })}
                   type="password"
@@ -316,17 +328,16 @@ export function AddProviderDialog({
                 />
               </div>
               <p className="text-xs text-muted-foreground">
-                Für public Repos optional — ohne Token gilt GitHubs
-                IP-Rate-Limit (60 req/h). Für private Repos ein{" "}
+                {t("githubHelpPrefix")}{" "}
                 <a
                   href="https://github.com/settings/tokens?type=beta"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="underline underline-offset-4"
                 >
-                  Fine-Grained PAT
+                  {t("patLinkLabel")}
                 </a>{" "}
-                mit „Contents: Read“-Scope auf dem Repo.
+                {t("githubHelpSuffix")}
               </p>
             </>
           )}
@@ -344,19 +355,19 @@ export function AddProviderDialog({
               onClick={close}
               disabled={submitting}
             >
-              Abbrechen
+              {t("cancel")}
             </Button>
             <Button type="submit" disabled={!valid || submitting}>
               {submitting ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : success ? (
-                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                <CheckCircle2 className="h-4 w-4" />
               ) : null}
               {submitting
-                ? "Teste Verbindung…"
+                ? t("submitting")
                 : success
-                  ? "Gespeichert"
-                  : "Testen & Speichern"}
+                  ? t("saved")
+                  : t("submit")}
             </Button>
           </DialogFooter>
         </form>
