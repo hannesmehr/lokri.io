@@ -1,6 +1,13 @@
 "use client";
 
-import { ChevronDown, CreditCard, LogOut, Settings, User } from "lucide-react";
+import {
+  ChevronDown,
+  CreditCard,
+  LogOut,
+  Settings,
+  Shield,
+  User,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -15,9 +22,11 @@ import { signOut } from "@/lib/auth-client";
 
 interface Props {
   user: { name: string; email: string };
+  /** When true, the backoffice shortcut appears at the top of the menu. */
+  isAdmin?: boolean;
 }
 
-export function UserMenu({ user }: Props) {
+export function UserMenu({ user, isAdmin = false }: Props) {
   const router = useRouter();
   const t = useTranslations("common.userMenu");
   const initials =
@@ -51,6 +60,20 @@ export function UserMenu({ user }: Props) {
           </div>
         </div>
         <DropdownMenuSeparator />
+        {/* Admin-Entry: nur für User mit is_admin-Flag. Absichtlich
+            deutsch + Shield-Icon, damit der Schritt zwischen Alltag
+            und Backoffice visuell gemarkert ist. */}
+        {isAdmin ? (
+          <>
+            <DropdownMenuItem render={<Link href="/admin" />}>
+              <Shield className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+              <span className="text-amber-700 dark:text-amber-300">
+                Admin-Bereich
+              </span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+          </>
+        ) : null}
         <DropdownMenuItem render={<Link href="/profile" />}>
           <User className="h-4 w-4" />
           {t("profile")}

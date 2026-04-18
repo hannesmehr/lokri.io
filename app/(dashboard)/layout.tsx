@@ -26,9 +26,9 @@ export default async function DashboardLayout({
   }
   const { session, ownerAccountId, accountType } = ctx;
 
-  // Pull active account name + the user's can_create_teams flag. Two
-  // cheap lookups but the `requireSessionWithAccount` helper doesn't
-  // expose the account row directly.
+  // Pull active account name + the user's can_create_teams + is_admin
+  // flags. Two cheap lookups but the `requireSessionWithAccount`
+  // helper doesn't expose the account row directly.
   const [[account], [userRow]] = await Promise.all([
     db
       .select({ name: ownerAccounts.name })
@@ -36,7 +36,10 @@ export default async function DashboardLayout({
       .where(eq(ownerAccounts.id, ownerAccountId))
       .limit(1),
     db
-      .select({ canCreateTeams: users.canCreateTeams })
+      .select({
+        canCreateTeams: users.canCreateTeams,
+        isAdmin: users.isAdmin,
+      })
       .from(users)
       .where(eq(users.id, session.user.id))
       .limit(1),
@@ -85,6 +88,7 @@ export default async function DashboardLayout({
             <SearchTrigger />
             <UserMenu
               user={{ name: session.user.name, email: session.user.email }}
+              isAdmin={userRow?.isAdmin ?? false}
             />
           </div>
         </div>

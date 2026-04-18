@@ -84,6 +84,13 @@ export const users = pgTable("users", {
    * enum migration every time we add a language.
    */
   preferredLocale: text("preferred_locale"),
+  /**
+   * Backoffice flag — gates every route under `app/(admin)/` and
+   * `app/api/admin/*`. Flipped manually via SQL (`UPDATE users SET
+   * is_admin = true WHERE email = …`). Never exposed to users
+   * themselves; checked server-side via `requireAdminSession`.
+   */
+  isAdmin: boolean("is_admin").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

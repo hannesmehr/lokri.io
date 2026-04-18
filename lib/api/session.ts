@@ -24,6 +24,35 @@ export async function requireSession(): Promise<AuthSession> {
 }
 
 /**
+ * Backoffice-session gate. Valid session plus `users.is_admin === true`.
+ * Used by every route under `/api/admin/*` and every page under
+ * `app/(admin)/`. On non-admin users: `ApiAuthError('Admin-Berechtigung
+ * erforderlich', 403)` — same class the rest of the app catches, same
+ * `authErrorResponse` mapping (403 → `forbidden.role`).
+ *
+ * We intentionally hit the DB here instead of relying on a session-
+ * cached flag. Admin-level access is rare enough that the extra query
+ * per admin-request is a non-issue, and it lets us flip access in a
+ * single `UPDATE users SET is_admin = …` without waiting for session
+ * caches (5-min cookie cache) to roll.
+ */
+export async function requireAdminSession(): Promise<{
+  session: AuthSession;
+  userId: string;
+}> {
+  const session = await requireSession();
+  const [row] = await db
+    .select({ isAdmin: users.isAdmin })
+    .from(users)
+    .where(eq(users.id, session.user.id))
+    .limit(1);
+  if (!row?.isAdmin) {
+    throw new ApiAuthError("Admin-Berechtigung erforderlich", 403);
+  }
+  return { session, userId: session.user.id };
+}
+
+/**
  * Find (or reconcile) the personal owner_account for a user.
  *
  * The signup hook (`lib/auth.ts`) creates this automatically, but the hook is
