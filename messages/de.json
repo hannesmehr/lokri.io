@@ -257,11 +257,18 @@
         "createDisabled": "Team-Erstellung ist derzeit nicht freigeschaltet.",
         "nameRequired": "Team-Name darf nicht leer sein.",
         "nameTooLong": "Team-Name ist zu lang.",
+        "nameMismatch": "Der eingetippte Name stimmt nicht überein.",
         "notFound": "Team nicht gefunden.",
         "forbidden": "Nur Owner und Admins dürfen das.",
         "alreadyMember": "Diese E-Mail ist bereits Mitglied im Team.",
         "ownerProtected": "Der Owner kann nicht entfernt oder degradiert werden.",
-        "confirmNameMismatch": "Der eingetippte Name stimmt nicht mit dem Team-Namen überein."
+        "ownerTransferSelf": "Du kannst die Owner-Rolle nicht an dich selbst übertragen.",
+        "ownerTransferNotAdmin": "Die Zielperson muss zuerst Admin sein.",
+        "ownerTransferNotOwner": "Nur der aktuelle Owner kann die Rolle übertragen.",
+        "roleChangeForbidden": "Nur Owner dürfen die Owner-Rolle vergeben.",
+        "selfRoleChange": "Du kannst deine eigene Rolle hier nicht ändern.",
+        "selfRemove": "Du kannst dich nicht selbst aus dem Team entfernen.",
+        "generic": "Aktion konnte nicht ausgeführt werden."
       },
       "invite": {
         "invalidToken": "Einladungslink ist ungültig oder abgelaufen.",
@@ -1100,20 +1107,26 @@
         "members": "Mitglieder"
       },
       "overview": {
+        "eyebrow": "Team-Übersicht",
+        "title": "Team verwalten",
+        "subtitle": "Name, Plan und Mitgliederstatus dieses Teams.",
         "nameLabel": "Team-Name",
+        "nameDescription": "Ändere den sichtbaren Namen für dein Team.",
+        "nameInputLabel": "Team-Name bearbeiten",
         "nameSave": "Speichern",
         "nameSaved": "Team-Name geändert.",
         "memberCount": "{count, plural, one {# Mitglied} other {# Mitglieder}}",
-        "seatsUsed": "{count, plural, one {# belegter Seat} other {# belegte Seats}}",
-        "planLabel": "Plan",
-        "planStatic": "Team (Beta, manuelle Abrechnung)",
-        "dangerTitle": "Gefahrenzone",
-        "dangerDescription": "Das Team und alle zugehörigen Daten werden unwiderruflich gelöscht."
+        "seatCount": "{count, plural, one {# belegter Seat} other {# belegte Seats}}",
+        "roleLabel": "Deine Rolle: {role}"
       },
       "delete": {
+        "eyebrow": "Gefahrenzone",
+        "dangerDescription": "Das Team und alle zugehörigen Daten werden unwiderruflich gelöscht.",
         "button": "Team löschen",
-        "title": "Team {name} löschen",
         "intro": "Dies entfernt alle Mitglieder, Spaces, Notes, Files und Tokens dieses Teams. Die Aktion ist nicht rückgängig zu machen.",
+        "storageHint": "Verknüpfte Storage-Objekte werden vor dem Löschen bestmöglich bereinigt.",
+        "confirmDescription": "Du löschst {name} dauerhaft. Alle Mitglieder verlieren den Zugriff sofort.",
+        "warning": "Nach dem Löschen sind Teamdaten, Einladungen und persönliche Team-Tokens nicht wiederherstellbar.",
         "confirmPrompt": "Tippe {name} zur Bestätigung ein.",
         "confirmPlaceholder": "Team-Name",
         "submit": "Endgültig löschen",
@@ -1122,48 +1135,52 @@
         "mismatch": "Der eingetippte Name stimmt nicht überein."
       },
       "members": {
+        "eyebrow": "Mitglieder",
         "title": "Mitglieder",
+        "subtitle": "Verwalte Rollen, Zugriffe und das tägliche Team-Setup.",
         "inviteButton": "Mitglied einladen",
         "table": {
-          "name": "Name",
-          "email": "E-Mail",
+          "member": "Mitglied",
           "role": "Rolle",
           "joined": "Beigetreten",
           "actions": "Aktionen"
         },
+        "joinedAt": "Beigetreten {date}",
         "remove": "Entfernen",
         "removeConfirm": "{name} aus dem Team entfernen? Persönliche Tokens dieses Mitglieds werden widerrufen.",
         "removed": "Mitglied entfernt.",
         "roleChanged": "Rolle aktualisiert.",
         "selfBadge": "Du",
-        "ownerBadge": "Owner",
-        "cannotDemoteOwner": "Owner kann nicht degradiert werden, solange kein anderer Owner existiert.",
-        "cannotRemoveOwner": "Owner kann nicht entfernt werden.",
-        "cannotRemoveSelf": "Du kannst dich nicht selbst entfernen.",
-        "transferOwnership": {
-          "menuItem": "→ Owner übertragen",
-          "dialogTitle": "Owner-Rolle übertragen",
-          "dialogBody": "Du überträgst die Owner-Rolle an {name}. Nach der Übertragung bist du Admin und kannst Billing sowie Team-Löschung nicht mehr steuern. Fortfahren?",
-          "submit": "Übertragen",
-          "submitting": "Übertrage…",
-          "cancel": "Abbrechen",
-          "success": "Owner-Rolle übertragen an {name}.",
-          "errors": {
-            "notAdmin": "Zieluser muss zunächst zum Admin gemacht werden.",
-            "selfTransfer": "Du kannst die Rolle nicht an dich selbst übertragen.",
-            "notOwner": "Nur der aktuelle Owner kann die Rolle übertragen.",
-            "generic": "Übertragung fehlgeschlagen."
-          }
+        "ownerLabel": "Owner",
+        "errors": {
+          "roleChangeFailed": "Rolle konnte nicht geändert werden.",
+          "removeFailed": "Mitglied konnte nicht entfernt werden."
+        }
+      },
+      "ownership": {
+        "menuItem": "Owner übertragen",
+        "title": "Owner-Rolle übertragen",
+        "confirm": "Du überträgst die Owner-Rolle an {userName}. Danach bist du Admin und verlierst Billing- und Löschrechte.",
+        "warning": "Die neue Owner-Person erhält vollständige Kontrolle über Billing, Mitgliederverwaltung und Team-Löschung.",
+        "submit": "Übertragen",
+        "submitting": "Übertrage…",
+        "cancel": "Abbrechen",
+        "success": "Owner-Rolle an {userName} übertragen.",
+        "errors": {
+          "generic": "Übertragung fehlgeschlagen."
         }
       },
       "invites": {
+        "eyebrow": "Ausstehende Einladungen",
         "pendingTitle": "Ausstehende Einladungen",
+        "pendingDescription": "Offene Einladungen bleiben bis zum Ablaufdatum gültig oder bis sie zurückgezogen werden.",
         "empty": "Keine ausstehenden Einladungen.",
         "invitedBy": "eingeladen von {name}",
         "expiresAt": "gültig bis {date}",
         "revoke": "Zurückziehen",
         "revokeConfirm": "Einladung an {email} zurückziehen?",
-        "revoked": "Einladung zurückgezogen."
+        "revoked": "Einladung zurückgezogen.",
+        "revokeFailed": "Einladung konnte nicht zurückgezogen werden."
       },
       "invite": {
         "title": "Mitglied einladen",
@@ -1171,6 +1188,7 @@
         "email": "E-Mail-Adresse",
         "emailPlaceholder": "name@firma.de",
         "role": "Rolle",
+        "cancel": "Abbrechen",
         "submit": "Einladung senden",
         "submitting": "Sende…",
         "success": "Einladung an {email} verschickt.",

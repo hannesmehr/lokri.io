@@ -257,11 +257,18 @@
         "createDisabled": "Team creation is currently not enabled for you.",
         "nameRequired": "Team name must not be empty.",
         "nameTooLong": "Team name is too long.",
+        "nameMismatch": "The entered name does not match.",
         "notFound": "Team not found.",
         "forbidden": "Only owners and admins may do that.",
         "alreadyMember": "This email is already a member of the team.",
         "ownerProtected": "The owner cannot be removed or demoted.",
-        "confirmNameMismatch": "The entered name does not match the team name."
+        "ownerTransferSelf": "You cannot transfer the owner role to yourself.",
+        "ownerTransferNotAdmin": "The target person must be an admin first.",
+        "ownerTransferNotOwner": "Only the current owner can transfer the role.",
+        "roleChangeForbidden": "Only owners can assign the owner role.",
+        "selfRoleChange": "You cannot change your own role here.",
+        "selfRemove": "You cannot remove yourself from the team.",
+        "generic": "The action could not be completed."
       },
       "invite": {
         "invalidToken": "Invitation link is invalid or has expired.",
@@ -1100,20 +1107,26 @@
         "members": "Members"
       },
       "overview": {
+        "eyebrow": "Team overview",
+        "title": "Manage team",
+        "subtitle": "Name, plan, and member status for this team.",
         "nameLabel": "Team name",
+        "nameDescription": "Change the visible name for your team.",
+        "nameInputLabel": "Edit team name",
         "nameSave": "Save",
         "nameSaved": "Team name updated.",
         "memberCount": "{count, plural, one {# member} other {# members}}",
-        "seatsUsed": "{count, plural, one {# seat used} other {# seats used}}",
-        "planLabel": "Plan",
-        "planStatic": "Team (beta, manual billing)",
-        "dangerTitle": "Danger zone",
-        "dangerDescription": "The team and all its data will be permanently deleted."
+        "seatCount": "{count, plural, one {# seat used} other {# seats used}}",
+        "roleLabel": "Your role: {role}"
       },
       "delete": {
+        "eyebrow": "Danger zone",
+        "dangerDescription": "The team and all related data will be permanently deleted.",
         "button": "Delete team",
-        "title": "Delete team {name}",
         "intro": "This removes all members, spaces, notes, files, and tokens of this team. The action cannot be undone.",
+        "storageHint": "Linked storage objects are cleaned up on a best-effort basis before deletion.",
+        "confirmDescription": "You are deleting {name} permanently. All members lose access immediately.",
+        "warning": "After deletion, team data, invitations, and personal team tokens cannot be restored.",
         "confirmPrompt": "Type {name} to confirm.",
         "confirmPlaceholder": "Team name",
         "submit": "Delete permanently",
@@ -1122,48 +1135,52 @@
         "mismatch": "The entered name does not match."
       },
       "members": {
+        "eyebrow": "Members",
         "title": "Members",
+        "subtitle": "Manage roles, access, and the daily team setup.",
         "inviteButton": "Invite member",
         "table": {
-          "name": "Name",
-          "email": "Email",
+          "member": "Member",
           "role": "Role",
           "joined": "Joined",
           "actions": "Actions"
         },
+        "joinedAt": "Joined {date}",
         "remove": "Remove",
         "removeConfirm": "Remove {name} from the team? Personal tokens for this member will be revoked.",
         "removed": "Member removed.",
         "roleChanged": "Role updated.",
         "selfBadge": "You",
-        "ownerBadge": "Owner",
-        "cannotDemoteOwner": "The sole owner cannot be demoted.",
-        "cannotRemoveOwner": "The owner cannot be removed.",
-        "cannotRemoveSelf": "You cannot remove yourself.",
-        "transferOwnership": {
-          "menuItem": "→ Transfer ownership",
-          "dialogTitle": "Transfer ownership",
-          "dialogBody": "You are transferring the owner role to {name}. After the transfer you will be an admin and can no longer manage billing or delete the team. Continue?",
-          "submit": "Transfer",
-          "submitting": "Transferring…",
-          "cancel": "Cancel",
-          "success": "Ownership transferred to {name}.",
-          "errors": {
-            "notAdmin": "The target user must be promoted to admin first.",
-            "selfTransfer": "You cannot transfer ownership to yourself.",
-            "notOwner": "Only the current owner can transfer ownership.",
-            "generic": "Transfer failed."
-          }
+        "ownerLabel": "Owner",
+        "errors": {
+          "roleChangeFailed": "Role could not be changed.",
+          "removeFailed": "Member could not be removed."
+        }
+      },
+      "ownership": {
+        "menuItem": "Transfer owner role",
+        "title": "Transfer owner role",
+        "confirm": "You are transferring the owner role to {userName}. Afterwards you will be an admin and lose billing and delete permissions.",
+        "warning": "The new owner gets full control over billing, member management, and team deletion.",
+        "submit": "Transfer",
+        "submitting": "Transferring…",
+        "cancel": "Cancel",
+        "success": "Owner role transferred to {userName}.",
+        "errors": {
+          "generic": "Transfer failed."
         }
       },
       "invites": {
+        "eyebrow": "Pending invites",
         "pendingTitle": "Pending invitations",
+        "pendingDescription": "Open invitations remain valid until they expire or get revoked.",
         "empty": "No pending invitations.",
         "invitedBy": "invited by {name}",
         "expiresAt": "valid until {date}",
         "revoke": "Revoke",
         "revokeConfirm": "Revoke the invitation to {email}?",
-        "revoked": "Invitation revoked."
+        "revoked": "Invitation revoked.",
+        "revokeFailed": "Invitation could not be revoked."
       },
       "invite": {
         "title": "Invite member",
@@ -1171,6 +1188,7 @@
         "email": "Email address",
         "emailPlaceholder": "name@company.com",
         "role": "Role",
+        "cancel": "Cancel",
         "submit": "Send invitation",
         "submitting": "Sending…",
         "success": "Invitation sent to {email}.",
