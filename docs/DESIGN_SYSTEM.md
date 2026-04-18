@@ -1,7 +1,21 @@
 # Design System — lokri.io (Phase 1)
 
-**Stand:** Phase 1 Redesign — Tokens + Showcase landed.
-**Scope:** User-Bereich (Auth, Dashboard, Marketing). Admin-Bereich nutzt dieselben Tokens, wurde aber in Phase 1 nicht visuell überarbeitet.
+**Stand:** Phase 2 abgeschlossen — User-Bereich durchgehend auf dem Design-System.
+**Scope:** User-Bereich (Auth, Dashboard, Marketing). Admin-Bereich nutzt dieselben Tokens, wurde aber bewusst nicht vollständig mit dem Phase-2-Rollout überarbeitet.
+
+## Status
+
+- Phase 1: Tokens, Typografie, Komponenten-Patterns und Responsive-Audits etabliert
+- Phase 2: User-Bereich bereichsweise auf diese Patterns migriert
+- Aktueller Zustand: keine neuen Pastell-/Gradient-Anti-Patterns mehr im non-admin User-Scope
+
+## Responsive-Testing-Protokoll
+
+Vor Abschluss eines Bereichs gilt:
+
+- `pnpm audit:responsive` auf allen betroffenen Routen mit 0 Violations
+- Light + Dark auf Mobile und Desktop gegenprüfen
+- Layout-Änderungen erst dann committen, wenn Audit und Sichtprüfung zusammen grün sind
 
 ---
 

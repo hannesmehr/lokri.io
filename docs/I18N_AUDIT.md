@@ -1,11 +1,23 @@
 # i18n Inner-Layer Audit
 
-**Stand:** 2026-04-18
+**Stand:** 2026-04-19
 **Runde 1:** ✅ erledigt
+**Runde 2:** ✅ erledigt
+**Runde 3:** ✅ erledigt
+**Runde 4:** ✅ erledigt
+**Runde 5 / Phase 2:** ✅ erledigt
 **Scope:** Innenschicht (Auth, Dashboard, Marketing, Legal-Links, Invites, Mailer-Templates, API-Error-Messages in non-admin-Routes, User-facing Lib-Errors).
 **Explizit ausgeschlossen:** `app/(admin)/*`, `app/api/admin/*`, `lib/admin/*`, `components/ui/*` (shadcn Base-UI), Inhalte von `datenschutz`/`impressum` (Legal-Pages bleiben per Anforderung deutsch).
 
-Kein Code wurde im Rahmen dieses Audits geändert — reine Read-Only-Analyse.
+## Abschlussstatus
+
+Phase 2 komplett abgeschlossen. lokri ist vollständig bilingual (DE + EN) außerhalb des Admin-Scopes, der bewusst deutsch bleibt. Siehe [docs/I18N.md](/Users/hannes/Development/private/lokri.io/docs/I18N.md:1) für die aktuellen Developer-Konventionen.
+
+Die folgenden Detailtabellen sind als historische Audit-Basis zu verstehen. Der aktuelle Produktstand lautet:
+
+- 0 offene hardcoded UI-Strings außerhalb des Admin-Scopes
+- 0 offene non-admin API-/Lib-Error-Strings außerhalb der dokumentierten Übergangs-Fallbacks
+- angelegte Namespaces: `confirmDialogs.*`, `toasts.*`, `errors.api.session.*`, `errors.api.storageProvider.*`
 
 ---
 
@@ -17,32 +29,32 @@ Kein Code wurde im Rahmen dieses Audits geändert — reine Read-Only-Analyse.
 | Geprüfte API-Route-Verzeichnisse (non-admin)          | 18 |
 | Geprüfte Lib-Dateien mit potentiell user-facing Strings | 15 |
 | Geprüfte Mailer-Template-Funktionen                   | 8 |
-| Gesamt-Leaf-Keys in `messages/de.json` / `messages/en.json` | 631 / 631 |
+| Gesamt-Leaf-Keys in `messages/de.json` / `messages/en.json` | 1075 / 1075 |
 | Top-Level-Namespaces                                  | 19 (identisch in beiden Locales) |
 | Shape-Diskrepanzen `de` ↔ `en`                        | 0 |
 | Mailer-Templates vollständig migriert                 | 8 / 8 ✅ |
 
 **UI-Block-Status:**
 
-- ✅ vollständig migriert: **20 Dateien** (29 %)
-- ⚠️ teilweise migriert: **35 Dateien** (50 %)
-- ❌ komplett/weitgehend hardcoded: **15 Dateien** (21 %)
+- ✅ vollständig migriert: **70 Dateien** (100 %)
+- ⚠️ teilweise migriert: **0 Dateien** (0 %)
+- ❌ komplett/weitgehend hardcoded: **0 Dateien** (0 %)
 
 **Hardcoded-Strings (grobe Schätzung):**
 
-- UI-Block: **~190 Strings** (JSX-Labels, Toasts, Confirm-Dialoge, Empty-States, Form-Labels)
+- UI-Block: **0 Strings** außerhalb Admin-Scope
 - API-Routes + Lib: **0** offene non-admin-Error-Strings (**Admin-Ausnahme bleibt bewusst deutsch**)
-- **Gesamt: ~200 Strings**
+- **Gesamt: 0** außerhalb Admin-Scope
 
 **Fehlende Message-Keys (grobe Schätzung):**
 
-- Bestehende Namespaces, die erweitert werden müssen: ~60–80 Keys (`dashboard.overview.*`, `settings.mcp.instructions.*`, `billing.plans.features.*`, `errors.api.session.*`, `errors.api.teams.*`)
+- Bestehende Namespaces wurden im Rollout erweitert
 - Neue Namespaces, die angelegt wurden:
   - `confirmDialogs.*` ✅
   - `toasts.*` ✅
   - `errors.api.session.*` ✅
   - `errors.api.storageProvider.*` ✅
-- **Gesamt grob: ~80–100 neue oder zu erweiternde Keys**
+- Offene i18n-Key-Lücken außerhalb Admin-Scope: **0**
 
 ---
 
