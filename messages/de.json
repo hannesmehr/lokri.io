@@ -562,6 +562,15 @@
     "title": "Spaces",
     "subtitle": "Thematische Gruppen für Notes und Files.",
     "create": "Space anlegen",
+    "list": {
+      "title": "Spaces",
+      "subtitle": "Gruppiere Notes und Files zu Themen.",
+      "updatedAt": "aktualisiert {relative}",
+      "open": "Öffnen",
+      "notes": "Notes",
+      "files": "Files",
+      "emptyDescription": "Keine Beschreibung"
+    },
     "empty": {
       "title": "Noch keine Spaces",
       "body": "Spaces bündeln Notes + Files zu Themen. Leg den ersten an."
@@ -572,12 +581,27 @@
       "name": "Name",
       "descriptionLabel": "Beschreibung (optional)",
       "storage": "Storage",
-      "submit": "Space anlegen"
+      "storageDefault": "lokri-managed (Standard)",
+      "noProviders": "Keine externen Provider. Leg einen in {link} an.",
+      "storageSettingsLink": "Settings → Storage",
+      "submit": "Space anlegen",
+      "submitting": "Anlegen…",
+      "success": "Space angelegt.",
+      "errors": {
+        "generic": "Konnte Space nicht anlegen."
+      }
     },
     "detail": {
       "back": "← Spaces",
       "createdAt": "Erstellt {relative}",
       "updatedAt": "zuletzt geändert {relative}",
+      "storageManaged": "lokri-managed (Standard)",
+      "browserTitle": "Bucket-Inhalt",
+      "browserTitleInternal": "Dateien",
+      "browserDescriptionExternal": "Live-Listing deines Buckets unter dem konfigurierten Path-Prefix. Dateien, die andere Tools bereits hochgeladen haben, tauchen hier automatisch auf.",
+      "browserDescriptionInternalPrefix": "Alle Dateien im Space. Uploads machst du weiterhin auf der",
+      "browserDescriptionInternalLink": "Files-Seite",
+      "browserDescriptionInternalSuffix": ".",
       "stats": {
         "notes": "Notes",
         "files": "Files (intern)",
@@ -592,6 +616,14 @@
         "success": "{indexed} indiziert · {chunks} Chunks gesamt",
         "partial": "{indexed} indiziert · {noText} ohne Text · {failed} fehlgeschlagen",
         "truncated": "weitere Dateien übrig. Nochmal klicken."
+      }
+    },
+    "actions": {
+      "delete": "Löschen",
+      "deleteConfirm": "Space \"{name}\" wirklich löschen? Notes und Files werden dadurch \"unsortiert\".",
+      "deleted": "Space gelöscht.",
+      "errors": {
+        "deleteFailed": "Konnte Space nicht löschen."
       }
     },
     "browser": {

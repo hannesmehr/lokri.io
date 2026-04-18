@@ -562,6 +562,15 @@
     "title": "Spaces",
     "subtitle": "Thematic groups for notes and files.",
     "create": "Create space",
+    "list": {
+      "title": "Spaces",
+      "subtitle": "Group notes and files by topic.",
+      "updatedAt": "updated {relative}",
+      "open": "Open",
+      "notes": "Notes",
+      "files": "Files",
+      "emptyDescription": "No description"
+    },
     "empty": {
       "title": "No spaces yet",
       "body": "Spaces bundle notes + files by topic. Create your first one."
@@ -572,12 +581,27 @@
       "name": "Name",
       "descriptionLabel": "Description (optional)",
       "storage": "Storage",
-      "submit": "Create space"
+      "storageDefault": "lokri-managed (default)",
+      "noProviders": "No external providers. Add one in {link}.",
+      "storageSettingsLink": "Settings → Storage",
+      "submit": "Create space",
+      "submitting": "Creating…",
+      "success": "Space created.",
+      "errors": {
+        "generic": "Could not create space."
+      }
     },
     "detail": {
       "back": "← Spaces",
       "createdAt": "Created {relative}",
       "updatedAt": "last updated {relative}",
+      "storageManaged": "lokri-managed (default)",
+      "browserTitle": "Bucket contents",
+      "browserTitleInternal": "Files",
+      "browserDescriptionExternal": "Live listing of your bucket under the configured path prefix. Files uploaded by other tools appear here automatically.",
+      "browserDescriptionInternalPrefix": "All files in this space. Keep uploading on the",
+      "browserDescriptionInternalLink": "Files page",
+      "browserDescriptionInternalSuffix": ".",
       "stats": {
         "notes": "Notes",
         "files": "Files (internal)",
@@ -592,6 +616,14 @@
         "success": "{indexed} indexed · {chunks} chunks total",
         "partial": "{indexed} indexed · {noText} without text · {failed} failed",
         "truncated": "more files remaining. Click again."
+      }
+    },
+    "actions": {
+      "delete": "Delete",
+      "deleteConfirm": "Really delete space \"{name}\"? Notes and files will become unsorted.",
+      "deleted": "Space deleted.",
+      "errors": {
+        "deleteFailed": "Could not delete space."
       }
     },
     "browser": {
