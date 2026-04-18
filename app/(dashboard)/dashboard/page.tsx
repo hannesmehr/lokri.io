@@ -160,13 +160,13 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      {/* Activity — 1 col bis md, 2 cols ab lg; zentriert mit max-w-4xl.
-          Bewusst schmaler als Main (max-w-5xl) damit Listen-Content nicht
-          auf Desktop „zu breit" wirkt. „Geöffnete Browser-Tabs" in einer
-          474px-Card ließ zu viel Whitespace rechts; 4xl bringt Cards auf
-          ~440px und rahmt die Sektion visuell von Quick-Actions/KPIs
-          oben ab (Summary-Widgets volle Breite, List-Sections schmaler). */}
-      <div className="mx-auto grid w-full max-w-4xl gap-3 lg:grid-cols-2">
+      {/* Activity — 1 col bis md, 2 cols ab lg, volle Main-Breite.
+          Eine frühere Iteration (4xl zentriert) sollte das „zu luftig"-
+          Problem bei wenigen Einträgen lösen, erzeugte aber sichtbare
+          Inkonsistenz zwischen den Sektionen gleicher Hierarchie —
+          Activity wirkte eingerückt gegenüber Quick-Actions und KPIs
+          darüber. Der 5xl-Main gibt das richtige Maß für alle Sektionen. */}
+      <div className="grid gap-3 lg:grid-cols-2">
         <ActivityList
           title={t("sections.recentNotes")}
           icon={<StickyNote className="h-4 w-4" />}
