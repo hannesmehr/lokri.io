@@ -112,10 +112,10 @@ export function AccountSwitcher({
               className="flex items-center gap-1.5 rounded-md border bg-background px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
             >
               <TriggerIcon className="h-3.5 w-3.5" />
-              <span className="max-w-[140px] truncate font-medium text-foreground">
+              <span className="max-w-[90px] truncate font-medium text-foreground sm:max-w-[140px]">
                 {activeAccountName}
               </span>
-              <span className="shrink-0 rounded border px-1 py-0.5 text-[9px] uppercase tracking-wide">
+              <span className="hidden shrink-0 rounded border px-1 py-0.5 text-[9px] uppercase tracking-wide sm:inline">
                 {activeAccountType === "team"
                   ? t("teamBadge")
                   : t("personalBadge")}

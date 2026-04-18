@@ -43,9 +43,10 @@ export function UserMenu({ user, isAdmin = false }: Props) {
         render={
           <button
             type="button"
-            className="flex items-center gap-1.5 rounded-full border bg-background px-1 py-1 text-sm transition-colors hover:bg-muted"
+            className="flex h-9 items-center gap-1.5 rounded-full border bg-background pl-1 pr-2 text-sm transition-colors hover:bg-muted"
+            aria-label="User-Menü"
           >
-            <span className="grid h-6 w-6 place-items-center rounded-full bg-foreground text-[10px] font-semibold text-background">
+            <span className="grid h-7 w-7 place-items-center rounded-full bg-foreground text-[11px] font-semibold text-background">
               {initials}
             </span>
             <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />

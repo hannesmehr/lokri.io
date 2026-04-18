@@ -500,12 +500,12 @@ export function SearchTrigger() {
     <button
       type="button"
       onClick={open}
-      className="hidden items-center gap-2 rounded-md border bg-background px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground sm:inline-flex"
+      className="inline-flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground lg:h-auto lg:w-auto lg:gap-2 lg:rounded-md lg:border lg:bg-background lg:px-2.5 lg:py-1 lg:text-xs lg:hover:bg-background"
       aria-label={t("triggerLabel")}
     >
-      <SearchIcon className="h-3.5 w-3.5" />
-      <span>{t("triggerLabel")}</span>
-      <kbd className="rounded bg-muted px-1 py-0.5 font-mono text-[10px]">
+      <SearchIcon className="h-5 w-5 lg:h-3.5 lg:w-3.5" />
+      <span className="sr-only lg:not-sr-only">{t("triggerLabel")}</span>
+      <kbd className="hidden rounded bg-muted px-1 py-0.5 font-mono text-[10px] lg:inline">
         {mac ? "⌘" : "Ctrl"} K
       </kbd>
     </button>

@@ -94,7 +94,7 @@ export function OnboardingCard({ hasSpace, hasNote, hasToken }: Props) {
           ))}
         </div>
       </header>
-      <div className="grid gap-2 p-2 sm:grid-cols-3">
+      <div className="grid gap-2 p-2 md:grid-cols-3">
         {steps.map((s, i) => (
           <div
             key={s.label}

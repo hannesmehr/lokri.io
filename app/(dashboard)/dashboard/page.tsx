@@ -68,11 +68,11 @@ export default async function DashboardPage() {
   const firstName = session.user.name?.split(" ")[0] ?? null;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 sm:space-y-8">
       {/* Header */}
       <header className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl lg:text-4xl">
             {firstName ? `Hi, ${firstName}` : "Dashboard"}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -81,7 +81,7 @@ export default async function DashboardPage() {
         </div>
         <Link
           href="/billing"
-          className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs transition-colors hover:border-foreground/20"
+          className="inline-flex min-h-9 items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs transition-colors hover:border-foreground/20"
           aria-label={`Plan: ${quota.planId} — zum Billing`}
         >
           <span className="text-muted-foreground">Plan</span>
@@ -95,8 +95,8 @@ export default async function DashboardPage() {
         hasToken={tokenCount > 0}
       />
 
-      {/* Quick actions */}
-      <div className="grid gap-3 sm:grid-cols-3">
+      {/* Quick actions — 1 col Mobile, 2 cols ab sm, 3 cols ab lg */}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <QuickActionCard
           href="/notes/new"
           icon={<Plus className="h-4 w-4" />}
@@ -117,7 +117,7 @@ export default async function DashboardPage() {
         />
       </div>
 
-      {/* Kontingent */}
+      {/* Kontingent — 1 col Mobile, 3 cols ab sm (schmale KPI-Tiles dürfen eng) */}
       <section className="space-y-3">
         <h2 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           Kontingent
@@ -144,7 +144,7 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      {/* Activity */}
+      {/* Activity — 1 col bis md, 2 cols ab lg */}
       <div className="grid gap-3 lg:grid-cols-2">
         <ActivityList
           title="Letzte Notes"
