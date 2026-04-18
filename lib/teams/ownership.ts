@@ -42,7 +42,7 @@ export async function transferOwnership(
   input: TransferOwnershipInput,
 ): Promise<void> {
   if (input.currentOwnerUserId === input.newOwnerUserId) {
-    throw new TeamError("OWNER_TRANSFER_SELF");
+    throw new TeamError("team.ownerTransferSelf");
   }
 
   await db.transaction(async (tx) => {
@@ -58,14 +58,14 @@ export async function transferOwnership(
 
     const current = rows.find((r) => r.userId === input.currentOwnerUserId);
     const target = rows.find((r) => r.userId === input.newOwnerUserId);
-    if (!current) throw new TeamError("NOT_FOUND");
-    if (!target) throw new TeamError("NOT_FOUND");
+    if (!current) throw new TeamError("team.notFound");
+    if (!target) throw new TeamError("team.notFound");
 
     if (normalizeLegacyRole(current.role) !== "owner") {
-      throw new TeamError("OWNER_TRANSFER_NOT_OWNER");
+      throw new TeamError("team.ownerTransferNotOwner");
     }
     if (normalizeLegacyRole(target.role) !== "admin") {
-      throw new TeamError("OWNER_TRANSFER_NOT_ADMIN");
+      throw new TeamError("team.ownerTransferNotAdmin");
     }
 
     // Demote outgoing owner first. If we promoted the new owner first

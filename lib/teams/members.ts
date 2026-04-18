@@ -110,7 +110,7 @@ export async function changeMemberRole(input: ChangeRoleInput): Promise<void> {
       ),
     )
     .limit(1);
-  if (!member) throw new TeamError("NOT_FOUND");
+  if (!member) throw new TeamError("team.notFound");
 
   const oldRole = normalizeLegacyRole(member.role);
   if (oldRole === input.nextRole) return; // no-op
@@ -123,7 +123,7 @@ export async function changeMemberRole(input: ChangeRoleInput): Promise<void> {
       input.ownerAccountId,
       input.targetUserId,
     );
-    if (others === 0) throw new TeamError("OWNER_PROTECTED");
+    if (others === 0) throw new TeamError("team.ownerProtected");
   }
 
   await db
@@ -170,10 +170,10 @@ export async function removeMember(input: RemoveMemberInput): Promise<void> {
       ),
     )
     .limit(1);
-  if (!member) throw new TeamError("NOT_FOUND");
+  if (!member) throw new TeamError("team.notFound");
 
   const targetRole = normalizeLegacyRole(member.role);
-  if (targetRole === "owner") throw new TeamError("OWNER_PROTECTED");
+  if (targetRole === "owner") throw new TeamError("team.ownerProtected");
 
   // Revoke all personal-scope tokens this user created for this account —
   // they're user-bound and should die with the membership. Team-scoped

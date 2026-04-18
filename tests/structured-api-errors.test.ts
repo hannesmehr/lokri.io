@@ -138,7 +138,7 @@ test("GitHubProvider maps 404 responses to repoNotFound", async () => {
 
 test("team create-disabled errors retain fallback message and status metadata", async () => {
   const err = new TeamError(
-    "CREATE_DISABLED",
+    "team.createDisabled",
     "Team-Erstellung ist derzeit nicht freigeschaltet.",
   );
 
@@ -152,7 +152,7 @@ test("team create-disabled errors retain fallback message and status metadata", 
 
   assert.equal(body.error, "Team-Erstellung ist derzeit nicht freigeschaltet.");
   assert.deepEqual(body.details, {
-    code: "CREATE_DISABLED",
+    code: "team.createDisabled",
     message: "Team-Erstellung ist derzeit nicht freigeschaltet.",
     status: 403,
   });

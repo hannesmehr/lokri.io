@@ -212,7 +212,9 @@ function CreateTeamDialog({
       const body = await res.json().catch(() => ({}));
       const code = (body?.details?.code as string | undefined) ?? "";
       toast.error(
-        code === "CREATE_DISABLED" ? t("errors.disabled") : t("errors.generic"),
+        code === "team.createDisabled"
+          ? t("errors.disabled")
+          : body?.error ?? t("errors.generic"),
       );
       return;
     }

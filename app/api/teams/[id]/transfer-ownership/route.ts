@@ -4,6 +4,7 @@ import {
   apiError,
   ApiAuthError,
   authErrorResponse,
+  codedApiError,
   parseJsonBody,
   serverError,
   zodError,
@@ -50,9 +51,7 @@ export async function POST(req: NextRequest, { params }: Params) {
       return NextResponse.json({ ok: true });
     } catch (err) {
       if (err instanceof TeamError) {
-        return apiError(err.message, teamErrorStatus(err.code), {
-          code: err.code,
-        });
+        return codedApiError(teamErrorStatus(err.code), err.code, err.message);
       }
       throw err;
     }

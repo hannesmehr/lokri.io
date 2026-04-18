@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   apiError,
   authErrorResponse,
+  codedApiError,
   parseJsonBody,
   serverError,
   zodError,
@@ -38,13 +39,21 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     // Only owners can promote to owner. Admins can reassign member/viewer
     // among the team.
     if (parsed.data.role === "owner" && actorRole !== "owner") {
-      return apiError("Only owners may promote to owner", 403);
+      return codedApiError(
+        teamErrorStatus("team.roleChangeForbidden"),
+        "team.roleChangeForbidden",
+        "Nur Owner duerfen die Owner-Rolle vergeben.",
+      );
     }
 
     // Can't change own role via this endpoint (avoids footguns). Owner
     // transfer is a separate future flow.
     if (session.user.id === userId) {
-      return apiError("Cannot change your own role", 400);
+      return codedApiError(
+        teamErrorStatus("team.selfRoleChange"),
+        "team.selfRoleChange",
+        "Du kannst deine eigene Rolle hier nicht aendern.",
+      );
     }
 
     try {
@@ -57,9 +66,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       return NextResponse.json({ ok: true });
     } catch (err) {
       if (err instanceof TeamError) {
-        return apiError(err.message, teamErrorStatus(err.code), {
-          code: err.code,
-        });
+        return codedApiError(teamErrorStatus(err.code), err.code, err.message);
       }
       throw err;
     }
@@ -79,7 +86,11 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
       return apiError("Team not in active context", 403);
     }
     if (session.user.id === userId) {
-      return apiError("Cannot remove yourself", 400);
+      return codedApiError(
+        teamErrorStatus("team.selfRemove"),
+        "team.selfRemove",
+        "Du kannst dich nicht selbst aus dem Team entfernen.",
+      );
     }
     try {
       await removeMember({
@@ -90,9 +101,7 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
       return new NextResponse(null, { status: 204 });
     } catch (err) {
       if (err instanceof TeamError) {
-        return apiError(err.message, teamErrorStatus(err.code), {
-          code: err.code,
-        });
+        return codedApiError(teamErrorStatus(err.code), err.code, err.message);
       }
       throw err;
     }

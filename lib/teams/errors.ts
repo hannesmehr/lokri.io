@@ -6,17 +6,20 @@
  */
 
 export type TeamErrorCode =
-  | "CREATE_DISABLED" // user.can_create_teams === false
-  | "NAME_REQUIRED"
-  | "NAME_TOO_LONG"
-  | "NAME_MISMATCH" // delete-confirm name doesn't match
-  | "NOT_FOUND" // team doesn't exist or user isn't a member
-  | "FORBIDDEN" // role insufficient
-  | "ALREADY_MEMBER"
-  | "OWNER_PROTECTED" // can't remove / demote the sole owner
-  | "OWNER_TRANSFER_SELF" // can't transfer to yourself
-  | "OWNER_TRANSFER_NOT_ADMIN" // target must already be admin
-  | "OWNER_TRANSFER_NOT_OWNER"; // caller claims to be owner but isn't
+  | "team.createDisabled" // user.can_create_teams === false
+  | "team.nameRequired"
+  | "team.nameTooLong"
+  | "team.nameMismatch" // delete-confirm name doesn't match
+  | "team.notFound" // team doesn't exist or user isn't a member
+  | "team.forbidden" // role insufficient
+  | "team.alreadyMember"
+  | "team.ownerProtected" // can't remove / demote the sole owner
+  | "team.ownerTransferSelf" // can't transfer to yourself
+  | "team.ownerTransferNotAdmin" // target must already be admin
+  | "team.ownerTransferNotOwner" // caller claims to be owner but isn't
+  | "team.roleChangeForbidden"
+  | "team.selfRoleChange"
+  | "team.selfRemove";
 
 export class TeamError extends Error {
   readonly code: TeamErrorCode;
@@ -30,21 +33,24 @@ export class TeamError extends Error {
 
 export function teamErrorStatus(code: TeamErrorCode): number {
   switch (code) {
-    case "CREATE_DISABLED":
-    case "FORBIDDEN":
+    case "team.createDisabled":
+    case "team.forbidden":
+    case "team.roleChangeForbidden":
       return 403;
-    case "NOT_FOUND":
+    case "team.notFound":
       return 404;
-    case "ALREADY_MEMBER":
-    case "OWNER_PROTECTED":
+    case "team.alreadyMember":
+    case "team.ownerProtected":
       return 409;
-    case "NAME_REQUIRED":
-    case "NAME_TOO_LONG":
-    case "NAME_MISMATCH":
-    case "OWNER_TRANSFER_SELF":
-    case "OWNER_TRANSFER_NOT_ADMIN":
+    case "team.nameRequired":
+    case "team.nameTooLong":
+    case "team.nameMismatch":
+    case "team.ownerTransferSelf":
+    case "team.ownerTransferNotAdmin":
+    case "team.selfRoleChange":
+    case "team.selfRemove":
       return 400;
-    case "OWNER_TRANSFER_NOT_OWNER":
+    case "team.ownerTransferNotOwner":
       return 403;
     default:
       return 400;

@@ -4,6 +4,7 @@ import { z } from "zod";
 import {
   apiError,
   authErrorResponse,
+  codedApiError,
   parseJsonBody,
   serverError,
   zodError,
@@ -129,9 +130,11 @@ export async function DELETE(req: NextRequest, { params }: Params) {
       .limit(1);
     if (!team) return apiError("Team not found", 404);
     if (team.name !== parsed.data.confirmName) {
-      return apiError("Name mismatch", teamErrorStatus("NAME_MISMATCH"), {
-        code: "NAME_MISMATCH",
-      });
+      return codedApiError(
+        teamErrorStatus("team.nameMismatch"),
+        "team.nameMismatch",
+        "Der eingetippte Name stimmt nicht überein.",
+      );
     }
 
     // Storage-object cleanup — same pattern as auth.deleteUser.beforeDelete.
@@ -192,9 +195,7 @@ export async function DELETE(req: NextRequest, { params }: Params) {
   } catch (err) {
     if (err instanceof ApiAuthError) return authErrorResponse(err);
     if (err instanceof TeamError) {
-      return apiError(err.message, teamErrorStatus(err.code), {
-        code: err.code,
-      });
+      return codedApiError(teamErrorStatus(err.code), err.code, err.message);
     }
     console.error("[api/teams.DELETE]", err);
     return serverError(err);

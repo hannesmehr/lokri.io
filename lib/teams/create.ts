@@ -45,8 +45,8 @@ export async function createTeam(
   input: CreateTeamInput,
 ): Promise<CreateTeamResult> {
   const name = input.name.trim();
-  if (!name) throw new TeamError("NAME_REQUIRED");
-  if (name.length > MAX_NAME_LEN) throw new TeamError("NAME_TOO_LONG");
+  if (!name) throw new TeamError("team.nameRequired");
+  if (name.length > MAX_NAME_LEN) throw new TeamError("team.nameTooLong");
 
   // Gate check outside the transaction — cheaper than rolling back, and
   // we can surface the disabled-error immediately.
@@ -55,12 +55,12 @@ export async function createTeam(
     .from(users)
     .where(eq(users.id, input.userId))
     .limit(1);
-  if (!user) throw new TeamError("NOT_FOUND", "User not found");
+  if (!user) throw new TeamError("team.notFound", "User not found");
   if (!user.canCreateTeams) {
     // TODO(i18n-rollout): `message`-Fallback entfernen nach Phase-2-Abschluss.
     // Frontend mappt dann konsequent code → t('errors.api.team.createDisabled').
     throw new TeamError(
-      "CREATE_DISABLED",
+      "team.createDisabled",
       "Team-Erstellung ist derzeit nicht freigeschaltet.",
     );
   }

@@ -13,34 +13,34 @@ import { TeamError, teamErrorStatus } from "@/lib/teams/errors";
  */
 
 test("TeamError carries the code forward", () => {
-  const e = new TeamError("OWNER_TRANSFER_SELF");
-  assert.equal(e.code, "OWNER_TRANSFER_SELF");
+  const e = new TeamError("team.ownerTransferSelf");
+  assert.equal(e.code, "team.ownerTransferSelf");
   assert.equal(e.name, "TeamError");
   assert.ok(e instanceof Error);
 });
 
 test("Self-transfer maps to 400 (bad request, not a server fault)", () => {
-  assert.equal(teamErrorStatus("OWNER_TRANSFER_SELF"), 400);
+  assert.equal(teamErrorStatus("team.ownerTransferSelf"), 400);
 });
 
 test("Transferring to a non-admin maps to 400 (client must promote first)", () => {
-  assert.equal(teamErrorStatus("OWNER_TRANSFER_NOT_ADMIN"), 400);
+  assert.equal(teamErrorStatus("team.ownerTransferNotAdmin"), 400);
 });
 
 test("Caller-not-owner maps to 403 (role check, not a data problem)", () => {
-  assert.equal(teamErrorStatus("OWNER_TRANSFER_NOT_OWNER"), 403);
+  assert.equal(teamErrorStatus("team.ownerTransferNotOwner"), 403);
 });
 
 test("Custom message is preserved; code stays stable", () => {
   const e = new TeamError(
-    "OWNER_TRANSFER_NOT_ADMIN",
+    "team.ownerTransferNotAdmin",
     "Promote the target to admin first.",
   );
-  assert.equal(e.code, "OWNER_TRANSFER_NOT_ADMIN");
+  assert.equal(e.code, "team.ownerTransferNotAdmin");
   assert.equal(e.message, "Promote the target to admin first.");
 });
 
 test("Default message falls back to the code when none supplied", () => {
-  const e = new TeamError("OWNER_TRANSFER_SELF");
-  assert.equal(e.message, "OWNER_TRANSFER_SELF");
+  const e = new TeamError("team.ownerTransferSelf");
+  assert.equal(e.message, "team.ownerTransferSelf");
 });

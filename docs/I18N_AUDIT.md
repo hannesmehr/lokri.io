@@ -221,7 +221,7 @@ Gruppierung pro Route-Familie. Zahlen sind echte Grep-Treffer, nicht geschätzt.
 | `app/api/search/**` | ✅ | 0 | n/a | — |
 | `app/api/spaces/**` | ✅ | 0 | n/a | Englische Standard-Errors |
 | `app/api/storage-providers/**` | ✅ | 0 | ja | Strukturierte Codes + deutscher Fallback via `codedApiError()` |
-| `app/api/teams/**` | ✅ | 0 | ja | Team-Create serialisiert strukturiert; `CREATE_DISABLED` bleibt vorerst aus UI-Kompatibilitätsgründen bestehen |
+| `app/api/teams/**` | ✅ | 0 | ja | Team-Create serialisiert strukturiert mit dot-notierten Team-Codes |
 | `app/api/tokens/**` | ✅ | 0 | n/a | — |
 
 ### N. Error-Messages in Lib (`lib/*` — außer `lib/admin/*`)
@@ -230,7 +230,7 @@ Gruppierung pro Route-Familie. Zahlen sind echte Grep-Treffer, nicht geschätzt.
 | --- | --- | --- | --- |
 | `lib/api/errors.ts` | ✅ | 0 | Englische Default-Messages (`"Unauthorized"`, `"Not found"`, …). Framework-OK. |
 | `lib/api/session.ts` | ✅ | **0** non-admin / **1 Admin-Ausnahme** | `session.accountDisabled` läuft strukturiert; `Admin-Berechtigung erforderlich` bleibt bewusst deutsch im Admin-Scope |
-| `lib/teams/create.ts` | ✅ | 0 | `CREATE_DISABLED` bleibt als Legacy-Code erhalten, liefert aber jetzt strukturierten Response-Fallback |
+| `lib/teams/create.ts` | ✅ | 0 | `team.createDisabled` liefert strukturierten Response-Fallback |
 | `lib/teams/*.ts` (invites, members, transfer, etc.) | ⚠️ | ~3 | Einige `TeamError`/`InviteError` tragen weiterhin deutsche `.message` — `.code` ist der autoritative Kanal, aber die Message wird manchmal direkt an `apiError()` gereicht. |
 | `lib/quota.ts` | ✅ | 0 | Englische `QUOTA:…`-Codes + strukturierte `reason`-Felder. Frontend übersetzt. |
 | `lib/storage/github.ts` | ✅ | 0 | GitHub-Testfehler laufen jetzt über strukturierte `storageProvider.github.*`-Codes |
