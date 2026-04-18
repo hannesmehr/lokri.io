@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
-import { Calendar, Sparkles } from "lucide-react";
+import { Calendar, CreditCard } from "lucide-react";
+import { getLocale, getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -11,14 +12,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { KpiCard } from "@/components/kpi-card";
 import { requireSessionWithAccount } from "@/lib/api/session";
 import { db } from "@/lib/db";
 import { ownerAccounts, plans } from "@/lib/db/schema";
-import { formatBytes, formatDateTime } from "@/lib/format";
-
-function formatCents(c: number): string {
-  return (c / 100).toFixed(2).replace(".", ",") + " €";
-}
+import { formatBytes, formatCurrency, formatDateTime } from "@/lib/i18n/formatters";
+import type { Locale } from "@/lib/i18n/config";
 
 function daysUntil(d: Date): number {
   return Math.ceil((d.getTime() - Date.now()) / (24 * 60 * 60 * 1000));
@@ -35,6 +34,8 @@ export default async function BillingOverviewPage({
 }) {
   const { ownerAccountId } = await requireSessionWithAccount();
   const { cancelled } = await searchParams;
+  const locale = (await getLocale()) as Locale;
+  const t = await getTranslations("billing.overview");
 
   const [account, currentPlanRow] = await Promise.all([
     db
@@ -74,148 +75,121 @@ export default async function BillingOverviewPage({
     <div className="space-y-6">
       {cancelled ? (
         <Alert>
-          <AlertTitle>Bestellung abgebrochen</AlertTitle>
+          <AlertTitle>{t("cancelled.title")}</AlertTitle>
           <AlertDescription>
-            Du wurdest von PayPal ohne Zahlung zurückgeleitet. Dein Plan ist
-            unverändert.
+            {t("cancelled.description")}
           </AlertDescription>
         </Alert>
       ) : null}
 
-      <Card className="overflow-hidden border-indigo-500/20 bg-gradient-to-br from-indigo-500/5 via-background to-fuchsia-500/5">
+      <Card>
         <CardHeader>
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="grid h-10 w-10 place-items-center rounded-lg bg-gradient-to-br from-indigo-500/15 to-fuchsia-500/15 text-indigo-700 dark:text-indigo-300">
-                <Sparkles className="h-4 w-4" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-md border border-border bg-muted">
+                <CreditCard className="h-5 w-5 text-muted-foreground" />
               </div>
               <div>
-                <CardTitle className="font-display text-2xl font-normal">
-                  Aktueller Plan:{" "}
-                  <span className="italic text-brand">
-                    {effectivePlan?.name ?? "Free"}
-                  </span>
+                <CardTitle className="text-lg font-semibold">
+                  {t("currentPlanLabel")}:{" "}
+                  <span className="font-mono text-foreground">{effectivePlanId}</span>
                 </CardTitle>
                 <CardDescription>
                   {effectivePlan
-                    ? `${formatBytes(effectivePlan.maxBytes)} Speicher · ${effectivePlan.maxFiles.toLocaleString("de-DE")} Files · ${effectivePlan.maxNotes.toLocaleString("de-DE")} Notes`
+                    ? t("currentPlanDescription", {
+                        storage: formatBytes(effectivePlan.maxBytes, locale),
+                        files: effectivePlan.maxFiles,
+                        notes: effectivePlan.maxNotes,
+                      })
                     : null}
                 </CardDescription>
               </div>
             </div>
             <Button
               nativeButton={false}
-              render={<Link href="/billing/plans">Plan ändern →</Link>}
+              render={<Link href="/billing/plans">{t("changePlan")}</Link>}
             />
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <Stat
-              label="Status"
+          <div className="grid gap-4 md:grid-cols-3">
+            <KpiCard
+              label={t("kpis.status")}
               value={
+                expired
+                  ? t("status.expired")
+                  : account?.planExpiresAt
+                    ? t("status.active")
+                    : t("status.free")
+              }
+              meta={
                 expired ? (
-                  <Badge
-                    variant="secondary"
-                    className="bg-red-500/10 text-red-700 dark:text-red-300"
-                  >
-                    abgelaufen
-                  </Badge>
-                ) : account?.planExpiresAt ? (
-                  <Badge variant="secondary">aktiv</Badge>
-                ) : (
-                  <Badge variant="secondary">Free</Badge>
-                )
+                  <Badge variant="outline">{t("status.expired")}</Badge>
+                ) : null
               }
             />
-            <Stat
-              label="Läuft bis"
+            <KpiCard
+              label={t("kpis.expiresAt")}
               value={
-                account?.planExpiresAt ? (
-                  <span>
-                    {formatDateTime(account.planExpiresAt)}
-                    {daysLeft !== null && !expired ? (
-                      <span className="ml-1 text-xs text-muted-foreground">
-                        ({daysLeft} Tage)
-                      </span>
-                    ) : null}
-                  </span>
-                ) : (
-                  <span className="text-muted-foreground">
-                    Keine Ablaufzeit
-                  </span>
-                )
+                account?.planExpiresAt
+                  ? formatDateTime(account.planExpiresAt, locale)
+                  : t("noExpiry")
+              }
+              meta={
+                daysLeft !== null && !expired
+                  ? t("daysLeft", { count: daysLeft })
+                  : undefined
               }
             />
-            <Stat
-              label="Zuletzt verlängert"
+            <KpiCard
+              label={t("kpis.renewedAt")}
               value={
-                account?.planRenewedAt ? (
-                  formatDateTime(account.planRenewedAt)
-                ) : (
-                  <span className="text-muted-foreground">—</span>
-                )
+                account?.planRenewedAt
+                  ? formatDateTime(account.planRenewedAt, locale)
+                  : "—"
               }
             />
           </div>
         </CardContent>
       </Card>
 
-      {/* CTA card */}
       {effectivePlanId === "free" ? (
         <Card>
           <CardContent className="flex flex-wrap items-center justify-between gap-4 py-5">
             <div>
-              <div className="font-medium">Mehr Speicher gefällig?</div>
+              <div className="font-medium">{t("upgrade.title")}</div>
               <p className="text-sm text-muted-foreground">
-                Starter ab <span className="tabular-nums">4,90 €</span>/Monat
-                oder <span className="tabular-nums">49 €</span>/Jahr.
+                {t("upgrade.description", {
+                  monthly: formatCurrency(490, locale),
+                  yearly: formatCurrency(4900, locale),
+                })}
               </p>
             </div>
             <Button
               nativeButton={false}
-              render={<Link href="/billing/plans">Plans ansehen</Link>}
+              render={<Link href="/billing/plans">{t("upgrade.cta")}</Link>}
             />
           </CardContent>
         </Card>
       ) : expired ? (
-        <Card className="border-amber-500/30 bg-amber-500/5">
+        <Card>
           <CardContent className="flex flex-wrap items-center justify-between gap-4 py-5">
             <div className="flex items-start gap-3">
-              <Calendar className="mt-0.5 h-5 w-5 text-amber-600" />
+              <Calendar className="mt-0.5 h-5 w-5 text-muted-foreground" />
               <div>
-                <div className="font-medium">Dein Plan ist abgelaufen</div>
+                <div className="font-medium">{t("expired.title")}</div>
                 <p className="text-sm text-muted-foreground">
-                  Du nutzt aktuell nur Free-Limits. Bestehende Daten bleiben
-                  erhalten — verlängere, um wieder das volle Kontingent zu
-                  bekommen.
+                  {t("expired.description")}
                 </p>
               </div>
             </div>
             <Button
               nativeButton={false}
-              render={<Link href="/billing/plans">Verlängern</Link>}
+              render={<Link href="/billing/plans">{t("expired.cta")}</Link>}
             />
           </CardContent>
         </Card>
       ) : null}
-    </div>
-  );
-}
-
-function Stat({
-  label,
-  value,
-}: {
-  label: string;
-  value: React.ReactNode;
-}) {
-  return (
-    <div className="rounded-xl border bg-card/60 p-4">
-      <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        {label}
-      </div>
-      <div className="mt-1 text-sm">{value}</div>
     </div>
   );
 }
