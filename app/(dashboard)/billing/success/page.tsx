@@ -1,6 +1,7 @@
 "use client";
 
 import { CheckCircle2, Loader2, XCircle } from "lucide-react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
@@ -24,16 +25,17 @@ export default function BillingSuccessPage() {
 type Phase = "capturing" | "success" | "error";
 
 function Inner() {
+  const t = useTranslations("billing.success");
+  const tErrors = useTranslations("errors.api.billing");
   const params = useSearchParams();
   const paypalOrderId = params.get("token"); // PayPal puts the order id in `token`
+  const missingTokenError = t("errors.missingToken");
   const [phase, setPhase] = useState<Phase>("capturing");
   const [error, setError] = useState<string | null>(null);
   const [invoiceId, setInvoiceId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!paypalOrderId) {
-      setPhase("error");
-      setError("PayPal hat keinen Order-Token mitgeliefert.");
       return;
     }
     let cancelled = false;
@@ -44,11 +46,19 @@ function Inner() {
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ paypalOrderId }),
         });
-        const data = await res.json().catch(() => ({ error: "Fehler" }));
+        const data = await res.json().catch(() => ({ error: t("errors.captureFailed") }));
         if (cancelled) return;
         if (!res.ok) {
+          const suffix =
+            typeof data?.details?.code === "string"
+              ? data.details.code.split(".").pop()
+              : null;
           setPhase("error");
-          setError(data.error ?? `Capture fehlgeschlagen (${res.status})`);
+          setError(
+            suffix && tErrors.has(suffix)
+              ? tErrors(suffix)
+              : data.error ?? t("errors.captureFailed"),
+          );
           return;
         }
         setInvoiceId(data.invoice?.id ?? null);
@@ -56,23 +66,47 @@ function Inner() {
       } catch (err) {
         if (cancelled) return;
         setPhase("error");
-        setError(err instanceof Error ? err.message : "Netzwerkfehler");
+        setError(err instanceof Error ? err.message : t("errors.network"));
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [paypalOrderId]);
+  }, [paypalOrderId, t, tErrors]);
+
+  if (!paypalOrderId) {
+    return (
+      <Card>
+        <CardHeader className="items-center text-center">
+          <XCircle className="mb-2 h-10 w-10 text-destructive" />
+          <CardTitle>{t("errorTitle")}</CardTitle>
+          <CardDescription>{missingTokenError}</CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-center">
+          <Button
+            className="w-full sm:w-auto"
+            nativeButton={false}
+            variant="outline"
+            render={<Link href="/billing">{t("backToBilling")}</Link>}
+          />
+          <Button
+            className="w-full sm:w-auto"
+            nativeButton={false}
+            render={<a href="mailto:hello@lokri.io">{t("contactSupport")}</a>}
+          />
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (phase === "capturing") {
     return (
       <Card>
         <CardHeader className="items-center text-center">
           <Loader2 className="mb-2 h-8 w-8 animate-spin text-muted-foreground" />
-          <CardTitle>Zahlung wird bestätigt…</CardTitle>
+          <CardTitle>{t("capturing.title")}</CardTitle>
           <CardDescription>
-            Wir holen die Bestätigung von PayPal und aktivieren deinen Plan.
-            Das dauert in der Regel 1–3 Sekunden.
+            {t("capturing.description")}
           </CardDescription>
         </CardHeader>
       </Card>
@@ -84,18 +118,18 @@ function Inner() {
       <Card>
         <CardHeader className="items-center text-center">
           <XCircle className="mb-2 h-10 w-10 text-destructive" />
-          <CardTitle>Etwas ist schiefgelaufen</CardTitle>
+          <CardTitle>{t("errorTitle")}</CardTitle>
           <CardDescription>{error}</CardDescription>
         </CardHeader>
         <CardContent className="flex items-center justify-center gap-2">
           <Button
             nativeButton={false}
             variant="outline"
-            render={<Link href="/billing">Zurück zu Billing</Link>}
+            render={<Link href="/billing">{t("backToBilling")}</Link>}
           />
           <Button
             nativeButton={false}
-            render={<a href="mailto:hello@lokri.io">Support anschreiben</a>}
+            render={<a href="mailto:hello@lokri.io">{t("contactSupport")}</a>}
           />
         </CardContent>
       </Card>
@@ -103,24 +137,23 @@ function Inner() {
   }
 
   return (
-    <Card className="overflow-hidden border-emerald-500/30 bg-gradient-to-br from-emerald-500/5 via-background to-teal-500/5">
+    <Card>
       <CardHeader className="items-center text-center">
         <CheckCircle2 className="mb-2 h-10 w-10 text-emerald-600 dark:text-emerald-400" />
-        <CardTitle className="font-display text-3xl leading-tight">
-          Zahlung bestätigt
+        <CardTitle className="text-3xl font-semibold tracking-tight leading-tight">
+          {t("title")}
         </CardTitle>
-        <CardDescription>
-          Dein Plan ist aktiv. Eine Rechnung liegt im Profil zum Download
-          bereit.
-        </CardDescription>
+        <CardDescription>{t("body")}</CardDescription>
       </CardHeader>
-      <CardContent className="flex flex-wrap items-center justify-center gap-2">
+      <CardContent className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-center">
         <Button
+          className="w-full sm:w-auto"
           nativeButton={false}
-          render={<Link href="/dashboard">Zum Dashboard</Link>}
+          render={<Link href="/dashboard">{t("backToDashboard")}</Link>}
         />
         {invoiceId ? (
           <Button
+            className="w-full sm:w-auto"
             variant="outline"
             nativeButton={false}
             render={
@@ -129,7 +162,7 @@ function Inner() {
                 target="_blank"
                 rel="noopener"
               >
-                Rechnung öffnen
+                {t("openInvoice")}
               </a>
             }
           />

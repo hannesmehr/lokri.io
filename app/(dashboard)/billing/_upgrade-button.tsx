@@ -1,6 +1,7 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,8 @@ interface Props {
  * approve URL. On return, `/billing/success` captures the order.
  */
 export function UpgradeButton({ planId, period, label, className }: Props) {
+  const t = useTranslations("billing.errors");
+  const tButton = useTranslations("billing.upgradeButton");
   const [loading, setLoading] = useState(false);
 
   async function go() {
@@ -28,14 +31,14 @@ export function UpgradeButton({ planId, period, label, className }: Props) {
     });
     if (!res.ok) {
       setLoading(false);
-      const data = await res.json().catch(() => ({ error: "Fehler" }));
-      toast.error(data.error ?? "PayPal-Bestellung fehlgeschlagen.");
+      const data = await res.json().catch(() => ({ error: t("createOrderFailed") }));
+      toast.error(data.error ?? t("createOrderFailed"));
       return;
     }
     const data: { approveUrl: string | null } = await res.json();
     if (!data.approveUrl) {
       setLoading(false);
-      toast.error("Keine Weiterleitungs-URL von PayPal erhalten.");
+      toast.error(t("noApproveUrl"));
       return;
     }
     window.location.href = data.approveUrl;
@@ -44,7 +47,7 @@ export function UpgradeButton({ planId, period, label, className }: Props) {
   return (
     <Button onClick={go} disabled={loading} className={className}>
       {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-      {loading ? "Öffne PayPal…" : label}
+      {loading ? tButton("opening") : label}
     </Button>
   );
 }
