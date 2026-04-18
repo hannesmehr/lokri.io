@@ -210,16 +210,14 @@ Cards im User-Bereich 350+ px breit — für kurzen Content (Label +
 3-stelligen Value + kurze Description) ist das zu luftig. `5xl`
 bringt Cards auf ~312 px — dichter, näher an Linear/Vercel.
 
-**List-Sections sitzen noch enger:** Activity-Sektion (Letzte Notes,
-Letzte Files) bekommt innerhalb des 5xl-Main-Containers nochmal ein
-eigenes `mx-auto max-w-4xl` (896 px), damit sie sich von den breiteren
-Summary-Widgets (Quick-Actions, KPI-Tiles in voller 5xl-Breite) optisch
-abgrenzt und schmale Rows (z.B. „Geöffnete Browser-Tabs · gestern")
-nicht in eine 470-px-Card fluten. Convention:
-
-- **Summary-Widgets** (Zahlen, Badges, Quick-Actions): volle Main-Breite
-- **List-Sections** (Notes, Files, Tokens, Invites): `mx-auto max-w-4xl`
-  zentriert unter dem Summary-Block
+**Alle Sektionen der Dashboard-Home laufen auf dieser vollen 5xl-
+Breite.** Eine frühere Iteration hatte List-Sections (Activity) per
+`mx-auto max-w-4xl` eingerückt, um das „zu luftig"-Gefühl bei wenigen
+Einträgen zu mildern — das erzeugte aber sichtbare Breiten-
+Inkonsistenz zwischen Sektionen gleicher Hierarchie. Verworfen im
+visuellen Review: **keine Per-Sektion-max-w-Einschränkung innerhalb
+des Main-Containers**. Wenn eine Sektion auf Desktop „leer" wirkt,
+ist das eine Content- oder Card-Design-Frage, keine Breiten-Frage.
 
 ### Grid-Layouts
 
@@ -229,7 +227,7 @@ Konventionen aus der Showcase:
 | --- | --- | --- | --- | --- |
 | Quick-Actions (3 Cards) | 1 col | 2 cols | 2 cols | 3 cols |
 | KPI-Tiles (mit Progress-Bar + Suffix) | 1 col | 1 col | 3 cols | 3 cols |
-| Activity-Cards (zentrierte List-Section, 2 Stück) | 1 col | 1 col | 1 col | 2 cols (im `max-w-4xl`-Wrapper) |
+| Activity-Cards (2 Stück) | 1 col | 1 col | 1 col | 2 cols |
 | Onboarding-Steps (3 Stück) | 1 col | 1 col | 3 cols | 3 cols |
 
 Faustregel: **„Breiter Content bleibt länger 1-spaltig."** Karten mit
@@ -451,10 +449,12 @@ wird oft übersehen), aber für User katastrophal.
   `z-40`, Admin `z-20`, Sheet-Overlay `z-50`. Daran halten.
 - [ ] **Container ohne max-width** — User-Seiten `max-w-5xl` (1024 px),
   Admin `max-w-6xl` (1152 px). Kein freies `w-full` auf Main-Content.
-- [ ] **List-Sections in voller Main-Breite** auf Desktop — Rows mit
-  kurzem Content (z.B. „Note-Titel · vor 3 Stunden") fluten sonst
-  in zu breite Cards. List-Sections bekommen `mx-auto max-w-4xl`
-  innerhalb des Main-Containers.
+- [ ] **Per-Sektion-max-w innerhalb des Main-Containers** — Sektionen
+  gleicher Hierarchie (Quick-Actions, KPIs, Activity, etc.) laufen
+  alle auf voller Main-Breite. Einzelne Sektionen zentriert-schmaler
+  zu machen erzeugt visuelle Einrückung, die als Bug wahrgenommen wird.
+  Falls eine Sektion auf Desktop „leer" wirkt, liegt's am Content/
+  Card-Design, nicht an der Breite.
 - [ ] **„Test bei 640, 768, 1024 war grün"** ist nicht ausreichend als
   Responsive-Nachweis. `pnpm audit:responsive` mit den 10 Zwischen-
   Breakpoint-Viewports **muss** vor Commit 0 Violations melden.
