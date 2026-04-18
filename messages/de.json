@@ -103,6 +103,67 @@
     }
   },
 
+  "confirmDialogs": {
+    "delete": {
+      "title": "Löschen bestätigen",
+      "description": "Möchtest du diesen Eintrag wirklich löschen?",
+      "confirm": "Löschen",
+      "cancel": "Abbrechen"
+    },
+    "revoke": {
+      "title": "Widerruf bestätigen",
+      "description": "Möchtest du diesen Zugriff wirklich widerrufen?",
+      "confirm": "Widerrufen",
+      "cancel": "Abbrechen"
+    },
+    "remove": {
+      "title": "Entfernen bestätigen",
+      "description": "Möchtest du diesen Eintrag wirklich entfernen?",
+      "confirm": "Entfernen",
+      "cancel": "Abbrechen"
+    },
+    "leave": {
+      "title": "Verlassen bestätigen",
+      "description": "Möchtest du diesen Bereich wirklich verlassen?",
+      "confirm": "Verlassen",
+      "cancel": "Abbrechen"
+    },
+    "disconnect": {
+      "title": "Trennen bestätigen",
+      "description": "Möchtest du diese Verbindung wirklich trennen?",
+      "confirm": "Trennen",
+      "cancel": "Abbrechen"
+    },
+    "defaults": {
+      "confirm": "Bestätigen",
+      "cancel": "Abbrechen"
+    }
+  },
+
+  "toasts": {
+    "success": {
+      "saved": "Gespeichert.",
+      "updated": "Aktualisiert.",
+      "deleted": "Gelöscht.",
+      "created": "Erstellt.",
+      "copied": "In die Zwischenablage kopiert.",
+      "sent": "Versendet."
+    },
+    "error": {
+      "generic": "Etwas ist schiefgelaufen.",
+      "networkFailed": "Netzwerkfehler. Bitte erneut versuchen.",
+      "unauthorized": "Du bist nicht berechtigt.",
+      "notFound": "Nicht gefunden.",
+      "validation": "Eingabe ungültig."
+    },
+    "loading": {
+      "saving": "Speichern…",
+      "deleting": "Löschen…",
+      "uploading": "Hochladen…",
+      "loading": "Laden…"
+    }
+  },
+
   "enums": {
     "role": {
       "owner": "Owner",
@@ -161,6 +222,11 @@
         "forbidden": "Du hast nicht die nötigen Rechte.",
         "sessionExpired": "Sitzung abgelaufen — bitte erneut anmelden."
       },
+      "session": {
+        "accountDisabled": "Dein Konto ist gesperrt. Wende dich an den Support.",
+        "sessionExpired": "Deine Session ist abgelaufen. Bitte erneut anmelden.",
+        "invalidCredentials": "Ungültige Anmeldedaten."
+      },
       "quota": {
         "exceeded": "Quota überschritten: {reason}",
         "filesExceeded": "Datei-Limit des Plans erreicht.",
@@ -173,6 +239,19 @@
         "connectionFailed": "Verbindungstest fehlgeschlagen: {reason}",
         "readOnly": "Dieser Provider ist read-only — Schreibzugriff nicht möglich.",
         "fileNotFound": "Datei nicht gefunden."
+      },
+      "storageProvider": {
+        "notFound": "Storage-Provider nicht gefunden.",
+        "invalidType": "Ungültiger Storage-Provider-Typ.",
+        "missingCredentials": "Zugangsdaten fehlen.",
+        "connectionFailed": "Verbindung zum Provider fehlgeschlagen.",
+        "inUse": "Storage-Provider wird noch verwendet und kann nicht gelöscht werden.",
+        "github": {
+          "invalidToken": "GitHub-Token ungültig oder abgelaufen.",
+          "insufficientScope": "GitHub-Token hat nicht die benötigten Berechtigungen.",
+          "repoNotFound": "Repository nicht gefunden oder nicht zugänglich.",
+          "rateLimit": "GitHub-Rate-Limit erreicht. Bitte später erneut versuchen."
+        }
       },
       "team": {
         "createDisabled": "Team-Erstellung ist derzeit nicht freigeschaltet.",

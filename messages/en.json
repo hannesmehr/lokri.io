@@ -103,6 +103,67 @@
     }
   },
 
+  "confirmDialogs": {
+    "delete": {
+      "title": "Confirm deletion",
+      "description": "Do you really want to delete this item?",
+      "confirm": "Delete",
+      "cancel": "Cancel"
+    },
+    "revoke": {
+      "title": "Confirm revocation",
+      "description": "Do you really want to revoke this access?",
+      "confirm": "Revoke",
+      "cancel": "Cancel"
+    },
+    "remove": {
+      "title": "Confirm removal",
+      "description": "Do you really want to remove this item?",
+      "confirm": "Remove",
+      "cancel": "Cancel"
+    },
+    "leave": {
+      "title": "Confirm leaving",
+      "description": "Do you really want to leave this area?",
+      "confirm": "Leave",
+      "cancel": "Cancel"
+    },
+    "disconnect": {
+      "title": "Confirm disconnect",
+      "description": "Do you really want to disconnect this connection?",
+      "confirm": "Disconnect",
+      "cancel": "Cancel"
+    },
+    "defaults": {
+      "confirm": "Confirm",
+      "cancel": "Cancel"
+    }
+  },
+
+  "toasts": {
+    "success": {
+      "saved": "Saved.",
+      "updated": "Updated.",
+      "deleted": "Deleted.",
+      "created": "Created.",
+      "copied": "Copied to clipboard.",
+      "sent": "Sent."
+    },
+    "error": {
+      "generic": "Something went wrong.",
+      "networkFailed": "Network error. Please try again.",
+      "unauthorized": "You are not authorized.",
+      "notFound": "Not found.",
+      "validation": "Invalid input."
+    },
+    "loading": {
+      "saving": "Saving…",
+      "deleting": "Deleting…",
+      "uploading": "Uploading…",
+      "loading": "Loading…"
+    }
+  },
+
   "enums": {
     "role": {
       "owner": "Owner",
@@ -161,6 +222,11 @@
         "forbidden": "You lack the required permissions.",
         "sessionExpired": "Session expired — please sign in again."
       },
+      "session": {
+        "accountDisabled": "Your account is disabled. Contact support.",
+        "sessionExpired": "Your session has expired. Please sign in again.",
+        "invalidCredentials": "Invalid credentials."
+      },
       "quota": {
         "exceeded": "Quota exceeded: {reason}",
         "filesExceeded": "Plan's file limit reached.",
@@ -173,6 +239,19 @@
         "connectionFailed": "Connection test failed: {reason}",
         "readOnly": "This provider is read-only — writes are not allowed.",
         "fileNotFound": "File not found."
+      },
+      "storageProvider": {
+        "notFound": "Storage provider not found.",
+        "invalidType": "Invalid storage provider type.",
+        "missingCredentials": "Credentials are missing.",
+        "connectionFailed": "Connection to the provider failed.",
+        "inUse": "Storage provider is still in use and cannot be deleted.",
+        "github": {
+          "invalidToken": "GitHub token is invalid or expired.",
+          "insufficientScope": "GitHub token does not have the required permissions.",
+          "repoNotFound": "Repository not found or not accessible.",
+          "rateLimit": "GitHub rate limit reached. Please try again later."
+        }
       },
       "team": {
         "createDisabled": "Team creation is currently not enabled for you.",
