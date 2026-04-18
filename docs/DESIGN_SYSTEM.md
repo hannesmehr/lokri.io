@@ -199,6 +199,18 @@ Tailwind-Defaults — keine Custom-Schwellen.
 In der Dashboard-Home-Showcase nutzen wir alle vier unteren Tiers
 aktiv; `xl:` ist bisher nicht gebraucht.
 
+### Content-Max-Width
+
+User-Bereich: `max-w-5xl` (64 rem = 1024 px) auf Header-Innencontainer
+und Main-Container. Admin-Bereich bleibt auf `max-w-6xl` (72 rem =
+1152 px), weil Admin-Seiten data-dense sind.
+
+Begründung: bei `max-w-6xl` und 3-Spalten-Grids wurden die einzelnen
+Cards im User-Bereich 350+ px breit — für kurzen Content (Label +
+3-stelligen Value + kurze Description) ist das zu luftig. `5xl`
+bringt Cards auf 310 px, Activity-Listen auf 470 px — dichter, näher
+an Linear/Vercel.
+
 ### Grid-Layouts
 
 Konventionen aus der Showcase:
@@ -206,15 +218,18 @@ Konventionen aus der Showcase:
 | Kontext | Mobile | sm (640+) | md (768+) | lg (1024+) |
 | --- | --- | --- | --- | --- |
 | Quick-Actions (3 Cards) | 1 col | 2 cols | 2 cols | 3 cols |
-| KPI-Tiles (schmal, 3 Stück) | 1 col | 3 cols | 3 cols | 3 cols |
+| KPI-Tiles (mit Progress-Bar + Suffix) | 1 col | 1 col | 3 cols | 3 cols |
 | Activity-Cards (breit, 2 Stück) | 1 col | 1 col | 1 col | 2 cols |
 | Onboarding-Steps (3 Stück) | 1 col | 1 col | 3 cols | 3 cols |
 
-Faustregel: **Kärtchen mit schmalem Content** (KPI-Tiles, Chips) dürfen
-früher auf mehrspaltig umschalten. **Karten mit breitem Content** (List-
-Container, Rich-Cards) bleiben länger 1-spaltig und brechen erst bei
-`lg:` auf 2 Spalten um. Niemals von 1 → 3 in einem Schritt — das bricht
-visuell unsauber auf 2+1-Reihen.
+Faustregel: **„Breiter Content bleibt länger 1-spaltig."** Karten mit
+mehr als einem Info-Element (z.B. Label + Value + Suffix + Progress-Bar
+wie bei den KPI-Tiles) brechen erst bei `md:` auf 3 Spalten um — auf
+Tablet-Portrait (640–767) würden sie sonst zu schmal, Text bricht um,
+Value und Suffix verrutschen. Die etwas schmaleren QuickAction-Cards
+(nur Icon + Label + Description) dürfen ab `sm:` auf 2 Spalten, weil
+kein Umbruch-Risiko besteht. Niemals direkt von 1 → 3 in einem Schritt
+— produziert auf der sm-Stufe ein hässliches 2+1-Waisenkind.
 
 ### Typografie pro Breakpoint
 
@@ -265,9 +280,13 @@ haben (iOS-HIG). Konkret in unserem Codebase:
 
 ### Mobile-Nav-Pattern
 
-Die Top-Nav kollabiert auf `< md` zu einem Hamburger-Trigger +
-Left-Sliding Sheet-Drawer. Die horizontale Nav-Liste ist `hidden md:flex`,
-der Hamburger `md:hidden`. Referenz-Implementierung:
+Die Top-Nav kollabiert auf `< lg` zu einem Hamburger-Trigger +
+Left-Sliding Sheet-Drawer. Die horizontale Nav-Liste ist `hidden
+lg:flex`, der Hamburger `lg:hidden`. Die Grenze liegt bewusst bei
+`lg:` (1024): im 640–1023-Fenster (Phones-Landscape + Tablets) haben
+4 Nav-Links + Search-Trigger + Account-Switcher + Theme + User-Menu
+schlicht keinen Platz, selbst nach Kompaktierung — Hamburger-Nav auf
+iPad ist etabliertes Pattern. Referenz-Implementierung:
 
 ```tsx
 // app/(dashboard)/_mobile-nav.tsx
@@ -279,7 +298,7 @@ der Hamburger `md:hidden`. Referenz-Implementierung:
         aria-label="Navigation öffnen"
         className="inline-flex h-10 w-10 items-center justify-center
                    rounded-md text-muted-foreground transition-colors
-                   hover:bg-muted hover:text-foreground md:hidden"
+                   hover:bg-muted hover:text-foreground lg:hidden"
       >
         <Menu className="h-5 w-5" />
       </button>
@@ -305,7 +324,7 @@ der Hamburger `md:hidden`. Referenz-Implementierung:
 </Sheet>
 ```
 
-Gleiches Pattern greift in der Admin-Sidebar: statisch `hidden lg:flex`,
+Die Admin-Sidebar nutzt dieselbe Schwelle: statisch `hidden lg:flex`,
 darunter `AdminMobileNavTrigger` als Hamburger + Drawer.
 
 **Controls, die im Drawer-Zustand sichtbar bleiben müssen:** Logo (als
@@ -360,11 +379,18 @@ Folge-Seite zu erfinden.
   `h-8 w-8` sind)
 - [ ] **Body-Text kleiner als `text-sm` (14 px)** auf Mobile (außer
   bewusste Mono-Captions mit `font-mono text-[11px]` o.ä.)
-- [ ] **Grid, das von 1 direkt auf 3 Spalten springt** ohne
-  Zwischenstufe (außer bei schmalen KPI-Tiles, wo 3-across auf 640+
-  bewusst passt)
+- [ ] **Content-dichte Cards (Label + Value + Suffix + Progress)**, die
+  ab `sm:` schon 3-spaltig werden — solche Cards brauchen mind. `md:`
+  (siehe Grid-Matrix). Auf Tablet-Portrait wirkt sonst der Value-
+  Umbruch beim Stacking mit den Nachbar-Cards zusammen chaotisch.
+- [ ] **Value + Suffix inline in KPI-Cards** (`<span>42</span> <span
+  className="text-sm">von 100</span>` auf gleicher Baseline) — das
+  bricht bei schmalen Cards um. Stattdessen: Value eigene Zeile,
+  Suffix `mt-1 text-xs` darunter.
 - [ ] **Sticky-Header ohne `z-index`-Plan** — aktuell nutzen User-Header
   `z-40`, Admin `z-20`, Sheet-Overlay `z-50`. Daran halten.
+- [ ] **Container ohne max-width** — User-Seiten `max-w-5xl` (1024 px),
+  Admin `max-w-6xl` (1152 px). Kein freies `w-full` auf Main-Content.
 - [ ] **Elemente, die nur in einem Theme gut aussehen** — muss beides
   testen, nicht nur eins
 

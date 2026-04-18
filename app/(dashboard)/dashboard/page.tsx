@@ -117,12 +117,14 @@ export default async function DashboardPage() {
         />
       </div>
 
-      {/* Kontingent — 1 col Mobile, 3 cols ab sm (schmale KPI-Tiles dürfen eng) */}
+      {/* Kontingent — 1 col bis md, 3 cols ab md (768+).
+          sm:grid-cols-3 war zu eng: „544.0 KB" + „von 20.0 MB" brach
+          bei 640–767px Card-Breite um. Ab 768px fits wieder sauber. */}
       <section className="space-y-3">
         <h2 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           Kontingent
         </h2>
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 md:grid-cols-3">
           <KpiCard
             label="Storage"
             value={formatBytes(quota.usedBytes)}

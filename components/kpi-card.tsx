@@ -6,8 +6,11 @@ import { cn } from "@/lib/utils";
  *
  * Drei Bausteine von oben nach unten:
  *   1. Eyebrow-Label (uppercase, small, muted)
- *   2. Hauptwert — groß, tabular-nums, optional mit Suffix daneben
- *   3. Optional Progress-Bar mit kleinem Prozent-Label rechts
+ *   2. Hauptwert — groß, tabular-nums, eigene Zeile
+ *   3. Optional Suffix (z.B. „von 20 GB") als eigene Zeile darunter —
+ *      nicht baseline-inline, damit schmale Cards den Value nicht
+ *      umbrechen („544.0" / „KB" auf zwei Zeilen war die Regression)
+ *   4. Optional Progress-Bar mit kleinem Prozent-Label rechts
  *
  * Progress-Farbe wechselt bei >80 % auf Amber, bei >95 % auf Destructive
  * — die einzigen zwei legitimen Tailwind-Hardcoded-Farben im User-
@@ -65,14 +68,12 @@ export function KpiCard({
       <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
         {label}
       </div>
-      <div className="mt-2 flex items-baseline gap-2">
-        <div className="text-3xl font-semibold tabular-nums leading-none">
-          {value}
-        </div>
-        {valueSuffix ? (
-          <div className="text-sm text-muted-foreground">{valueSuffix}</div>
-        ) : null}
+      <div className="mt-2 text-3xl font-semibold tabular-nums leading-none">
+        {value}
       </div>
+      {valueSuffix ? (
+        <div className="mt-1 text-xs text-muted-foreground">{valueSuffix}</div>
+      ) : null}
       {pct != null ? (
         <div className="mt-4 space-y-1">
           <div

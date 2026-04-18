@@ -61,7 +61,7 @@ export default async function DashboardLayout({
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur-md">
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-2 px-4 py-3 sm:gap-4 sm:px-6">
+        <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-2 px-4 py-3 sm:gap-4 sm:px-6">
           <div className="flex min-w-0 items-center gap-2 sm:gap-4">
             <MobileNav items={NAV} />
             <Link
@@ -79,10 +79,13 @@ export default async function DashboardLayout({
               activeAccountName={account?.name ?? "lokri.io"}
               canCreateTeams={userRow?.canCreateTeams ?? false}
             />
-            {/* Horizontal nav ab md (768); darunter bleibt die Nav im
-                MobileNav-Drawer, damit Nav + Search-Trigger sich nicht
-                auf schmalen Tablet-Portrait-Breiten überlappen. */}
-            <nav className="hidden items-center gap-1 md:flex">
+            {/* Horizontal nav ab lg (1024). Darunter bleibt die Nav
+                im MobileNav-Drawer — auf Tablet-Portrait und schmalen
+                Tablet-Landscape-Größen haben Nav-Links + Search-
+                Trigger schlicht keinen Platz, selbst nach Kompaktierung
+                (verifiziert via getBoundingClientRect bei 686/720/768).
+                Hamburger bis 1023 ist etabliertes iPad-Pattern. */}
+            <nav className="hidden items-center gap-1 lg:flex">
               {NAV.map((item) => (
                 <NavLink key={item.href} href={item.href}>
                   {item.label}
@@ -100,7 +103,7 @@ export default async function DashboardLayout({
           </div>
         </div>
       </header>
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
         {children}
       </main>
       <SearchPalette />

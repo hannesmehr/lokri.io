@@ -20,8 +20,10 @@ interface NavItem {
 
 /**
  * Mobile-Nav — Hamburger-Trigger + Side-Sheet mit den Dashboard-Nav-
- * Links. Nur auf < sm sichtbar; auf sm+ sitzt die horizontale Nav
- * direkt in der Top-Bar.
+ * Links. Sichtbar bis < lg (1024); ab lg übernimmt die horizontale
+ * Nav-Liste direkt in der Top-Bar. Die Grenze liegt bewusst bei lg:
+ * im 640–1023-Fenster ist Hamburger-Nav etablierter iPad-Pattern und
+ * vermeidet jeglichen Nav-vs-Search-Trigger-Engpass.
  *
  * Das Panel ist bewusst schlicht: Titel („Navigation"), Link-Liste,
  * keine Sekundär-Aktionen. Sprach-/Account-/Theme-Controls bleiben in
@@ -38,7 +40,7 @@ export function MobileNav({ items }: { items: NavItem[] }) {
           <button
             type="button"
             aria-label="Navigation öffnen"
-            className="inline-flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground md:hidden"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground lg:hidden"
           >
             <Menu className="h-5 w-5" />
           </button>
