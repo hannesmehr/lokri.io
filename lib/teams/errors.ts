@@ -13,7 +13,10 @@ export type TeamErrorCode =
   | "NOT_FOUND" // team doesn't exist or user isn't a member
   | "FORBIDDEN" // role insufficient
   | "ALREADY_MEMBER"
-  | "OWNER_PROTECTED"; // can't remove / demote the sole owner
+  | "OWNER_PROTECTED" // can't remove / demote the sole owner
+  | "OWNER_TRANSFER_SELF" // can't transfer to yourself
+  | "OWNER_TRANSFER_NOT_ADMIN" // target must already be admin
+  | "OWNER_TRANSFER_NOT_OWNER"; // caller claims to be owner but isn't
 
 export class TeamError extends Error {
   readonly code: TeamErrorCode;
@@ -38,7 +41,11 @@ export function teamErrorStatus(code: TeamErrorCode): number {
     case "NAME_REQUIRED":
     case "NAME_TOO_LONG":
     case "NAME_MISMATCH":
+    case "OWNER_TRANSFER_SELF":
+    case "OWNER_TRANSFER_NOT_ADMIN":
       return 400;
+    case "OWNER_TRANSFER_NOT_OWNER":
+      return 403;
     default:
       return 400;
   }

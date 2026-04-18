@@ -19,6 +19,10 @@ import { Label } from "@/components/ui/label";
 import { formatDate } from "@/lib/i18n/formatters";
 import type { Locale } from "@/lib/i18n/config";
 
+/** Sentinel value used in the role-select dropdown to trigger the
+ *  ownership-transfer flow instead of a plain role change. */
+const TRANSFER_SENTINEL = "__transfer__";
+
 interface Member {
   userId: string;
   name: string;
@@ -43,9 +47,13 @@ export function MembersTable({
   const router = useRouter();
   const locale = useLocale() as Locale;
   const t = useTranslations("settings.team.members");
+  const tTransfer = useTranslations(
+    "settings.team.members.transferOwnership",
+  );
   const tRoles = useTranslations("enums.role");
   const [busy, setBusy] = useState<string | null>(null);
   const [showInvite, setShowInvite] = useState(false);
+  const [transferTarget, setTransferTarget] = useState<Member | null>(null);
 
   async function changeRole(userId: string, nextRole: string) {
     setBusy(userId);
@@ -64,6 +72,51 @@ export function MembersTable({
       return;
     }
     toast.success(t("roleChanged"));
+    router.refresh();
+  }
+
+  /**
+   * Wrapper around the native select's onChange. Intercepts the sentinel
+   * so picking "→ Transfer ownership" opens the confirm dialog instead
+   * of patching the role straight to itself (`admin → admin` is a no-op
+   * anyway, and we want the warning).
+   */
+  function handleRoleSelect(m: Member, next: string) {
+    if (next === TRANSFER_SENTINEL) {
+      setTransferTarget(m);
+      return;
+    }
+    void changeRole(m.userId, next);
+  }
+
+  async function confirmTransfer() {
+    if (!transferTarget) return;
+    setBusy(transferTarget.userId);
+    const res = await fetch(`/api/teams/${teamId}/transfer-ownership`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ newOwnerUserId: transferTarget.userId }),
+    });
+    setBusy(null);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      const code = body?.details?.code;
+      const key =
+        code === "OWNER_TRANSFER_NOT_ADMIN"
+          ? "notAdmin"
+          : code === "OWNER_TRANSFER_SELF"
+            ? "selfTransfer"
+            : code === "OWNER_TRANSFER_NOT_OWNER"
+              ? "notOwner"
+              : "generic";
+      toast.error(tTransfer(`errors.${key}`));
+      return;
+    }
+    const target = transferTarget;
+    setTransferTarget(null);
+    toast.success(
+      tTransfer("success", { name: target.name || target.email }),
+    );
     router.refresh();
   }
 
@@ -112,8 +165,11 @@ export function MembersTable({
             {members.map((m) => {
               const isSelf = m.userId === currentUserId;
               const isOwner = m.role === "owner";
-              const canChangeThisRole =
-                canManage && !isSelf && !(isOwner && currentUserRole !== "owner");
+              // Owners are never edited via plain PATCH — transfer is
+              // the only path in / out of the owner role, and it has
+              // its own confirm dialog. The select is rendered only for
+              // non-owners managed by an admin+.
+              const canChangeThisRole = canManage && !isSelf && !isOwner;
               return (
                 <tr key={m.userId}>
                   <td className="py-2 pr-3">
@@ -131,16 +187,21 @@ export function MembersTable({
                     {canChangeThisRole ? (
                       <select
                         value={m.role}
-                        onChange={(e) => void changeRole(m.userId, e.target.value)}
+                        onChange={(e) => handleRoleSelect(m, e.target.value)}
                         disabled={busy === m.userId}
                         className="rounded-md border bg-background px-2 py-1 text-xs"
                       >
-                        {currentUserRole === "owner" ? (
-                          <option value="owner">{tRoles("owner")}</option>
-                        ) : null}
+                        {/* Owner option is only reachable via transfer — we
+                            don't offer a plain "set → owner" path because
+                            the intent should go through the confirm dialog. */}
                         <option value="admin">{tRoles("admin")}</option>
                         <option value="member">{tRoles("member")}</option>
                         <option value="viewer">{tRoles("viewer")}</option>
+                        {currentUserRole === "owner" && m.role === "admin" ? (
+                          <option value={TRANSFER_SENTINEL}>
+                            {tTransfer("menuItem")}
+                          </option>
+                        ) : null}
                       </select>
                     ) : (
                       <span className="inline-flex items-center gap-1 text-xs">
@@ -185,6 +246,43 @@ export function MembersTable({
         open={showInvite}
         onOpenChange={setShowInvite}
       />
+
+      <Dialog
+        open={transferTarget !== null}
+        onOpenChange={(v) => !v && setTransferTarget(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{tTransfer("dialogTitle")}</DialogTitle>
+            <DialogDescription>
+              {transferTarget
+                ? tTransfer("dialogBody", {
+                    name: transferTarget.name || transferTarget.email,
+                  })
+                : ""}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => setTransferTarget(null)}
+              disabled={busy !== null}
+            >
+              {tTransfer("cancel")}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmTransfer}
+              disabled={busy !== null}
+            >
+              {busy !== null ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : null}
+              {busy !== null ? tTransfer("submitting") : tTransfer("submit")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -649,7 +649,22 @@
         "ownerBadge": "Owner",
         "cannotDemoteOwner": "Owner kann nicht degradiert werden, solange kein anderer Owner existiert.",
         "cannotRemoveOwner": "Owner kann nicht entfernt werden.",
-        "cannotRemoveSelf": "Du kannst dich nicht selbst entfernen."
+        "cannotRemoveSelf": "Du kannst dich nicht selbst entfernen.",
+        "transferOwnership": {
+          "menuItem": "→ Owner übertragen",
+          "dialogTitle": "Owner-Rolle übertragen",
+          "dialogBody": "Du überträgst die Owner-Rolle an {name}. Nach der Übertragung bist du Admin und kannst Billing sowie Team-Löschung nicht mehr steuern. Fortfahren?",
+          "submit": "Übertragen",
+          "submitting": "Übertrage…",
+          "cancel": "Abbrechen",
+          "success": "Owner-Rolle übertragen an {name}.",
+          "errors": {
+            "notAdmin": "Zieluser muss zunächst zum Admin gemacht werden.",
+            "selfTransfer": "Du kannst die Rolle nicht an dich selbst übertragen.",
+            "notOwner": "Nur der aktuelle Owner kann die Rolle übertragen.",
+            "generic": "Übertragung fehlgeschlagen."
+          }
+        }
       },
       "invites": {
         "pendingTitle": "Ausstehende Einladungen",

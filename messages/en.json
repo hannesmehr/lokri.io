@@ -649,7 +649,22 @@
         "ownerBadge": "Owner",
         "cannotDemoteOwner": "The sole owner cannot be demoted.",
         "cannotRemoveOwner": "The owner cannot be removed.",
-        "cannotRemoveSelf": "You cannot remove yourself."
+        "cannotRemoveSelf": "You cannot remove yourself.",
+        "transferOwnership": {
+          "menuItem": "→ Transfer ownership",
+          "dialogTitle": "Transfer ownership",
+          "dialogBody": "You are transferring the owner role to {name}. After the transfer you will be an admin and can no longer manage billing or delete the team. Continue?",
+          "submit": "Transfer",
+          "submitting": "Transferring…",
+          "cancel": "Cancel",
+          "success": "Ownership transferred to {name}.",
+          "errors": {
+            "notAdmin": "The target user must be promoted to admin first.",
+            "selfTransfer": "You cannot transfer ownership to yourself.",
+            "notOwner": "Only the current owner can transfer ownership.",
+            "generic": "Transfer failed."
+          }
+        }
       },
       "invites": {
         "pendingTitle": "Pending invitations",
