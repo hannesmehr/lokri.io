@@ -58,7 +58,7 @@ Tailwind-Nutzung:
 
 ### Legacy: `.font-display`
 
-Diese Klasse wurde in Phase 0 auf `Instrument Serif` gelegt. In Phase 1 ist sie **intern auf Sans umgebogen** (siehe `globals.css`): Geist Sans + `font-weight: 600` + `letter-spacing: -0.02em`. Damit sehen alle 37 Call-Sites sofort modern aus, ohne dass wir jede Datei anfassen. Der Phase-2-Rollout räumt die Klasse dann weg und ersetzt sie durch explizite Tailwind-Klassen (`font-semibold text-tighter`).
+Im User-Scope wird `.font-display` nicht mehr verwendet. Die Klasse bleibt aktuell nur noch als Back-compat-Layer für den Admin-Scope in `app/globals.css`, bis das Admin-Redesign separat durchgezogen wird.
 
 **Neuen Code:** Nicht mehr auf `.font-display` verlassen — stattdessen `font-semibold tracking-tight` nutzen.
 
@@ -542,7 +542,7 @@ Für neue Components: **immer beides testen**. Abkürzung im Dev: Toggle im UI +
 
 ## Migration-Hinweise
 
-- Alte `font-display`-Calls funktionieren weiter (sehen jetzt nur Sans statt Serif aus). Neuer Code nutzt `font-semibold tracking-tight`.
+- Im User-Scope sind die alten `font-display`-Calls entfernt. Admin nutzt die Klasse aktuell noch übergangsweise weiter.
 - Alte hardcoded Farben (`text-indigo-700`, `bg-amber-50` etc.) werden im Rollout stufenweise gegen semantische Tokens getauscht. Neuer Code: **nie** hardcoded Tailwind-Farben.
 - `--font-serif` + `--font-heading` sind aus `globals.css` entfernt. Alte Tailwind-Klasse `font-serif` / `font-heading` rendert jetzt auf System-Default-Serif — taucht im Code aktuell nicht auf, also unkritisch.
 
