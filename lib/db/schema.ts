@@ -91,6 +91,14 @@ export const users = pgTable("users", {
    * themselves; checked server-side via `requireAdminSession`.
    */
   isAdmin: boolean("is_admin").notNull().default(false),
+  /**
+   * Soft-disable marker. Non-null ⇒ the user is locked out:
+   * `requireSession` rejects, Better-Auth `beforeSignIn` hook blocks
+   * new sessions. The timestamp itself is admin-facing (audit +
+   * "disabled since") — we don't key enforcement off the value, only
+   * off its presence.
+   */
+  disabledAt: timestamp("disabled_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

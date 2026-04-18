@@ -8,7 +8,12 @@ import {
   type MemberRole,
 } from "@/lib/auth/roles";
 import { db } from "@/lib/db";
-import { ownerAccountMembers, ownerAccounts, users } from "@/lib/db/schema";
+import {
+  ownerAccountMembers,
+  ownerAccounts,
+  sessions,
+  users,
+} from "@/lib/db/schema";
 
 const FREE_PLAN_ID = "free";
 
@@ -20,6 +25,26 @@ export { ApiAuthError };
 export async function requireSession(): Promise<AuthSession> {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) throw new ApiAuthError();
+
+  // Soft-disabled guard. Admins can lock a user via
+  // `/admin/users/[id]` → disable; `disabled_at` is set on the row. A
+  // disabled user with a still-valid session cookie would otherwise
+  // keep working until TTL expiry — unacceptable. Check the flag here
+  // and, if set, kill every session of the user and reject with 403.
+  //
+  // Cheap single-indexed lookup by PK. Runs on every authenticated
+  // request, but the existing per-request DB load (Drizzle pool + Neon
+  // HTTP) swallows this comfortably.
+  const [userRow] = await db
+    .select({ disabledAt: users.disabledAt })
+    .from(users)
+    .where(eq(users.id, session.user.id))
+    .limit(1);
+  if (userRow?.disabledAt) {
+    await db.delete(sessions).where(eq(sessions.userId, session.user.id));
+    throw new ApiAuthError("Konto gesperrt", 403);
+  }
+
   return session as AuthSession;
 }
 

@@ -1,0 +1,23 @@
+import { Breadcrumbs } from "../../_breadcrumbs";
+import { UsersExplorer } from "./_explorer";
+
+/**
+ * Admin-Seite Benutzerliste. Kapselt nur Layout-Rand + Breadcrumbs;
+ * die komplette Interaktion (Suche, Filter, SWR, Toggle, Pagination)
+ * lebt im Client-Island `UsersExplorer`.
+ */
+export default function AdminUsersPage() {
+  return (
+    <div className="space-y-6">
+      <Breadcrumbs items={[{ label: "User" }]} />
+      <div>
+        <h1 className="font-display text-3xl leading-tight">User-Verwaltung</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Alle User im System. Suche über Email + Name, Filter für Admin-
+          Status, Team-Ersteller und Verifizierung.
+        </p>
+      </div>
+      <UsersExplorer />
+    </div>
+  );
+}
