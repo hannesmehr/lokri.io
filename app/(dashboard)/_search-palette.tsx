@@ -92,109 +92,6 @@ interface CommandDef {
   keywords?: string[];
 }
 
-const COMMANDS: CommandDef[] = [
-  {
-    id: "nav-home",
-    label: "Dashboard",
-    icon: Home,
-    run: (r) => r.push("/dashboard"),
-    keywords: ["start", "übersicht"],
-  },
-  {
-    id: "nav-spaces",
-    label: "Spaces",
-    icon: Folder,
-    run: (r) => r.push("/spaces"),
-  },
-  {
-    id: "nav-notes",
-    label: "Notes",
-    icon: StickyNote,
-    run: (r) => r.push("/notes"),
-  },
-  {
-    id: "nav-files",
-    label: "Files",
-    icon: FileText,
-    run: (r) => r.push("/files"),
-  },
-  {
-    id: "action-new-note",
-    label: "Neue Note",
-    icon: Plus,
-    run: (r) => r.push("/notes/new"),
-    keywords: ["create", "neu", "add"],
-  },
-  {
-    id: "action-new-space",
-    label: "Neuen Space anlegen",
-    icon: Plus,
-    run: (r) => r.push("/spaces"),
-    hint: "Spaces-Seite öffnen",
-    keywords: ["create", "neu", "add"],
-  },
-  {
-    id: "nav-profile",
-    label: "Profil",
-    icon: User,
-    run: (r) => r.push("/profile"),
-    keywords: ["account", "einstellungen", "2fa"],
-  },
-  {
-    id: "nav-billing",
-    label: "Billing",
-    icon: CreditCard,
-    run: (r) => r.push("/billing"),
-    keywords: ["plan", "rechnung", "payment"],
-  },
-  {
-    id: "nav-settings",
-    label: "Einstellungen",
-    icon: Settings,
-    run: (r) => r.push("/settings"),
-    keywords: ["config", "storage", "mcp"],
-  },
-  {
-    id: "nav-storage",
-    label: "Storage-Provider",
-    icon: HardDrive,
-    run: (r) => r.push("/settings/storage"),
-    keywords: ["s3", "bucket", "external"],
-  },
-  {
-    id: "nav-mcp",
-    label: "MCP-Verbindung einrichten",
-    icon: Zap,
-    run: (r) => r.push("/settings/mcp"),
-    keywords: ["claude", "cursor", "chatgpt", "token"],
-  },
-  {
-    id: "nav-impressum",
-    label: "Impressum",
-    icon: BookOpenText,
-    run: (r) => r.push("/impressum"),
-    keywords: ["legal", "kontakt"],
-  },
-  {
-    id: "nav-datenschutz",
-    label: "Datenschutz",
-    icon: BookOpenText,
-    run: (r) => r.push("/datenschutz"),
-    keywords: ["privacy", "dsgvo", "gdpr"],
-  },
-  {
-    id: "action-logout",
-    label: "Abmelden",
-    icon: LogOut,
-    run: async (r) => {
-      await signOut();
-      r.push("/login");
-      r.refresh();
-    },
-    keywords: ["logout", "sign out"],
-  },
-];
-
 const DEBOUNCE_MS = 220;
 const MIN_SEMANTIC_CHARS = 3;
 
@@ -217,7 +114,7 @@ function score(haystack: string, needle: string): number | null {
 
 export function SearchPalette() {
   const router = useRouter();
-  const t = useTranslations("common.search");
+  const t = useTranslations("search");
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [data, setData] = useState<PaletteData | null>(null);
@@ -225,6 +122,112 @@ export function SearchPalette() {
   const [semanticLoading, setSemanticLoading] = useState(false);
   const dataLoadedRef = useRef(false);
   const abortRef = useRef<AbortController | null>(null);
+
+  const commands = useMemo<CommandDef[]>(
+    () => [
+      {
+        id: "nav-home",
+        label: t("commands.navHome.label"),
+        icon: Home,
+        run: (r) => r.push("/dashboard"),
+        keywords: t("commands.navHome.keywords").split(" "),
+      },
+      {
+        id: "nav-spaces",
+        label: t("groups.spaces"),
+        icon: Folder,
+        run: (r) => r.push("/spaces"),
+      },
+      {
+        id: "nav-notes",
+        label: t("groups.notes"),
+        icon: StickyNote,
+        run: (r) => r.push("/notes"),
+      },
+      {
+        id: "nav-files",
+        label: t("groups.files"),
+        icon: FileText,
+        run: (r) => r.push("/files"),
+      },
+      {
+        id: "action-new-note",
+        label: t("commands.newNote.label"),
+        icon: Plus,
+        run: (r) => r.push("/notes/new"),
+        keywords: t("commands.newNote.keywords").split(" "),
+      },
+      {
+        id: "action-new-space",
+        label: t("commands.newSpace.label"),
+        icon: Plus,
+        run: (r) => r.push("/spaces"),
+        hint: t("commands.newSpace.hint"),
+        keywords: t("commands.newSpace.keywords").split(" "),
+      },
+      {
+        id: "nav-profile",
+        label: t("commands.profile.label"),
+        icon: User,
+        run: (r) => r.push("/profile"),
+        keywords: t("commands.profile.keywords").split(" "),
+      },
+      {
+        id: "nav-billing",
+        label: t("commands.billing.label"),
+        icon: CreditCard,
+        run: (r) => r.push("/billing"),
+        keywords: t("commands.billing.keywords").split(" "),
+      },
+      {
+        id: "nav-settings",
+        label: t("commands.settings.label"),
+        icon: Settings,
+        run: (r) => r.push("/settings"),
+        keywords: t("commands.settings.keywords").split(" "),
+      },
+      {
+        id: "nav-storage",
+        label: t("commands.storage.label"),
+        icon: HardDrive,
+        run: (r) => r.push("/settings/storage"),
+        keywords: t("commands.storage.keywords").split(" "),
+      },
+      {
+        id: "nav-mcp",
+        label: t("commands.mcp.label"),
+        icon: Zap,
+        run: (r) => r.push("/settings/mcp"),
+        keywords: t("commands.mcp.keywords").split(" "),
+      },
+      {
+        id: "nav-impressum",
+        label: t("commands.impressum.label"),
+        icon: BookOpenText,
+        run: (r) => r.push("/impressum"),
+        keywords: t("commands.impressum.keywords").split(" "),
+      },
+      {
+        id: "nav-datenschutz",
+        label: t("commands.datenschutz.label"),
+        icon: BookOpenText,
+        run: (r) => r.push("/datenschutz"),
+        keywords: t("commands.datenschutz.keywords").split(" "),
+      },
+      {
+        id: "action-logout",
+        label: t("commands.logout.label"),
+        icon: LogOut,
+        run: async (r) => {
+          await signOut();
+          r.push("/login");
+          r.refresh();
+        },
+        keywords: t("commands.logout.keywords").split(" "),
+      },
+    ],
+    [t],
+  );
 
   // ⌘K / Ctrl+K shortcut
   useEffect(() => {
@@ -299,14 +302,14 @@ export function SearchPalette() {
         .sort((a, b) => a.s - b.s)
         .map((x) => x.i);
     }
-    const cmds = rankList(COMMANDS, (c) =>
+    const cmds = rankList(commands, (c) =>
       [c.label, c.hint ?? "", ...(c.keywords ?? [])].join(" "),
-    ).slice(0, q ? 6 : COMMANDS.length);
+    ).slice(0, q ? 6 : commands.length);
     const spaces = rankList(data?.spaces ?? [], (s) => s.name).slice(0, 8);
     const notes = rankList(data?.notes ?? [], (n) => n.title).slice(0, 10);
     const files = rankList(data?.files ?? [], (f) => f.filename).slice(0, 10);
     return { cmds, spaces, notes, files };
-  }, [query, data]);
+  }, [query, data, commands]);
 
   function close() {
     setOpen(false);
@@ -330,10 +333,8 @@ export function SearchPalette() {
   return (
     <Dialog open={open} onOpenChange={(v) => (v ? setOpen(true) : close())}>
       <DialogHeader className="sr-only">
-        <DialogTitle>Command Palette</DialogTitle>
-        <DialogDescription>
-          Springe zu Spaces, Notes, Files oder führe Aktionen aus.
-        </DialogDescription>
+        <DialogTitle>{t("dialog.title")}</DialogTitle>
+        <DialogDescription>{t("dialog.description")}</DialogDescription>
       </DialogHeader>
       <DialogContent
         className="top-1/4 translate-y-0 overflow-hidden rounded-xl p-0"
@@ -356,7 +357,7 @@ export function SearchPalette() {
             ) : null}
 
             {filtered.cmds.length > 0 ? (
-              <CommandGroup heading={t("commands")}>
+              <CommandGroup heading={t("commandsHeading")}>
                 {filtered.cmds.map((c) => {
                   const Icon = c.icon;
                   return (
@@ -382,7 +383,7 @@ export function SearchPalette() {
             ) : null}
 
             {filtered.spaces.length > 0 ? (
-              <CommandGroup heading="Spaces">
+              <CommandGroup heading={t("groups.spaces")}>
                 {filtered.spaces.map((s) => (
                   <CommandItem
                     key={s.id}
@@ -397,7 +398,7 @@ export function SearchPalette() {
             ) : null}
 
             {filtered.notes.length > 0 ? (
-              <CommandGroup heading="Notes">
+              <CommandGroup heading={t("groups.notes")}>
                 {filtered.notes.map((n) => (
                   <CommandItem
                     key={n.id}
@@ -412,7 +413,7 @@ export function SearchPalette() {
             ) : null}
 
             {filtered.files.length > 0 ? (
-              <CommandGroup heading="Files">
+              <CommandGroup heading={t("groups.files")}>
                 {filtered.files.map((f) => (
                   <CommandItem
                     key={f.id}
@@ -430,7 +431,7 @@ export function SearchPalette() {
             ) : null}
 
             {semanticHits.length > 0 ? (
-              <CommandGroup heading={t("contentSearch")}>
+              <CommandGroup heading={t("contentSearchHeading")}>
                 {semanticHits.map((h) => {
                   const Icon = h.type === "note" ? StickyNote : FileText;
                   return (
@@ -479,14 +480,10 @@ export function SearchPalette() {
 
 /** Inline trigger in the nav so users discover the shortcut. */
 export function SearchTrigger() {
-  const t = useTranslations("common.search");
-  const [mac, setMac] = useState(false);
-  useEffect(() => {
-    setMac(
-      typeof navigator !== "undefined" &&
-        /Mac|iPod|iPhone|iPad/.test(navigator.platform),
-    );
-  }, []);
+  const t = useTranslations("search");
+  const mac =
+    typeof navigator !== "undefined" &&
+    /Mac|iPod|iPhone|iPad/.test(navigator.platform);
   function open() {
     window.dispatchEvent(
       new KeyboardEvent("keydown", {
