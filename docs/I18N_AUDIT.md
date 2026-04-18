@@ -18,6 +18,7 @@ Die folgenden Detailtabellen sind als historische Audit-Basis zu verstehen. Der 
 - 0 offene hardcoded UI-Strings außerhalb des Admin-Scopes
 - 0 offene non-admin API-/Lib-Error-Strings außerhalb der dokumentierten Übergangs-Fallbacks
 - angelegte Namespaces: `confirmDialogs.*`, `toasts.*`, `errors.api.session.*`, `errors.api.storageProvider.*`
+- nachträglich ergänzt: `errors.api.embeddingKey.*` und `settings.embeddingKey.*` als Retrofit für den ursprünglich nicht vollständig abgedeckten Embedding-Key-Bereich
 
 ---
 
