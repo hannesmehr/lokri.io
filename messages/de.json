@@ -750,6 +750,8 @@
     "storage": {
       "title": "Storage",
       "subtitle": "Eigene S3-Buckets oder GitHub-Repos anbinden.",
+      "pageTitle": "Storage-Provider",
+      "pageDescription": "Der interne Vercel-Blob-Storage ist immer aktiv. Externe S3-Provider kannst du hinzufügen und anschließend einzelnen Spaces zuweisen — Daten in dem Space gehen dann in deinen eigenen Bucket.",
       "internal": {
         "name": "lokri-managed (Vercel Blob)",
         "default": "Standard",
@@ -758,7 +760,13 @@
       "list": {
         "empty": "Noch keine externen Provider. Lege einen an — dann kannst du ihn einzelnen Spaces zuweisen.",
         "remove": "Entfernen",
-        "removeConfirm": "Provider \"{name}\" wirklich entfernen?"
+        "removeConfirm": "Provider \"{name}\" wirklich entfernen?",
+        "readOnly": "read-only",
+        "createdAt": "{type} · angelegt {date}",
+        "removed": "Provider entfernt.",
+        "errors": {
+          "generic": "Konnte nicht löschen."
+        }
       },
       "add": {
         "button": "Neuer Provider",
@@ -773,21 +781,39 @@
         },
         "fields": {
           "name": "Name",
+          "nameRequired": "Name *",
+          "namePlaceholderS3": "z.B. Mein R2 Bucket",
+          "namePlaceholderGithub": "z.B. anthropic/docs",
           "bucket": "Bucket",
+          "bucketRequired": "Bucket *",
+          "bucketPlaceholder": "mein-lokri-bucket",
           "region": "Region",
+          "regionRequired": "Region *",
+          "regionPlaceholder": "eu-central-1 / auto (R2)",
           "endpoint": "Endpoint (R2/B2/MinIO)",
+          "endpointPlaceholder": "https://<id>.r2.cloudflarestorage.com",
           "accessKeyId": "Access Key ID",
+          "accessKeyIdRequired": "Access Key ID *",
           "secretAccessKey": "Secret Access Key",
+          "secretAccessKeyRequired": "Secret Access Key *",
           "pathPrefix": "Path Prefix (optional)",
+          "pathPrefixPlaceholderS3": "lokri/",
+          "pathPrefixPlaceholderGithub": "docs/",
           "forcePathStyle": "Path-Style erzwingen (für R2 / MinIO sinnvoll)",
           "owner": "Owner",
+          "ownerRequired": "Owner *",
+          "ownerPlaceholder": "anthropics",
           "repo": "Repository",
+          "repoRequired": "Repository *",
+          "repoPlaceholder": "claude-code",
           "ref": "Branch / Ref (optional)",
           "refPlaceholder": "leer = default branch",
           "token": "Access Token (PAT)"
         },
-        "githubHelp": "Für public Repos optional — ohne Token gilt GitHubs IP-Rate-Limit (60 req/h). Für private Repos ein {patLink} mit „Contents: Read“-Scope auf dem Repo.",
+        "githubHelpPrefix": "Für public Repos optional — ohne Token gilt GitHubs IP-Rate-Limit (60 req/h). Für private Repos ein",
+        "githubHelpSuffix": "mit „Contents: Read“-Scope auf dem Repo.",
         "patLinkLabel": "Fine-Grained PAT",
+        "cancel": "Abbrechen",
         "submit": "Testen & Speichern",
         "submitting": "Teste Verbindung…",
         "saved": "Gespeichert",

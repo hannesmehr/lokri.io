@@ -1,5 +1,6 @@
 import { asc, eq } from "drizzle-orm";
 import { HardDrive } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import {
   Card,
   CardContent,
@@ -13,6 +14,7 @@ import { storageProviders } from "@/lib/db/schema";
 import { ProviderList } from "./_provider-list";
 
 export default async function StorageSettingsPage() {
+  const t = await getTranslations("settings.storage");
   const { ownerAccountId } = await requireSessionWithAccount();
   const providers = await db
     .select({
@@ -29,17 +31,12 @@ export default async function StorageSettingsPage() {
     <Card>
       <CardHeader>
         <div className="flex items-center gap-3">
-          <div className="grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br from-cyan-500/15 to-sky-500/15 text-cyan-700 dark:text-cyan-400">
+          <div className="grid h-9 w-9 place-items-center rounded-lg border bg-muted text-foreground">
             <HardDrive className="h-4 w-4" />
           </div>
           <div>
-            <CardTitle>Storage-Provider</CardTitle>
-            <CardDescription>
-              Der interne Vercel-Blob-Storage ist immer aktiv. Externe
-              S3-Provider kannst du hinzufügen und anschließend einzelnen
-              Spaces zuweisen — Daten in dem Space gehen dann in deinen
-              eigenen Bucket.
-            </CardDescription>
+            <CardTitle>{t("pageTitle")}</CardTitle>
+            <CardDescription>{t("pageDescription")}</CardDescription>
           </div>
         </div>
       </CardHeader>

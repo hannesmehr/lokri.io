@@ -750,6 +750,8 @@
     "storage": {
       "title": "Storage",
       "subtitle": "Attach your own S3 buckets or GitHub repos.",
+      "pageTitle": "Storage providers",
+      "pageDescription": "The internal Vercel Blob storage is always active. You can add external S3 providers and then assign them to individual spaces — data in that space will go to your own bucket.",
       "internal": {
         "name": "lokri-managed (Vercel Blob)",
         "default": "Default",
@@ -758,7 +760,13 @@
       "list": {
         "empty": "No external providers yet. Create one, then you can assign it to individual spaces.",
         "remove": "Remove",
-        "removeConfirm": "Really remove provider \"{name}\"?"
+        "removeConfirm": "Really remove provider \"{name}\"?",
+        "readOnly": "read-only",
+        "createdAt": "{type} · created {date}",
+        "removed": "Provider removed.",
+        "errors": {
+          "generic": "Could not delete."
+        }
       },
       "add": {
         "button": "New provider",
@@ -773,21 +781,39 @@
         },
         "fields": {
           "name": "Name",
+          "nameRequired": "Name *",
+          "namePlaceholderS3": "e.g. My R2 bucket",
+          "namePlaceholderGithub": "e.g. anthropic/docs",
           "bucket": "Bucket",
+          "bucketRequired": "Bucket *",
+          "bucketPlaceholder": "my-lokri-bucket",
           "region": "Region",
+          "regionRequired": "Region *",
+          "regionPlaceholder": "eu-central-1 / auto (R2)",
           "endpoint": "Endpoint (R2/B2/MinIO)",
+          "endpointPlaceholder": "https://<id>.r2.cloudflarestorage.com",
           "accessKeyId": "Access Key ID",
+          "accessKeyIdRequired": "Access Key ID *",
           "secretAccessKey": "Secret Access Key",
+          "secretAccessKeyRequired": "Secret Access Key *",
           "pathPrefix": "Path prefix (optional)",
+          "pathPrefixPlaceholderS3": "lokri/",
+          "pathPrefixPlaceholderGithub": "docs/",
           "forcePathStyle": "Force path-style (needed for R2 / MinIO)",
           "owner": "Owner",
+          "ownerRequired": "Owner *",
+          "ownerPlaceholder": "anthropic",
           "repo": "Repository",
+          "repoRequired": "Repository *",
+          "repoPlaceholder": "claude-code",
           "ref": "Branch / ref (optional)",
           "refPlaceholder": "empty = default branch",
           "token": "Access token (PAT)"
         },
-        "githubHelp": "Optional for public repos — without a token, GitHub's IP rate limit applies (60 req/h). For private repos use a {patLink} with the \"Contents: Read\" scope on the repo.",
+        "githubHelpPrefix": "Optional for public repos — without a token, GitHub's IP rate limit applies (60 req/h). For private repos use a",
+        "githubHelpSuffix": "with the \"Contents: Read\" scope on the repo.",
         "patLinkLabel": "fine-grained PAT",
+        "cancel": "Cancel",
         "submit": "Test & save",
         "submitting": "Testing connection…",
         "saved": "Saved",
