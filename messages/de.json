@@ -669,6 +669,15 @@
     "title": "Files",
     "subtitle": "Dateien — lokal oder von verbundenen Storage-Providern.",
     "upload": "Datei hochladen",
+    "list": {
+      "title": "Files",
+      "subtitle": "Private Blob-Storage-Dateien. Maximal 10 MB pro Datei. Textinhalte aus Textdateien und JSON werden automatisch gechunked und eingebettet.",
+      "clearFilter": "Filter entfernen",
+      "spaceLabel": "Space",
+      "noSpace": "Keiner",
+      "hiddenFromMcp": "Für MCP ausgeblendet",
+      "downloadAriaLabel": "{name} herunterladen"
+    },
     "empty": {
       "title": "Noch keine Files",
       "body": "Hier landen deine Uploads. Text wird extrahiert und durchsuchbar gemacht."
@@ -679,6 +688,36 @@
       "mimeType": "Typ",
       "createdAt": "Hochgeladen",
       "actions": "Aktionen"
+    },
+    "uploader": {
+      "spaceLabel": "Space",
+      "noSpace": "Keiner",
+      "idle": "Datei hier hinziehen oder klicken",
+      "dropActive": "Loslassen zum Hochladen",
+      "hint": "Maximal {max}. Textdateien und JSON werden automatisch eingebettet.",
+      "status": {
+        "uploading": "{name} wird hochgeladen…",
+        "uploaded": "{name} hochgeladen"
+      },
+      "errors": {
+        "empty": "Datei ist leer.",
+        "tooLarge": "Datei ist zu groß (maximal {max}).",
+        "uploadFailed": "Upload fehlgeschlagen.",
+        "uploadFailedWithStatus": "Upload fehlgeschlagen ({status}).",
+        "aborted": "Upload abgebrochen."
+      },
+      "success": {
+        "uploaded": "{name} hochgeladen."
+      }
+    },
+    "actions": {
+      "download": "Download",
+      "delete": "Löschen",
+      "deleteConfirm": "\"{name}\" wirklich löschen?",
+      "errors": {
+        "deleteFailed": "Konnte File nicht löschen."
+      },
+      "deleted": "File gelöscht."
     }
   },
 

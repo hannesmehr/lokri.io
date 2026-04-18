@@ -669,6 +669,15 @@
     "title": "Files",
     "subtitle": "Files — local or from connected storage providers.",
     "upload": "Upload file",
+    "list": {
+      "title": "Files",
+      "subtitle": "Private blob-storage files. Maximum 10 MB per file. Text content from text files and JSON is automatically chunked and embedded.",
+      "clearFilter": "Clear filter",
+      "spaceLabel": "Space",
+      "noSpace": "None",
+      "hiddenFromMcp": "Hidden from MCP",
+      "downloadAriaLabel": "Download {name}"
+    },
     "empty": {
       "title": "No files yet",
       "body": "Your uploads land here. Text is extracted and made searchable."
@@ -679,6 +688,36 @@
       "mimeType": "Type",
       "createdAt": "Uploaded",
       "actions": "Actions"
+    },
+    "uploader": {
+      "spaceLabel": "Space",
+      "noSpace": "None",
+      "idle": "Drop a file here or click",
+      "dropActive": "Release to upload",
+      "hint": "Maximum {max}. Text files and JSON are embedded automatically.",
+      "status": {
+        "uploading": "Uploading {name}…",
+        "uploaded": "{name} uploaded"
+      },
+      "errors": {
+        "empty": "File is empty.",
+        "tooLarge": "File is too large (maximum {max}).",
+        "uploadFailed": "Upload failed.",
+        "uploadFailedWithStatus": "Upload failed ({status}).",
+        "aborted": "Upload aborted."
+      },
+      "success": {
+        "uploaded": "{name} uploaded."
+      }
+    },
+    "actions": {
+      "download": "Download",
+      "delete": "Delete",
+      "deleteConfirm": "Really delete \"{name}\"?",
+      "errors": {
+        "deleteFailed": "Could not delete file."
+      },
+      "deleted": "File deleted."
     }
   },
 
