@@ -127,8 +127,9 @@ Identisch:
   wenn nichts gesetzt ist.
 - **Audit-Log**: security-relevante Events (team.created, member.invited,
   member.role_changed, token.revoked_on_member_remove, login.success, …)
-  werden in `audit_events` mitgeschrieben. **Kein UI in V1** — Abfrage per
-  SQL (siehe `docs/OPS.md`).
+  werden in `audit_events` mitgeschrieben. Admins haben (seit Admin-
+  Dashboard Teil 1) den Viewer unter `/admin/audit` (Teil 2) bzw. SQL-
+  Snippets in `docs/OPS.md` als Fallback.
 - **Team löschen**: nur `owner`. Eingabefeld mit Team-Name als
   Bestätigung; danach Hard-Delete inklusive Storage-Objekt-Bereinigung
   (analog User-Delete-Flow).
@@ -143,8 +144,10 @@ Die folgenden Punkte sind bewusst offen gelassen und kommen später:
   Integration sind ein eigener Meilenstein.
 - **Per-Space-ACL-UI** — Schema (`space_members`) existiert, aber im MVP
   sehen alle Team-Mitglieder alle Spaces des Teams.
-- **Audit-Log-UI** — Daten werden erfasst, aber für V1 gibt es kein
-  Frontend. SQL-Snippets in `docs/OPS.md` decken den Admin-Use-Case ab.
+- **Audit-Log-UI** — kommt in Admin-Dashboard Teil 2. Teil 1 hat für
+  Admin-Aktionen ein Per-Field-Audit mit `admin.*`-Prefix im Log
+  hinterlegt; die Betrachtung läuft aktuell noch via SQL
+  (`docs/OPS.md`).
 - **Ownership-Transfer** via UI — kann im MVP entfallen; wird nachgezogen,
   sobald Bedarf besteht.
 - **SSO / SAML** — Solo- und kleine-Team-Fokus, Enterprise-Auth ist
@@ -153,6 +156,40 @@ Die folgenden Punkte sind bewusst offen gelassen und kommen später:
   verschieben geht derzeit nicht; Re-Upload + Delete ist der Weg.
 - **Team-Discovery** — es gibt keine „öffentlichen Teams", Teams sind
   ausschließlich invite-based.
+
+---
+
+## Admin-Bereich
+
+Seit Teil 1 hat lokri ein internes Backoffice unter `/admin`, gatet
+hinter `users.is_admin = true`. Sichtbare Oberfläche (nicht der
+öffentliche Produktumfang, aber für OPS-Runbooks relevant):
+
+- **Dashboard** — KPI-Kacheln, in Teil 2 kommen Charts + Revenue-Graph.
+- **User** — Liste, Detail, Flags setzen (`is_admin`,
+  `can_create_teams`, `preferred_locale`), Disable/Enable, Sessions
+  beenden, Passwort-Reset triggern, Hard-Delete.
+- **Accounts** — Personal + Team zusammen. Plan-Wechsel, Ablaufdatum,
+  **Quota-Override** (Bytes/Files/Notes pro Feld einzeln).
+- **Rechnungen** — Suche + Filter, admin-PDF-Download, **manueller
+  Team-Rechnungs-Wizard** (5 Schritte: Account → Parameter → Preview
+  → Confirm → Ergebnis; erzeugt `orders` + `invoices` + optionale
+  Mail; bumpt `plan_expires_at` mit Grace-Stacking).
+- **Tokens** — globale Sicht auf `api_tokens`, Einzel-Revoke,
+  **Bulk-Revoke-Inaktive** (Dry-Run + Apply, mit per-Account
+  Audit-Event).
+
+Jede mutierende Admin-Aktion schreibt ein `admin.*`-Audit-Event, das
+auf den betroffenen Owner-Account gescopet ist — User sehen also in
+ihrer eigenen Audit-Spur (später), dass ein Admin ihren Account
+angefasst hat.
+
+**Nicht im Admin-Bereich**: Content-Moderation (User-Files anschauen
+oder löschen ist tabu), Feature-Flags pro User, Multi-Operator-
+Rechtestufen (alle Admins haben volle Rechte). Retention-Policy für
+Audit-Events ist offen.
+
+Details in `docs/OPS.md`.
 
 ---
 

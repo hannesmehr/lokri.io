@@ -9,6 +9,98 @@ Möglichkeit in einem read-only-Branch laufen lassen, bevor sie auf
 
 ---
 
+## Admin-Dashboard (Teil 1)
+
+Ein UI gibt es inzwischen unter `/admin` — gated hinter `users.is_admin = true`.
+Die SQL-Snippets in diesem Dokument sind weiterhin nützlich für Massen-
+Abfragen oder wenn das UI nicht ausreicht; für 90 % der Fälle ist aber
+das Dashboard der erste Weg.
+
+### Admin-Zugang bootstrappen
+
+Erster Admin muss per SQL gesetzt werden — das UI kann sich nicht selbst
+befördern:
+
+```sql
+UPDATE users
+SET is_admin = true
+WHERE email = 'du@lokri.io';
+```
+
+Alle weiteren Admins können dann über `/admin/users/[id]` das Flag für
+andere User umlegen. Self-Demotion ist im UI blockiert (`actorId === id`).
+
+### User-Verwaltung `/admin/users`
+
+- Suche über Email/Name, Filter: Admins, Team-Ersteller, Unverifizierte,
+  Gesperrte
+- Inline-Toggle für `can_create_teams` (ersetzt das SQL-Snippet oben)
+- Detailseite `/admin/users/[id]`:
+  - Flags (`is_admin`, `can_create_teams`, `preferred_locale`)
+  - **Disable-Toggle** (`disabled_at`): setzt den Zeitstempel, wischt alle
+    Sessions; beim nächsten `requireSession` fällt der User auf 403 mit
+    "Konto gesperrt". Entsperren = Zeitstempel löschen.
+  - **Force password reset**: triggert Better-Auths
+    `requestPasswordReset`-Flow → User bekommt die normale
+    Passwort-vergessen-Mail
+  - **Alle Sessions beenden** (revoke sessions) — zwingt zum Re-Login auf
+    allen Devices
+  - **Hard delete**: wie Better-Auths `beforeDelete`-Hook (Storage-Blobs
+    + FK-Cascade). Email-Echo-Confirm.
+
+### Account-Verwaltung `/admin/accounts`
+
+Personal- und Team-Accounts zusammen. Filter: Typ, Plan, Suche.
+
+- **Quota-Override** (Migration 0017, `quota_override jsonb`): pro
+  Account können `bytes`, `files`, `notes` einzeln gegenüber dem
+  Plan-Limit überschrieben werden. Wirkt nach Seat-Multiplikation und
+  Free-Fallback in `getQuota` + `reserveQuota`. Im UI: Bytes-Input in
+  **MB**, Files/Notes als ganze Zahl. Leeres Feld = Plan-Limit greift.
+- **Plan + Expiry direkt setzen** — macht das manuelle SQL unten
+  obsolet. Für Team-Abos siehe unten "Team-Plan manuell abrechnen".
+
+### Rechnungen `/admin/invoices`
+
+- Volltextsuche auf Nummer/Email/Beschreibung, Filter: Account, Status,
+  Zeitraum. PDF-Download ist admin-gatet (eigener Endpoint
+  `/api/admin/invoices/[id]/pdf`, unabhängig vom user-gated Endpoint).
+- Detail-Seite zeigt Order-Verknüpfung (Plan, Periode, Laufzeit).
+
+### Team-Rechnungs-Wizard `/admin/billing/new-team-invoice`
+
+5-Schritte-Flow:
+
+1. **Account wählen** — Typeahead-Suche, nur Team-Accounts
+2. **Parameter** — Plan, Periode, Brutto (Tarif-Auto-Fill per Klick),
+   Beschreibung, Kunden-Name+Email, Expiry-Datum
+3. **Preview** — Netto/USt/Brutto-Split, neue Expiry
+4. **Bestätigen** — Echo-Confirm über Account-Name
+5. **Ergebnis** — PDF-Link + Optional-Mail-Status
+
+Hinter den Kulissen: `orders`-Row (`status='captured'`,
+`payment_method='manual'`, `paypal_order_id='MANUAL-…'`), dann
+`createInvoice` → PDF in Vercel Blob, dann optional
+`plan_expires_at`-Bump (Grace-Stacking) und optional Resend-Mail.
+Audit-Event `admin.billing.manual_invoice_created` mit Diff.
+
+### Token-Übersicht `/admin/tokens`
+
+- Globale Liste aller `api_tokens` mit Filter: Status (aktiv/revoked/alle),
+  Scope (personal/team), Inaktivitäts-Fenster (Tage seit letzter Nutzung).
+- **Inline-Revoke** pro Zeile.
+- **Bulk-Revoke inaktive** (Button rechts oben): Dialog mit zwei
+  Parametern:
+  - `inactiveDays` (Default 180) — Token wurde benutzt, aber
+    `last_used_at < now() - X Tage`
+  - `unusedOlderThanDays` (Default 90) — Token wurde nie benutzt und
+    `created_at < now() - Y Tage`
+  Dry-Run zeigt die Zahl, Apply revoked tatsächlich und schreibt pro
+  betroffenem Owner-Account ein `admin.bulk.tokens_revoked`-Event mit
+  der Liste der revoked IDs.
+
+---
+
 ## Team-Features
 
 ### Einen Beta-User für Team-Erstellung freischalten
