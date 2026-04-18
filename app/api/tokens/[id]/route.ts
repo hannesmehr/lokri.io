@@ -15,7 +15,7 @@ type Params = { params: Promise<{ id: string }> };
 /** Revoke (soft-delete) a token. Hard-delete would orphan audit history. */
 export async function DELETE(_req: NextRequest, { params }: Params) {
   try {
-    const { ownerAccountId, session } = await requireSessionWithAccount();
+    const { ownerAccountId, session } = await requireSessionWithAccount({ minRole: "member" });
     const { id } = await params;
 
     const [row] = await db

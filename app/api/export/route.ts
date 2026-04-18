@@ -1,14 +1,14 @@
 import { eq } from "drizzle-orm";
 import JSZip from "jszip";
 import { NextResponse } from "next/server";
-import { serverError, unauthorized } from "@/lib/api/errors";
+import {  authErrorResponse,
+ serverError} from "@/lib/api/errors";
 import { ApiAuthError, requireSessionWithAccount } from "@/lib/api/session";
 import { db } from "@/lib/db";
 import {
   files as filesTable,
   notes as notesTable,
-  spaces as spacesTable,
-} from "@/lib/db/schema";
+  spaces as spacesTable} from "@/lib/db/schema";
 import { getProviderForFile } from "@/lib/storage";
 
 /**
@@ -48,8 +48,7 @@ export async function GET() {
           contentText: notesTable.contentText,
           spaceId: notesTable.spaceId,
           createdAt: notesTable.createdAt,
-          updatedAt: notesTable.updatedAt,
-        })
+          updatedAt: notesTable.updatedAt})
         .from(notesTable)
         .where(eq(notesTable.ownerAccountId, ownerAccountId)),
       db
@@ -66,14 +65,11 @@ export async function GET() {
       account: {
         userId: session.user.id,
         userEmail: session.user.email,
-        ownerAccountId,
-      },
+        ownerAccountId},
       counts: {
         spaces: spaces.length,
         notes: notes.length,
-        files: files.length,
-      },
-    };
+        files: files.length}};
     zip.file("manifest.json", JSON.stringify(manifest, null, 2));
     zip.file("spaces.json", JSON.stringify(spaces, null, 2));
     zip.file("notes.json", JSON.stringify(notes, null, 2));
@@ -140,11 +136,9 @@ export async function GET() {
       headers: {
         "content-type": "application/zip",
         "content-disposition": `attachment; filename="lokri-export-${stamp}.zip"`,
-        "cache-control": "private, no-store",
-      },
-    });
+        "cache-control": "private, no-store"}});
   } catch (err) {
-    if (err instanceof ApiAuthError) return unauthorized(err.message);
+    if (err instanceof ApiAuthError) return authErrorResponse(err);
     return serverError(err);
   }
 }

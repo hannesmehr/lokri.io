@@ -4,8 +4,7 @@ import {
   apiError,
   notFound,
   serverError,
-  unauthorized,
-} from "@/lib/api/errors";
+  authErrorResponse} from "@/lib/api/errors";
 import { ApiAuthError, requireSessionWithAccount } from "@/lib/api/session";
 import { db } from "@/lib/db";
 import { files, storageProviders } from "@/lib/db/schema";
@@ -20,7 +19,7 @@ type Params = { params: Promise<{ id: string }> };
  */
 export async function DELETE(_req: NextRequest, { params }: Params) {
   try {
-    const { ownerAccountId } = await requireSessionWithAccount();
+    const { ownerAccountId } = await requireSessionWithAccount({ minRole: "admin" });
     const { id } = await params;
 
     const [existing] = await db
@@ -53,7 +52,7 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
     await db.delete(storageProviders).where(eq(storageProviders.id, id));
     return new NextResponse(null, { status: 204 });
   } catch (err) {
-    if (err instanceof ApiAuthError) return unauthorized(err.message);
+    if (err instanceof ApiAuthError) return authErrorResponse(err);
     return serverError(err);
   }
 }

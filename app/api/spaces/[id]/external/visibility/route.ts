@@ -5,9 +5,8 @@ import {
   notFound,
   parseJsonBody,
   serverError,
-  unauthorized,
-  zodError,
-} from "@/lib/api/errors";
+  authErrorResponse,
+  zodError} from "@/lib/api/errors";
 import { ApiAuthError, requireSessionWithAccount } from "@/lib/api/session";
 import { db } from "@/lib/db";
 import { files, spaces } from "@/lib/db/schema";
@@ -20,8 +19,7 @@ const bodySchema = z.object({
    * prefixes — all matching keys (and sub-keys) are affected.
    */
   key: z.string().min(1).max(1500),
-  hidden: z.boolean(),
-});
+  hidden: z.boolean()});
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -35,7 +33,7 @@ type Params = { params: Promise<{ id: string }> };
  */
 export async function PATCH(req: NextRequest, { params }: Params) {
   try {
-    const { ownerAccountId } = await requireSessionWithAccount();
+    const { ownerAccountId } = await requireSessionWithAccount({ minRole: "admin" });
     const { id } = await params;
 
     const body = await parseJsonBody(req, 4 * 1024);
@@ -45,8 +43,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     const [space] = await db
       .select({
         id: spaces.id,
-        storageProviderId: spaces.storageProviderId,
-      })
+        storageProviderId: spaces.storageProviderId})
       .from(spaces)
       .where(and(eq(spaces.id, id), eq(spaces.ownerAccountId, ownerAccountId)))
       .limit(1);
@@ -59,15 +56,13 @@ export async function PATCH(req: NextRequest, { params }: Params) {
         .set({
           hiddenExternalKeys: sql`(
             SELECT ARRAY(SELECT DISTINCT UNNEST(array_append(${spaces.hiddenExternalKeys}, ${parsed.data.key})))
-          )`,
-        })
+          )`})
         .where(eq(spaces.id, id));
     } else {
       await db
         .update(spaces)
         .set({
-          hiddenExternalKeys: sql`array_remove(${spaces.hiddenExternalKeys}, ${parsed.data.key})`,
-        })
+          hiddenExternalKeys: sql`array_remove(${spaces.hiddenExternalKeys}, ${parsed.data.key})`})
         .where(eq(spaces.id, id));
     }
 
@@ -107,7 +102,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 
     return NextResponse.json({ ok: true });
   } catch (err) {
-    if (err instanceof ApiAuthError) return unauthorized(err.message);
+    if (err instanceof ApiAuthError) return authErrorResponse(err);
     console.error("[external.visibility]", err);
     return serverError(err);
   }

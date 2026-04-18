@@ -6,9 +6,8 @@ import {
   parseJsonBody,
   paymentRequired,
   serverError,
-  unauthorized,
-  zodError,
-} from "@/lib/api/errors";
+  authErrorResponse,
+  zodError} from "@/lib/api/errors";
 import { findOwnedSpace } from "@/lib/api/ownership";
 import { ApiAuthError, requireSessionWithAccount } from "@/lib/api/session";
 import { db } from "@/lib/db";
@@ -19,14 +18,12 @@ import { limit, rateLimitResponse } from "@/lib/rate-limit";
 
 const listQuerySchema = z.object({
   spaceId: z.uuid().optional(),
-  limit: z.coerce.number().int().positive().max(200).default(50),
-});
+  limit: z.coerce.number().int().positive().max(200).default(50)});
 
 const createBodySchema = z.object({
   title: z.string().trim().min(1).max(300),
   content: z.string().min(1).max(1_000_000),
-  spaceId: z.uuid().nullable().optional(),
-});
+  spaceId: z.uuid().nullable().optional()});
 
 export async function GET(req: NextRequest) {
   try {
@@ -47,8 +44,7 @@ export async function GET(req: NextRequest) {
         title: notes.title,
         spaceId: notes.spaceId,
         createdAt: notes.createdAt,
-        updatedAt: notes.updatedAt,
-      })
+        updatedAt: notes.updatedAt})
       .from(notes)
       .where(and(...conditions))
       .orderBy(desc(notes.updatedAt))
@@ -56,14 +52,14 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ notes: rows });
   } catch (err) {
-    if (err instanceof ApiAuthError) return unauthorized(err.message);
+    if (err instanceof ApiAuthError) return authErrorResponse(err);
     return serverError(err);
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const { ownerAccountId } = await requireSessionWithAccount();
+    const { ownerAccountId } = await requireSessionWithAccount({ minRole: "member" });
     const rl = await limit("noteWrite", `u:${ownerAccountId}`);
     if (!rl.ok) return rateLimitResponse(rl);
 
@@ -94,8 +90,7 @@ export async function POST(req: NextRequest) {
           title: parsed.data.title,
           contentText: parsed.data.content,
           embedding,
-          embeddingModel: model,
-        })
+          embeddingModel: model})
         .returning();
 
       return created;
@@ -106,7 +101,7 @@ export async function POST(req: NextRequest) {
     if (err instanceof Error && err.message.startsWith("QUOTA:")) {
       return paymentRequired(err.message.slice("QUOTA:".length));
     }
-    if (err instanceof ApiAuthError) return unauthorized(err.message);
+    if (err instanceof ApiAuthError) return authErrorResponse(err);
     return serverError(err);
   }
 }

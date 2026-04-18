@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { NextResponse, type NextRequest } from "next/server";
-import { apiError, notFound, serverError, unauthorized } from "@/lib/api/errors";
+import {  authErrorResponse,
+ apiError, notFound, serverError} from "@/lib/api/errors";
 import { ApiAuthError, requireSessionWithAccount } from "@/lib/api/session";
 import { db } from "@/lib/db";
 import { spaces } from "@/lib/db/schema";
@@ -25,8 +26,7 @@ export async function GET(req: NextRequest, { params }: Params) {
     const [space] = await db
       .select({
         id: spaces.id,
-        storageProviderId: spaces.storageProviderId,
-      })
+        storageProviderId: spaces.storageProviderId})
       .from(spaces)
       .where(
         and(eq(spaces.id, id), eq(spaces.ownerAccountId, ownerAccountId)),
@@ -46,14 +46,12 @@ export async function GET(req: NextRequest, { params }: Params) {
       "content-type": mimeType ?? "application/octet-stream",
       "content-length": String(content.byteLength),
       "content-disposition": `inline; filename="${encodeURIComponent(filename)}"`,
-      "cache-control": "private, no-store",
-    });
+      "cache-control": "private, no-store"});
     return new NextResponse(content as unknown as BodyInit, {
       status: 200,
-      headers,
-    });
+      headers});
   } catch (err) {
-    if (err instanceof ApiAuthError) return unauthorized(err.message);
+    if (err instanceof ApiAuthError) return authErrorResponse(err);
     console.error("[spaces.object]", err);
     return serverError(err);
   }

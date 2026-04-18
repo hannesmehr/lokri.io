@@ -4,16 +4,14 @@ import {
   apiError,
   serverError,
   tooLarge,
-  unauthorized,
-} from "@/lib/api/errors";
+  authErrorResponse} from "@/lib/api/errors";
 import { ApiAuthError, requireSessionWithAccount } from "@/lib/api/session";
 import { db } from "@/lib/db";
 import {
   fileChunks,
   files as filesTable,
   notes as notesTable,
-  spaces as spacesTable,
-} from "@/lib/db/schema";
+  spaces as spacesTable} from "@/lib/db/schema";
 import { chunkText, embedText, embedTexts } from "@/lib/embeddings";
 import { extractText } from "@/lib/text-extract";
 import { checkQuota, reserveQuota } from "@/lib/quota";
@@ -49,7 +47,7 @@ interface ImportSummary {
 
 export async function POST(req: NextRequest) {
   try {
-    const { ownerAccountId } = await requireSessionWithAccount();
+    const { ownerAccountId } = await requireSessionWithAccount({ minRole: "member" });
     const rl = await limit("fileUpload", `u:${ownerAccountId}`);
     if (!rl.ok) return rateLimitResponse(rl);
 
@@ -79,8 +77,7 @@ export async function POST(req: NextRequest) {
       spacesCreated: 0,
       notesCreated: 0,
       filesCreated: 0,
-      skipped: [],
-    };
+      skipped: []};
 
     if (isLokriExport) {
       await importLokriExport(zip, ownerAccountId, summary);
@@ -90,7 +87,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(summary);
   } catch (err) {
-    if (err instanceof ApiAuthError) return unauthorized(err.message);
+    if (err instanceof ApiAuthError) return authErrorResponse(err);
     return serverError(err);
   }
 }
@@ -126,8 +123,7 @@ async function importLokriExport(
       .values({
         ownerAccountId,
         name: s.name,
-        description: s.description,
-      })
+        description: s.description})
       .returning({ id: spacesTable.id });
     idMap.set(s.id, row.id);
     summary.spacesCreated++;
@@ -147,8 +143,7 @@ async function importLokriExport(
     if (!quota.ok) {
       summary.skipped.push({
         path: `notes/${n.id}.md`,
-        reason: "quota: " + quota.reason,
-      });
+        reason: "quota: " + quota.reason});
       continue;
     }
     try {
@@ -165,8 +160,7 @@ async function importLokriExport(
           title: n.title,
           contentText: n.contentText,
           embedding,
-          embeddingModel: model,
-        });
+          embeddingModel: model});
       });
       summary.notesCreated++;
     } catch (err) {
@@ -175,8 +169,7 @@ async function importLokriExport(
         reason:
           err instanceof Error && err.message.startsWith("QUOTA:")
             ? `quota: ${err.message.slice("QUOTA:".length)}`
-            : `embed failed: ${(err as Error).message}`,
-      });
+            : `embed failed: ${(err as Error).message}`});
     }
   }
 
@@ -197,8 +190,7 @@ async function importLokriExport(
       archivePath: f.path,
       filename: f.filename,
       mimeType: f.mimeType,
-      spaceId: f.spaceId ? (idMap.get(f.spaceId) ?? null) : null,
-    })),
+      spaceId: f.spaceId ? (idMap.get(f.spaceId) ?? null) : null})),
     summary,
   );
 }
@@ -219,15 +211,13 @@ async function importMarkdownVault(
   if (mdPaths.length === 0) {
     summary.skipped.push({
       path: "(archive)",
-      reason: "Keine .md-Dateien gefunden.",
-    });
+      reason: "Keine .md-Dateien gefunden."});
     return;
   }
   if (mdPaths.length > MAX_FILES_PER_ARCHIVE) {
     summary.skipped.push({
       path: "(archive)",
-      reason: `Zu viele Dateien (max ${MAX_FILES_PER_ARCHIVE}).`,
-    });
+      reason: `Zu viele Dateien (max ${MAX_FILES_PER_ARCHIVE}).`});
     return;
   }
 
@@ -282,8 +272,7 @@ async function importMarkdownVault(
           title,
           contentText: clean,
           embedding,
-          embeddingModel: model,
-        });
+          embeddingModel: model});
       });
       summary.notesCreated++;
     } catch (err) {
@@ -292,8 +281,7 @@ async function importMarkdownVault(
         reason:
           err instanceof Error && err.message.startsWith("QUOTA:")
             ? `quota: ${err.message.slice("QUOTA:".length)}`
-            : `embed failed: ${(err as Error).message}`,
-      });
+            : `embed failed: ${(err as Error).message}`});
     }
   }
 }
@@ -319,20 +307,17 @@ async function importFiles(
     if (!zipped) {
       summary.skipped.push({
         path: entry.archivePath,
-        reason: "Datei fehlt im Archiv",
-      });
+        reason: "Datei fehlt im Archiv"});
       continue;
     }
     const bytes = await zipped.async("nodebuffer");
     const quota = await checkQuota(ownerAccountId, {
       bytes: bytes.byteLength,
-      files: 1,
-    });
+      files: 1});
     if (!quota.ok) {
       summary.skipped.push({
         path: entry.archivePath,
-        reason: "quota: " + quota.reason,
-      });
+        reason: "quota: " + quota.reason});
       continue;
     }
 
@@ -341,16 +326,14 @@ async function importFiles(
         ownerAccountId,
         filename: entry.filename,
         content: bytes,
-        mimeType: entry.mimeType,
-      });
+        mimeType: entry.mimeType});
       try {
         const row = await db.transaction(async (tx) => {
           const quota = await reserveQuota(
             ownerAccountId,
             {
               bytes: put.sizeBytes,
-              files: 1,
-            },
+              files: 1},
             tx,
           );
           if (!quota.ok) throw new Error(`QUOTA:${quota.reason}`);
@@ -364,8 +347,7 @@ async function importFiles(
               mimeType: entry.mimeType,
               sizeBytes: put.sizeBytes,
               storageProviderId: providerId,
-              storageKey: put.storageKey,
-            })
+              storageKey: put.storageKey})
             .returning({ id: filesTable.id });
           return created;
         });
@@ -384,8 +366,7 @@ async function importFiles(
                   chunkIndex: i,
                   contentText: c,
                   embedding: embeddings[i],
-                  embeddingModel: model,
-                })),
+                  embeddingModel: model})),
               );
             }
           }
@@ -406,8 +387,7 @@ async function importFiles(
         if (err instanceof Error && err.message.startsWith("QUOTA:")) {
           summary.skipped.push({
             path: entry.archivePath,
-            reason: `quota: ${err.message.slice("QUOTA:".length)}`,
-          });
+            reason: `quota: ${err.message.slice("QUOTA:".length)}`});
           continue;
         }
         throw err;
@@ -415,8 +395,7 @@ async function importFiles(
     } catch (err) {
       summary.skipped.push({
         path: entry.archivePath,
-        reason: `upload failed: ${(err as Error).message}`,
-      });
+        reason: `upload failed: ${(err as Error).message}`});
     }
   }
 }

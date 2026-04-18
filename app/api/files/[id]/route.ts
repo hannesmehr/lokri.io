@@ -5,9 +5,8 @@ import {
   notFound,
   parseJsonBody,
   serverError,
-  unauthorized,
-  zodError,
-} from "@/lib/api/errors";
+  authErrorResponse,
+  zodError} from "@/lib/api/errors";
 import { findOwnedFile } from "@/lib/api/ownership";
 import { ApiAuthError, requireSessionWithAccount } from "@/lib/api/session";
 import { db } from "@/lib/db";
@@ -16,8 +15,7 @@ import { applyQuotaDelta } from "@/lib/quota";
 import { getProviderForFile } from "@/lib/storage";
 
 const patchSchema = z.object({
-  mcpHidden: z.boolean().optional(),
-});
+  mcpHidden: z.boolean().optional()});
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -30,17 +28,16 @@ export async function GET(_req: NextRequest, { params }: Params) {
     // Download link is a same-origin proxy — auth-checked on each request.
     return NextResponse.json({
       file,
-      downloadUrl: `/api/files/${file.id}/content`,
-    });
+      downloadUrl: `/api/files/${file.id}/content`});
   } catch (err) {
-    if (err instanceof ApiAuthError) return unauthorized(err.message);
+    if (err instanceof ApiAuthError) return authErrorResponse(err);
     return serverError(err);
   }
 }
 
 export async function PATCH(req: NextRequest, { params }: Params) {
   try {
-    const { ownerAccountId } = await requireSessionWithAccount();
+    const { ownerAccountId } = await requireSessionWithAccount({ minRole: "member" });
     const { id } = await params;
     const existing = await findOwnedFile(ownerAccountId, id);
     if (!existing) return notFound();
@@ -54,20 +51,19 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       .set({
         ...(parsed.data.mcpHidden !== undefined
           ? { mcpHidden: parsed.data.mcpHidden }
-          : {}),
-      })
+          : {})})
       .where(eq(files.id, id));
 
     return NextResponse.json({ ok: true });
   } catch (err) {
-    if (err instanceof ApiAuthError) return unauthorized(err.message);
+    if (err instanceof ApiAuthError) return authErrorResponse(err);
     return serverError(err);
   }
 }
 
 export async function DELETE(_req: NextRequest, { params }: Params) {
   try {
-    const { ownerAccountId } = await requireSessionWithAccount();
+    const { ownerAccountId } = await requireSessionWithAccount({ minRole: "member" });
     const { id } = await params;
     const existing = await findOwnedFile(ownerAccountId, id);
     if (!existing) return notFound();
@@ -87,15 +83,14 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
         ownerAccountId,
         {
           bytes: -existing.sizeBytes,
-          files: -1,
-        },
+          files: -1},
         tx,
       );
     });
 
     return new NextResponse(null, { status: 204 });
   } catch (err) {
-    if (err instanceof ApiAuthError) return unauthorized(err.message);
+    if (err instanceof ApiAuthError) return authErrorResponse(err);
     return serverError(err);
   }
 }

@@ -6,9 +6,8 @@ import {
   paymentRequired,
   serverError,
   tooLarge,
-  unauthorized,
-  zodError,
-} from "@/lib/api/errors";
+  authErrorResponse,
+  zodError} from "@/lib/api/errors";
 import { findOwnedSpace } from "@/lib/api/ownership";
 import { ApiAuthError, requireSessionWithAccount } from "@/lib/api/session";
 import { db } from "@/lib/db";
@@ -23,8 +22,7 @@ const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB per file (spec)
 
 const listQuerySchema = z.object({
   spaceId: z.uuid().optional(),
-  limit: z.coerce.number().int().positive().max(200).default(50),
-});
+  limit: z.coerce.number().int().positive().max(200).default(50)});
 
 export async function GET(req: NextRequest) {
   try {
@@ -48,7 +46,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ files: rows });
   } catch (err) {
-    if (err instanceof ApiAuthError) return unauthorized(err.message);
+    if (err instanceof ApiAuthError) return authErrorResponse(err);
     return serverError(err);
   }
 }
@@ -63,7 +61,7 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   try {
-    const { ownerAccountId } = await requireSessionWithAccount();
+    const { ownerAccountId } = await requireSessionWithAccount({ minRole: "member" });
     const rl = await limit("fileUpload", `u:${ownerAccountId}`);
     if (!rl.ok) return rateLimitResponse(rl);
 
@@ -110,8 +108,7 @@ export async function POST(req: NextRequest) {
       filename: file.name,
       content,
       mimeType,
-      targetPrefix,
-    });
+      targetPrefix});
 
     try {
       // When `target_prefix` is provided (D&D), the storage key is determin-
@@ -150,8 +147,7 @@ export async function POST(req: NextRequest) {
           ownerAccountId,
           {
             bytes: putResult.sizeBytes - existingFreedBytes,
-            files: 1 - existingFreedFiles,
-          },
+            files: 1 - existingFreedFiles},
           tx,
         );
         if (!quotaCheck.ok) throw new Error(`QUOTA:${quotaCheck.reason}`);
@@ -165,8 +161,7 @@ export async function POST(req: NextRequest) {
             mimeType,
             sizeBytes: putResult.sizeBytes,
             storageProviderId: providerId,
-            storageKey: putResult.storageKey,
-          })
+            storageKey: putResult.storageKey})
           .returning();
 
         return created;
@@ -186,8 +181,7 @@ export async function POST(req: NextRequest) {
                 chunkIndex: i,
                 contentText: c,
                 embedding: embeddings[i],
-                embeddingModel: model,
-              })),
+                embeddingModel: model})),
             );
           }
         }
@@ -217,7 +211,7 @@ export async function POST(req: NextRequest) {
       throw err;
     }
   } catch (err) {
-    if (err instanceof ApiAuthError) return unauthorized(err.message);
+    if (err instanceof ApiAuthError) return authErrorResponse(err);
     return serverError(err);
   }
 }

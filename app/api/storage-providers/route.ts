@@ -5,9 +5,8 @@ import {
   apiError,
   parseJsonBody,
   serverError,
-  unauthorized,
-  zodError,
-} from "@/lib/api/errors";
+  authErrorResponse,
+  zodError} from "@/lib/api/errors";
 import { ApiAuthError, requireSessionWithAccount } from "@/lib/api/session";
 import { db } from "@/lib/db";
 import { storageProviders } from "@/lib/db/schema";
@@ -25,8 +24,7 @@ const s3ConfigSchema = z.object({
   accessKeyId: z.string().min(1).max(200),
   secretAccessKey: z.string().min(1).max(400),
   pathPrefix: z.string().max(200).optional(),
-  forcePathStyle: z.boolean().optional(),
-});
+  forcePathStyle: z.boolean().optional()});
 
 const githubConfigSchema = z.object({
   accessToken: z.string().min(1).max(400).optional(),
@@ -43,20 +41,17 @@ const githubConfigSchema = z.object({
     .max(120)
     .regex(/^[\w.-]+$/, "Ungültiger Repo-Name"),
   ref: z.string().trim().max(200).optional(),
-  pathPrefix: z.string().max(200).optional(),
-});
+  pathPrefix: z.string().max(200).optional()});
 
 const createSchema = z.discriminatedUnion("type", [
   z.object({
     name: z.string().trim().min(1).max(80),
     type: z.literal("s3"),
-    s3: s3ConfigSchema,
-  }),
+    s3: s3ConfigSchema}),
   z.object({
     name: z.string().trim().min(1).max(80),
     type: z.literal("github"),
-    github: githubConfigSchema,
-  }),
+    github: githubConfigSchema}),
 ]);
 
 // ---- List -----------------------------------------------------------------
@@ -70,14 +65,13 @@ export async function GET() {
         name: storageProviders.name,
         type: storageProviders.type,
         createdAt: storageProviders.createdAt,
-        updatedAt: storageProviders.updatedAt,
-      })
+        updatedAt: storageProviders.updatedAt})
       .from(storageProviders)
       .where(eq(storageProviders.ownerAccountId, ownerAccountId))
       .orderBy(asc(storageProviders.createdAt));
     return NextResponse.json({ providers: rows });
   } catch (err) {
-    if (err instanceof ApiAuthError) return unauthorized(err.message);
+    if (err instanceof ApiAuthError) return authErrorResponse(err);
     return serverError(err);
   }
 }
@@ -86,7 +80,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const { ownerAccountId } = await requireSessionWithAccount();
+    const { ownerAccountId } = await requireSessionWithAccount({ minRole: "admin" });
     const rl = await limit("tokenCreate", `u:${ownerAccountId}`);
     if (!rl.ok) return rateLimitResponse(rl);
 
@@ -138,17 +132,15 @@ export async function POST(req: NextRequest) {
         ownerAccountId,
         name: parsed.data.name,
         type: parsed.data.type,
-        configEncrypted: encrypted,
-      })
+        configEncrypted: encrypted})
       .returning({
         id: storageProviders.id,
         name: storageProviders.name,
         type: storageProviders.type,
-        createdAt: storageProviders.createdAt,
-      });
+        createdAt: storageProviders.createdAt});
     return NextResponse.json({ provider: row }, { status: 201 });
   } catch (err) {
-    if (err instanceof ApiAuthError) return unauthorized(err.message);
+    if (err instanceof ApiAuthError) return authErrorResponse(err);
     console.error("[storage-providers.POST]", err);
     return serverError(err);
   }

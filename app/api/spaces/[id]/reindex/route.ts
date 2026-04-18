@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { NextResponse, type NextRequest } from "next/server";
-import { notFound, serverError, unauthorized } from "@/lib/api/errors";
+import {  authErrorResponse,
+ notFound, serverError} from "@/lib/api/errors";
 import { ApiAuthError, requireSessionWithAccount } from "@/lib/api/session";
 import { db } from "@/lib/db";
 import { files, spaces } from "@/lib/db/schema";
@@ -27,7 +28,7 @@ const MAX_FILES_PER_CALL = 100;
  */
 export async function POST(_req: NextRequest, { params }: Params) {
   try {
-    const { ownerAccountId } = await requireSessionWithAccount();
+    const { ownerAccountId } = await requireSessionWithAccount({ minRole: "member" });
     const { id } = await params;
 
     const rl = await limit("reindex", `u:${ownerAccountId}`);
@@ -65,12 +66,11 @@ export async function POST(_req: NextRequest, { params }: Params) {
       noText: results.filter((r) => r.status === "no_text").length,
       failed: results.filter((r) => r.status === "failed").length,
       chunks: results.reduce((n, r) => n + r.chunks, 0),
-      truncated,
-    };
+      truncated};
 
     return NextResponse.json({ summary, results });
   } catch (err) {
-    if (err instanceof ApiAuthError) return unauthorized(err.message);
+    if (err instanceof ApiAuthError) return authErrorResponse(err);
     console.error("[spaces.reindex]", err);
     return serverError(err);
   }

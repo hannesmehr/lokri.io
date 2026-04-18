@@ -4,8 +4,7 @@ import {
   apiError,
   notFound,
   serverError,
-  unauthorized,
-} from "@/lib/api/errors";
+  authErrorResponse} from "@/lib/api/errors";
 import { ApiAuthError, requireSessionWithAccount } from "@/lib/api/session";
 import { db } from "@/lib/db";
 import { files } from "@/lib/db/schema";
@@ -24,7 +23,8 @@ type Params = { params: Promise<{ id: string }> };
  */
 export async function POST(_req: NextRequest, { params }: Params) {
   try {
-    const { ownerAccountId } = await requireSessionWithAccount();
+    const { ownerAccountId } = await requireSessionWithAccount({
+      minRole: "member"});
     const { id } = await params;
 
     const rl = await limit("fileUpload", `u:${ownerAccountId}`);
@@ -49,7 +49,7 @@ export async function POST(_req: NextRequest, { params }: Params) {
     }
     return NextResponse.json({ chunks: result.chunks });
   } catch (err) {
-    if (err instanceof ApiAuthError) return unauthorized(err.message);
+    if (err instanceof ApiAuthError) return authErrorResponse(err);
     console.error("[files.reindex]", err);
     return serverError(err);
   }

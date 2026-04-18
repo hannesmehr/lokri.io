@@ -1,6 +1,7 @@
 import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import { NextResponse, type NextRequest } from "next/server";
-import { notFound, serverError, unauthorized } from "@/lib/api/errors";
+import {  authErrorResponse,
+ notFound, serverError} from "@/lib/api/errors";
 import { ApiAuthError, requireSessionWithAccount } from "@/lib/api/session";
 import { db } from "@/lib/db";
 import { files, spaces } from "@/lib/db/schema";
@@ -51,8 +52,7 @@ export async function GET(req: NextRequest, { params }: Params) {
       .select({
         id: spaces.id,
         storageProviderId: spaces.storageProviderId,
-        hiddenExternalKeys: spaces.hiddenExternalKeys,
-      })
+        hiddenExternalKeys: spaces.hiddenExternalKeys})
       .from(spaces)
       .where(and(eq(spaces.id, id), eq(spaces.ownerAccountId, ownerAccountId)))
       .limit(1);
@@ -69,8 +69,7 @@ export async function GET(req: NextRequest, { params }: Params) {
           mimeType: files.mimeType,
           sizeBytes: files.sizeBytes,
           mcpHidden: files.mcpHidden,
-          createdAt: files.createdAt,
-        })
+          createdAt: files.createdAt})
         .from(files)
         .where(
           and(
@@ -90,8 +89,7 @@ export async function GET(req: NextRequest, { params }: Params) {
         lastModified: r.createdAt.toISOString(),
         mimeType: r.mimeType,
         imported: true,
-        hidden: r.mcpHidden,
-      }));
+        hidden: r.mcpHidden}));
 
       return NextResponse.json({
         source: "internal",
@@ -102,8 +100,7 @@ export async function GET(req: NextRequest, { params }: Params) {
         directories: [] as DirEntry[],
         objects,
         isTruncated: false,
-        nextContinuationToken: null,
-      });
+        nextContinuationToken: null});
     }
 
     // ── External path (S3 or GitHub) ───────────────────────────────────
@@ -147,13 +144,11 @@ export async function GET(req: NextRequest, { params }: Params) {
       lastModified: o.lastModified,
       mimeType: null,
       imported: fileRowByKey.has(fullKeys[i]),
-      hidden: isKeyHidden(o.key, hiddenList),
-    }));
+      hidden: isKeyHidden(o.key, hiddenList)}));
 
     const directories: DirEntry[] = result.directories.map((d) => ({
       key: d,
-      hidden: isKeyHidden(d, hiddenList),
-    }));
+      hidden: isKeyHidden(d, hiddenList)}));
 
     return NextResponse.json({
       source: "external",
@@ -164,10 +159,9 @@ export async function GET(req: NextRequest, { params }: Params) {
       directories,
       objects,
       isTruncated: result.isTruncated,
-      nextContinuationToken: result.nextContinuationToken,
-    });
+      nextContinuationToken: result.nextContinuationToken});
   } catch (err) {
-    if (err instanceof ApiAuthError) return unauthorized(err.message);
+    if (err instanceof ApiAuthError) return authErrorResponse(err);
     console.error("[spaces.browse]", err);
     return serverError(err);
   }

@@ -5,15 +5,13 @@ import {
   apiError,
   parseJsonBody,
   serverError,
-  unauthorized,
-  zodError,
-} from "@/lib/api/errors";
+  authErrorResponse,
+  zodError} from "@/lib/api/errors";
 import { ApiAuthError, requireSessionWithAccount } from "@/lib/api/session";
 import {
   computeBillingWindow,
   ensureInvoiceForCapturedOrder,
-  reconcileCapturedOrderState,
-} from "@/lib/billing/reconcile";
+  reconcileCapturedOrderState} from "@/lib/billing/reconcile";
 import { db } from "@/lib/db";
 import { orders, ownerAccounts } from "@/lib/db/schema";
 import { reportOperationalIssue } from "@/lib/ops-alerts";
@@ -23,8 +21,7 @@ export const runtime = "nodejs";
 export const maxDuration = 30;
 
 const bodySchema = z.object({
-  paypalOrderId: z.string().min(1).max(200),
-});
+  paypalOrderId: z.string().min(1).max(200)});
 
 /**
  * Capture a PayPal order, activate the purchased plan, generate the invoice.
@@ -40,7 +37,7 @@ const bodySchema = z.object({
  */
 export async function POST(req: NextRequest) {
   try {
-    const { session, ownerAccountId } = await requireSessionWithAccount();
+    const { session, ownerAccountId } = await requireSessionWithAccount({ minRole: "owner" });
     const json = await parseJsonBody(req, 2048);
     const parsed = bodySchema.safeParse(json);
     if (!parsed.success) return zodError(parsed.error);
@@ -78,17 +75,14 @@ export async function POST(req: NextRequest) {
         user: {
           id: session.user.id,
           name: session.user.name,
-          email: session.user.email,
-        },
+          email: session.user.email},
         paymentId: intent.paymentId,
         grossCents: intent.amountCents,
-        payerEmail: null,
-      });
+        payerEmail: null});
       return NextResponse.json({
         status: "already_captured",
         order: reconciled.order,
-        invoice: reconciled.invoice,
-      });
+        invoice: reconciled.invoice});
     }
     if (intent.status !== "created") {
       return apiError(`Unexpected order status: ${intent.status}`, 409);
@@ -160,8 +154,7 @@ export async function POST(req: NextRequest) {
         capturedAt: now,
         startsAt: baseExpiry,
         expiresAt: newExpiry,
-        paymentId: captured.paymentId,
-      })
+        paymentId: captured.paymentId})
       .where(and(eq(orders.id, intent.id), eq(orders.status, "created"), isNull(orders.paymentId)))
       .returning();
 
@@ -171,8 +164,7 @@ export async function POST(req: NextRequest) {
       capturedAt: now,
       startsAt: baseExpiry,
       expiresAt: newExpiry,
-      paymentId: captured.paymentId,
-    };
+      paymentId: captured.paymentId};
 
     // 2. upgrade the owner_account
     await db
@@ -180,8 +172,7 @@ export async function POST(req: NextRequest) {
       .set({
         planId: intent.planId,
         planExpiresAt: newExpiry,
-        planRenewedAt: now,
-      })
+        planRenewedAt: now})
       .where(eq(ownerAccounts.id, ownerAccountId));
 
     // 3. issue or recover the invoice row
@@ -193,28 +184,24 @@ export async function POST(req: NextRequest) {
         user: {
           id: session.user.id,
           name: session.user.name,
-          email: session.user.email,
-        },
+          email: session.user.email},
         paymentId: captured.paymentId,
         grossCents: captured.amountCents || intent.amountCents,
-        payerEmail: captured.payerEmail,
-      });
+        payerEmail: captured.payerEmail});
     } catch (err) {
       reportOperationalIssue("billing.invoice_generation_failed", "error", {
         orderId: intent.id,
         ownerAccountId,
         paymentId: captured.paymentId,
-        message: err instanceof Error ? err.message : String(err),
-      });
+        message: err instanceof Error ? err.message : String(err)});
     }
 
     return NextResponse.json({
       status: "captured",
       order: effectiveOrder,
-      invoice,
-    });
+      invoice});
   } catch (err) {
-    if (err instanceof ApiAuthError) return unauthorized(err.message);
+    if (err instanceof ApiAuthError) return authErrorResponse(err);
     console.error("[paypal/capture-order]", err);
     return serverError(err);
   }

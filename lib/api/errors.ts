@@ -2,6 +2,23 @@ import { NextResponse } from "next/server";
 import type { ZodError } from "zod";
 
 /**
+ * Thrown by `requireSession` / `requireSessionWithAccount` when the
+ * caller is unauthenticated (default 401) or lacks the required role
+ * (`status: 403`). Lives here (not in `session.ts`) so tests and other
+ * DB-free modules can import it without transitively loading the DB
+ * client.
+ */
+export class ApiAuthError extends Error {
+  readonly status: number;
+
+  constructor(message = "Unauthorized", status = 401) {
+    super(message);
+    this.name = "ApiAuthError";
+    this.status = status;
+  }
+}
+
+/**
  * Unified JSON error shape: `{ error: string, details?: unknown }`.
  * Keep messages stable — the Web-UI and MCP tool layer both consume these.
  */
@@ -20,22 +37,21 @@ export function unauthorized(message = "Unauthorized") {
   return apiError(message, 401);
 }
 
-export function forbidden(message = "Forbidden") {
-  return apiError(message, 403);
+export function forbidden(message = "Forbidden", code = "forbidden") {
+  return apiError(message, 403, { code });
 }
 
 /**
  * Map a thrown `ApiAuthError` to the correct HTTP response. `status === 403`
- * → `forbidden()` (user is logged in but lacks the required role/scope),
- * everything else → `unauthorized()` (no session / stale cookie).
+ * → `forbidden()` with a `code: 'forbidden.role'` marker so the frontend
+ * can distinguish this from a missing session (`unauthorized`, `401`).
  *
- * Existing routes that still call `unauthorized(err.message)` directly keep
- * working — they just always respond 401 even on role mismatches. New routes
- * that use the `minRole` guard should prefer this helper so the frontend
- * can distinguish "log in" from "ask an admin".
+ * Existing routes that still call `unauthorized(err.message)` directly
+ * keep working — they just always respond 401 even on role mismatches.
+ * New routes that use the `minRole` guard should prefer this helper.
  */
 export function authErrorResponse(err: { message: string; status?: number }) {
-  if (err.status === 403) return forbidden(err.message);
+  if (err.status === 403) return forbidden(err.message, "forbidden.role");
   return unauthorized(err.message);
 }
 

@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
+import { ApiAuthError } from "@/lib/api/errors";
 import {
   hasRole,
   normalizeLegacyRole,
@@ -11,24 +12,10 @@ import { ownerAccountMembers, ownerAccounts, users } from "@/lib/db/schema";
 
 const FREE_PLAN_ID = "free";
 
-/**
- * Resolves the current session from request cookies.
- *
- * `ApiAuthError` carries an explicit HTTP status so route handlers can map
- * `401` (no session) vs `403` (authenticated but not authorised for this
- * account/role). The caller matches on the class and returns the right
- * response via the helpers in `lib/api/errors.ts`.
- */
-export class ApiAuthError extends Error {
-  /** HTTP status the caller should reply with. 401 by default, 403 for role/scope fails. */
-  readonly status: number;
-
-  constructor(message = "Unauthorized", status = 401) {
-    super(message);
-    this.name = "ApiAuthError";
-    this.status = status;
-  }
-}
+// Back-compat re-export so the ~25 existing call sites that import
+// `ApiAuthError` from `@/lib/api/session` keep working without a sweep.
+// New code should import directly from `@/lib/api/errors`.
+export { ApiAuthError };
 
 export async function requireSession(): Promise<AuthSession> {
   const session = await auth.api.getSession({ headers: await headers() });

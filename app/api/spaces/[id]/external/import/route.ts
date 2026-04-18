@@ -6,9 +6,8 @@ import {
   parseJsonBody,
   paymentRequired,
   serverError,
-  unauthorized,
-  zodError,
-} from "@/lib/api/errors";
+  authErrorResponse,
+  zodError} from "@/lib/api/errors";
 import { ApiAuthError, requireSessionWithAccount } from "@/lib/api/session";
 import { db } from "@/lib/db";
 import { spaces } from "@/lib/db/schema";
@@ -21,14 +20,14 @@ export const maxDuration = 60;
 
 const bodySchema = z.object({
   /** Key relative to the provider's path_prefix (same as browse UI). */
-  key: z.string().min(1).max(1500),
-});
+  key: z.string().min(1).max(1500)});
 
 type Params = { params: Promise<{ id: string }> };
 
 export async function POST(req: NextRequest, { params }: Params) {
   try {
-    const { ownerAccountId } = await requireSessionWithAccount();
+    const { ownerAccountId } = await requireSessionWithAccount({
+      minRole: "member"});
     const { id } = await params;
 
     const rl = await limit("fileUpload", `u:${ownerAccountId}`);
@@ -41,8 +40,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     const [space] = await db
       .select({
         id: spaces.id,
-        storageProviderId: spaces.storageProviderId,
-      })
+        storageProviderId: spaces.storageProviderId})
       .from(spaces)
       .where(and(eq(spaces.id, id), eq(spaces.ownerAccountId, ownerAccountId)))
       .limit(1);
@@ -59,8 +57,7 @@ export async function POST(req: NextRequest, { params }: Params) {
         spaceId: space.id,
         providerId: space.storageProviderId,
         provider,
-        rootPrefix: provider.rootPrefix,
-      },
+        rootPrefix: provider.rootPrefix},
       parsed.data.key,
     );
 
@@ -72,10 +69,9 @@ export async function POST(req: NextRequest, { params }: Params) {
     }
     return NextResponse.json({
       fileId: result.fileId,
-      alreadyImported: result.status === "already_imported",
-    });
+      alreadyImported: result.status === "already_imported"});
   } catch (err) {
-    if (err instanceof ApiAuthError) return unauthorized(err.message);
+    if (err instanceof ApiAuthError) return authErrorResponse(err);
     console.error("[external.import]", err);
     return serverError(err);
   }

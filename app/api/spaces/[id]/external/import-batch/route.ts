@@ -5,9 +5,8 @@ import {
   notFound,
   parseJsonBody,
   serverError,
-  unauthorized,
-  zodError,
-} from "@/lib/api/errors";
+  authErrorResponse,
+  zodError} from "@/lib/api/errors";
 import { ApiAuthError, requireSessionWithAccount } from "@/lib/api/session";
 import { db } from "@/lib/db";
 import { spaces } from "@/lib/db/schema";
@@ -33,14 +32,14 @@ const bodySchema = z.object({
   keys: z
     .array(z.string().min(1).max(1500))
     .min(1)
-    .max(MAX_KEYS_PER_BATCH),
-});
+    .max(MAX_KEYS_PER_BATCH)});
 
 type Params = { params: Promise<{ id: string }> };
 
 export async function POST(req: NextRequest, { params }: Params) {
   try {
-    const { ownerAccountId } = await requireSessionWithAccount();
+    const { ownerAccountId } = await requireSessionWithAccount({
+      minRole: "member"});
     const { id } = await params;
 
     // Same rate-limit bucket as the single-file import path — a batch
@@ -57,8 +56,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     const [space] = await db
       .select({
         id: spaces.id,
-        storageProviderId: spaces.storageProviderId,
-      })
+        storageProviderId: spaces.storageProviderId})
       .from(spaces)
       .where(and(eq(spaces.id, id), eq(spaces.ownerAccountId, ownerAccountId)))
       .limit(1);
@@ -73,8 +71,7 @@ export async function POST(req: NextRequest, { params }: Params) {
       spaceId: space.id,
       providerId: space.storageProviderId,
       provider,
-      rootPrefix: provider.rootPrefix,
-    };
+      rootPrefix: provider.rootPrefix};
 
     // Expand directory prefixes (trailing "/") into flat key lists via
     // S3's recursive listing. Dedup at each step so the same object in a
@@ -104,8 +101,7 @@ export async function POST(req: NextRequest, { params }: Params) {
         results.push({
           key,
           status: "skipped_quota",
-          reason: "Quota wurde vorher erreicht — keine weiteren Imports.",
-        });
+          reason: "Quota wurde vorher erreicht — keine weiteren Imports."});
         continue;
       }
       const r = await importExternalKey(ctx, key);
@@ -120,12 +116,11 @@ export async function POST(req: NextRequest, { params }: Params) {
         .length,
       skippedQuota: results.filter((r) => r.status === "skipped_quota").length,
       failed: results.filter((r) => r.status === "failed").length,
-      truncatedExpansion,
-    };
+      truncatedExpansion};
 
     return NextResponse.json({ summary, results });
   } catch (err) {
-    if (err instanceof ApiAuthError) return unauthorized(err.message);
+    if (err instanceof ApiAuthError) return authErrorResponse(err);
     console.error("[external.import-batch]", err);
     return serverError(err);
   }

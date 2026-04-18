@@ -71,7 +71,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const { ownerAccountId, session, role, accountType } =
-      await requireSessionWithAccount();
+      await requireSessionWithAccount({ minRole: "member" });
     const rl = await limit("tokenCreate", `u:${ownerAccountId}`);
     if (!rl.ok) return rateLimitResponse(rl);
 

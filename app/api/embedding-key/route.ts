@@ -5,17 +5,15 @@ import {
   apiError,
   parseJsonBody,
   serverError,
-  unauthorized,
-  zodError,
-} from "@/lib/api/errors";
+  authErrorResponse,
+  zodError} from "@/lib/api/errors";
 import { ApiAuthError, requireSessionWithAccount } from "@/lib/api/session";
 import { db } from "@/lib/db";
 import { embeddingKeys } from "@/lib/db/schema";
 import {
   ALLOWED_BYOK_MODELS,
   testEmbeddingKey,
-  type EmbeddingProviderKind,
-} from "@/lib/embedding-keys";
+  type EmbeddingProviderKind} from "@/lib/embedding-keys";
 import { limit, rateLimitResponse } from "@/lib/rate-limit";
 import { encryptJson } from "@/lib/storage/encryption";
 
@@ -25,8 +23,7 @@ const bodySchema = z.object({
   provider: z.enum(["openai"] as const),
   model: z.string().min(1).max(100),
   /** Plaintext API key — stored AES-256-GCM-encrypted; never returned back. */
-  apiKey: z.string().min(10).max(400),
-});
+  apiKey: z.string().min(10).max(400)});
 
 // ---- GET: current BYOK state (never returns the plaintext key) -------------
 
@@ -39,14 +36,13 @@ export async function GET() {
         provider: embeddingKeys.provider,
         model: embeddingKeys.model,
         lastUsedAt: embeddingKeys.lastUsedAt,
-        createdAt: embeddingKeys.createdAt,
-      })
+        createdAt: embeddingKeys.createdAt})
       .from(embeddingKeys)
       .where(eq(embeddingKeys.ownerAccountId, ownerAccountId))
       .limit(1);
     return NextResponse.json({ key: row ?? null });
   } catch (err) {
-    if (err instanceof ApiAuthError) return unauthorized(err.message);
+    if (err instanceof ApiAuthError) return authErrorResponse(err);
     return serverError(err);
   }
 }
@@ -55,7 +51,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const { ownerAccountId } = await requireSessionWithAccount();
+    const { ownerAccountId } = await requireSessionWithAccount({ minRole: "admin" });
     const rl = await limit("tokenCreate", `u:${ownerAccountId}`);
     if (!rl.ok) return rateLimitResponse(rl);
 
@@ -99,18 +95,16 @@ export async function POST(req: NextRequest) {
         ownerAccountId,
         provider,
         model,
-        configEncrypted,
-      })
+        configEncrypted})
       .returning({
         id: embeddingKeys.id,
         provider: embeddingKeys.provider,
         model: embeddingKeys.model,
-        createdAt: embeddingKeys.createdAt,
-      });
+        createdAt: embeddingKeys.createdAt});
 
     return NextResponse.json({ key: row }, { status: 201 });
   } catch (err) {
-    if (err instanceof ApiAuthError) return unauthorized(err.message);
+    if (err instanceof ApiAuthError) return authErrorResponse(err);
     console.error("[embedding-key.POST]", err);
     return serverError(err);
   }
@@ -120,13 +114,13 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE() {
   try {
-    const { ownerAccountId } = await requireSessionWithAccount();
+    const { ownerAccountId } = await requireSessionWithAccount({ minRole: "admin" });
     await db
       .delete(embeddingKeys)
       .where(eq(embeddingKeys.ownerAccountId, ownerAccountId));
     return NextResponse.json({ ok: true });
   } catch (err) {
-    if (err instanceof ApiAuthError) return unauthorized(err.message);
+    if (err instanceof ApiAuthError) return authErrorResponse(err);
     return serverError(err);
   }
 }

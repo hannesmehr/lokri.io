@@ -4,9 +4,8 @@ import { z } from "zod";
 import {
   parseJsonBody,
   serverError,
-  unauthorized,
-  zodError,
-} from "@/lib/api/errors";
+  authErrorResponse,
+  zodError} from "@/lib/api/errors";
 import { ApiAuthError, requireSessionWithAccount } from "@/lib/api/session";
 import { db } from "@/lib/db";
 import { fileChunks, files, notes } from "@/lib/db/schema";
@@ -18,8 +17,7 @@ const bodySchema = z.object({
   limit: z.number().int().positive().max(50).optional().default(10),
   spaceId: z.uuid().optional(),
   /** Minimum cosine similarity (0..1). Default 0 — keep everything. */
-  minSimilarity: z.number().min(0).max(1).optional().default(0),
-});
+  minSimilarity: z.number().min(0).max(1).optional().default(0)});
 
 export interface SearchHit {
   id: string;
@@ -64,8 +62,7 @@ export async function POST(req: NextRequest) {
         title: notes.title,
         content: notes.contentText,
         spaceId: notes.spaceId,
-        similarity: noteSim,
-      })
+        similarity: noteSim})
       .from(notes)
       .where(and(...noteConditions))
       .orderBy(desc(noteSim))
@@ -88,8 +85,7 @@ export async function POST(req: NextRequest) {
         content: fileChunks.contentText,
         filename: files.filename,
         spaceId: files.spaceId,
-        similarity: chunkSim,
-      })
+        similarity: chunkSim})
       .from(fileChunks)
       .innerJoin(files, eq(files.id, fileChunks.fileId))
       .where(and(...chunkConditions))
@@ -104,8 +100,7 @@ export async function POST(req: NextRequest) {
         snippet: makeSnippet(h.content),
         similarity: Number(h.similarity),
         spaceId: h.spaceId,
-        metadata: {},
-      })),
+        metadata: {}})),
       ...chunkHits.map<SearchHit>((h) => ({
         id: h.chunkId,
         type: "file_chunk",
@@ -113,14 +108,13 @@ export async function POST(req: NextRequest) {
         snippet: makeSnippet(h.content),
         similarity: Number(h.similarity),
         spaceId: h.spaceId,
-        metadata: { fileId: h.fileId, chunkIndex: h.chunkIndex },
-      })),
+        metadata: { fileId: h.fileId, chunkIndex: h.chunkIndex }})),
     ];
 
     hits.sort((a, b) => b.similarity - a.similarity);
     return NextResponse.json({ hits: hits.slice(0, limit) });
   } catch (err) {
-    if (err instanceof ApiAuthError) return unauthorized(err.message);
+    if (err instanceof ApiAuthError) return authErrorResponse(err);
     return serverError(err);
   }
 }

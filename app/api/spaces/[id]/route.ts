@@ -2,10 +2,11 @@ import { eq } from "drizzle-orm";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import {
+  apiError,
+  authErrorResponse,
   notFound,
   parseJsonBody,
   serverError,
-  unauthorized,
   zodError,
 } from "@/lib/api/errors";
 import { findOwnedSpace } from "@/lib/api/ownership";
@@ -38,14 +39,16 @@ export async function GET(_req: NextRequest, { params }: Params) {
     if (!space) return notFound();
     return NextResponse.json({ space });
   } catch (err) {
-    if (err instanceof ApiAuthError) return unauthorized(err.message);
+    if (err instanceof ApiAuthError) return authErrorResponse(err);
     return serverError(err);
   }
 }
 
 export async function PATCH(req: NextRequest, { params }: Params) {
   try {
-    const { ownerAccountId } = await requireSessionWithAccount();
+    const { ownerAccountId } = await requireSessionWithAccount({
+      minRole: "member",
+    });
     const { id } = await params;
     const existing = await findOwnedSpace(ownerAccountId, id);
     if (!existing) return notFound();
@@ -59,7 +62,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
         ownerAccountId,
         parsed.data.storageProviderId,
       );
-      if (!provider) return unauthorized("Storage provider not found.");
+      if (!provider) return apiError("Storage provider not found.", 404);
     }
 
     const [updated] = await db
@@ -78,14 +81,16 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 
     return NextResponse.json({ space: updated });
   } catch (err) {
-    if (err instanceof ApiAuthError) return unauthorized(err.message);
+    if (err instanceof ApiAuthError) return authErrorResponse(err);
     return serverError(err);
   }
 }
 
 export async function DELETE(_req: NextRequest, { params }: Params) {
   try {
-    const { ownerAccountId } = await requireSessionWithAccount();
+    const { ownerAccountId } = await requireSessionWithAccount({
+      minRole: "member",
+    });
     const { id } = await params;
     const existing = await findOwnedSpace(ownerAccountId, id);
     if (!existing) return notFound();
@@ -96,7 +101,7 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
     await db.delete(spaces).where(eq(spaces.id, id));
     return new NextResponse(null, { status: 204 });
   } catch (err) {
-    if (err instanceof ApiAuthError) return unauthorized(err.message);
+    if (err instanceof ApiAuthError) return authErrorResponse(err);
     return serverError(err);
   }
 }

@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { NextResponse, type NextRequest } from "next/server";
-import { notFound, serverError, unauthorized } from "@/lib/api/errors";
+import {  authErrorResponse,
+ notFound, serverError} from "@/lib/api/errors";
 import { ApiAuthError, requireSessionWithAccount } from "@/lib/api/session";
 import { db } from "@/lib/db";
 import { invoices } from "@/lib/db/schema";
@@ -13,7 +14,7 @@ type Params = { params: Promise<{ id: string }> };
 /** Session-gated proxy for the private invoice PDF in Vercel Blob. */
 export async function GET(_req: NextRequest, { params }: Params) {
   try {
-    const { ownerAccountId } = await requireSessionWithAccount();
+    const { ownerAccountId } = await requireSessionWithAccount({ minRole: "owner" });
     const { id } = await params;
 
     const [invoice] = await db
@@ -37,11 +38,9 @@ export async function GET(_req: NextRequest, { params }: Params) {
         "content-type": "application/pdf",
         "content-length": String(content.byteLength),
         "content-disposition": `inline; filename="${invoice.invoiceNumber}.pdf"`,
-        "cache-control": "private, no-store",
-      },
-    });
+        "cache-control": "private, no-store"}});
   } catch (err) {
-    if (err instanceof ApiAuthError) return unauthorized(err.message);
+    if (err instanceof ApiAuthError) return authErrorResponse(err);
     return serverError(err);
   }
 }

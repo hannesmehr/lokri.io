@@ -1,6 +1,7 @@
 import { and, desc, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
-import { serverError, unauthorized } from "@/lib/api/errors";
+import {  authErrorResponse,
+ serverError} from "@/lib/api/errors";
 import { ApiAuthError, requireSessionWithAccount } from "@/lib/api/session";
 import { db } from "@/lib/db";
 import { files, notes, spaces } from "@/lib/db/schema";
@@ -22,8 +23,7 @@ export async function GET() {
         .select({
           id: spaces.id,
           name: spaces.name,
-          updatedAt: spaces.updatedAt,
-        })
+          updatedAt: spaces.updatedAt})
         .from(spaces)
         .where(eq(spaces.ownerAccountId, ownerAccountId))
         .orderBy(desc(spaces.updatedAt))
@@ -33,8 +33,7 @@ export async function GET() {
           id: notes.id,
           title: notes.title,
           spaceId: notes.spaceId,
-          updatedAt: notes.updatedAt,
-        })
+          updatedAt: notes.updatedAt})
         .from(notes)
         .where(
           and(
@@ -49,8 +48,7 @@ export async function GET() {
           id: files.id,
           filename: files.filename,
           spaceId: files.spaceId,
-          createdAt: files.createdAt,
-        })
+          createdAt: files.createdAt})
         .from(files)
         .where(eq(files.ownerAccountId, ownerAccountId))
         .orderBy(desc(files.createdAt))
@@ -60,10 +58,9 @@ export async function GET() {
     return NextResponse.json({
       spaces: spaceRows,
       notes: noteRows,
-      files: fileRows,
-    });
+      files: fileRows});
   } catch (err) {
-    if (err instanceof ApiAuthError) return unauthorized(err.message);
+    if (err instanceof ApiAuthError) return authErrorResponse(err);
     return serverError(err);
   }
 }

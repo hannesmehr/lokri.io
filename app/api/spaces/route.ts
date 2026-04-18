@@ -4,9 +4,10 @@ import { z } from "zod";
 import { ApiAuthError, requireSessionWithAccount } from "@/lib/api/session";
 import { findOwnedStorageProvider } from "@/lib/api/ownership";
 import {
+  apiError,
+  authErrorResponse,
   parseJsonBody,
   serverError,
-  unauthorized,
   zodError,
 } from "@/lib/api/errors";
 import { db } from "@/lib/db";
@@ -28,14 +29,16 @@ export async function GET() {
       .orderBy(desc(spaces.updatedAt));
     return NextResponse.json({ spaces: rows });
   } catch (err) {
-    if (err instanceof ApiAuthError) return unauthorized(err.message);
+    if (err instanceof ApiAuthError) return authErrorResponse(err);
     return serverError(err);
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const { ownerAccountId } = await requireSessionWithAccount();
+    const { ownerAccountId } = await requireSessionWithAccount({
+      minRole: "member",
+    });
     const json = await parseJsonBody(req, 64 * 1024);
     const parsed = createBodySchema.safeParse(json);
     if (!parsed.success) return zodError(parsed.error);
@@ -45,7 +48,7 @@ export async function POST(req: NextRequest) {
         ownerAccountId,
         parsed.data.storageProviderId,
       );
-      if (!provider) return unauthorized("Storage provider not found.");
+      if (!provider) return apiError("Storage provider not found.", 404);
     }
 
     const [space] = await db
@@ -67,7 +70,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ space }, { status: 201 });
   } catch (err) {
-    if (err instanceof ApiAuthError) return unauthorized(err.message);
+    if (err instanceof ApiAuthError) return authErrorResponse(err);
     return serverError(err);
   }
 }

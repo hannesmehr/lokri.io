@@ -5,9 +5,8 @@ import {
   apiError,
   parseJsonBody,
   serverError,
-  unauthorized,
-  zodError,
-} from "@/lib/api/errors";
+  authErrorResponse,
+  zodError} from "@/lib/api/errors";
 import { ApiAuthError, requireSessionWithAccount } from "@/lib/api/session";
 import { db } from "@/lib/db";
 import { orders, plans } from "@/lib/db/schema";
@@ -19,12 +18,11 @@ export const runtime = "nodejs";
 
 const bodySchema = z.object({
   planId: z.string().min(1).max(50),
-  period: z.enum(["monthly", "yearly"]),
-});
+  period: z.enum(["monthly", "yearly"])});
 
 export async function POST(req: NextRequest) {
   try {
-    const { session, ownerAccountId } = await requireSessionWithAccount();
+    const { session, ownerAccountId } = await requireSessionWithAccount({ minRole: "owner" });
     const rl = await limit("tokenCreate", `u:${ownerAccountId}`);
     if (!rl.ok) return rateLimitResponse(rl);
 
@@ -57,8 +55,7 @@ export async function POST(req: NextRequest) {
         period: parsed.data.period,
         amountCents,
         paypalOrderId: "pending",
-        status: "created",
-      })
+        status: "created"})
       .returning({ id: orders.id });
 
     const origin = resolveAppOrigin();
@@ -72,8 +69,7 @@ export async function POST(req: NextRequest) {
       period: parsed.data.period,
       amountCents,
       returnUrl: `${origin}/billing/success`,
-      cancelUrl: `${origin}/billing?cancelled=1`,
-    });
+      cancelUrl: `${origin}/billing?cancelled=1`});
 
     // Bind the PayPal order ID back to our row.
     await db
@@ -85,10 +81,9 @@ export async function POST(req: NextRequest) {
       orderId: orderRow.id,
       paypalOrderId: paypal.paypalOrderId,
       status: paypal.status,
-      approveUrl: paypal.approveUrl,
-    });
+      approveUrl: paypal.approveUrl});
   } catch (err) {
-    if (err instanceof ApiAuthError) return unauthorized(err.message);
+    if (err instanceof ApiAuthError) return authErrorResponse(err);
     console.error("[paypal/create-order]", err);
     return serverError(err);
   }

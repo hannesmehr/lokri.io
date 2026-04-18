@@ -6,9 +6,8 @@ import {
   notFound,
   parseJsonBody,
   serverError,
-  unauthorized,
-  zodError,
-} from "@/lib/api/errors";
+  authErrorResponse,
+  zodError} from "@/lib/api/errors";
 import { findOwnedNote, findOwnedSpace } from "@/lib/api/ownership";
 import { ApiAuthError, requireSessionWithAccount } from "@/lib/api/session";
 import { db } from "@/lib/db";
@@ -22,8 +21,7 @@ const patchBodySchema = z
     title: z.string().trim().min(1).max(300).optional(),
     content: z.string().min(1).max(1_000_000).optional(),
     spaceId: z.uuid().nullable().optional(),
-    mcpHidden: z.boolean().optional(),
-  })
+    mcpHidden: z.boolean().optional()})
   .refine(
     (v) =>
       v.title !== undefined ||
@@ -46,14 +44,14 @@ export async function GET(_req: NextRequest, { params }: Params) {
     void _e;
     return NextResponse.json({ note: rest });
   } catch (err) {
-    if (err instanceof ApiAuthError) return unauthorized(err.message);
+    if (err instanceof ApiAuthError) return authErrorResponse(err);
     return serverError(err);
   }
 }
 
 export async function PATCH(req: NextRequest, { params }: Params) {
   try {
-    const { ownerAccountId } = await requireSessionWithAccount();
+    const { ownerAccountId } = await requireSessionWithAccount({ minRole: "member" });
     const rl = await limit("noteWrite", `u:${ownerAccountId}`);
     if (!rl.ok) return rateLimitResponse(rl);
 
@@ -100,8 +98,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
         embeddingModel,
         ...(parsed.data.mcpHidden !== undefined
           ? { mcpHidden: parsed.data.mcpHidden }
-          : {}),
-      })
+          : {})})
       .where(eq(notes.id, id))
       .returning();
 
@@ -109,14 +106,14 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     void _e;
     return NextResponse.json({ note: rest });
   } catch (err) {
-    if (err instanceof ApiAuthError) return unauthorized(err.message);
+    if (err instanceof ApiAuthError) return authErrorResponse(err);
     return serverError(err);
   }
 }
 
 export async function DELETE(_req: NextRequest, { params }: Params) {
   try {
-    const { ownerAccountId } = await requireSessionWithAccount();
+    const { ownerAccountId } = await requireSessionWithAccount({ minRole: "member" });
     const { id } = await params;
     const existing = await findOwnedNote(ownerAccountId, id);
     if (!existing) return notFound();
@@ -127,7 +124,7 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
     });
     return new NextResponse(null, { status: 204 });
   } catch (err) {
-    if (err instanceof ApiAuthError) return unauthorized(err.message);
+    if (err instanceof ApiAuthError) return authErrorResponse(err);
     return serverError(err);
   }
 }
