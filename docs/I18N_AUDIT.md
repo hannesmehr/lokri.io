@@ -1,6 +1,7 @@
 # i18n Inner-Layer Audit
 
 **Stand:** 2026-04-18
+**Runde 1:** ✅ erledigt
 **Scope:** Innenschicht (Auth, Dashboard, Marketing, Legal-Links, Invites, Mailer-Templates, API-Error-Messages in non-admin-Routes, User-facing Lib-Errors).
 **Explizit ausgeschlossen:** `app/(admin)/*`, `app/api/admin/*`, `lib/admin/*`, `components/ui/*` (shadcn Base-UI), Inhalte von `datenschutz`/`impressum` (Legal-Pages bleiben per Anforderung deutsch).
 
@@ -16,8 +17,8 @@ Kein Code wurde im Rahmen dieses Audits geändert — reine Read-Only-Analyse.
 | Geprüfte API-Route-Verzeichnisse (non-admin)          | 18 |
 | Geprüfte Lib-Dateien mit potentiell user-facing Strings | 15 |
 | Geprüfte Mailer-Template-Funktionen                   | 8 |
-| Gesamt-Leaf-Keys in `messages/de.json` / `messages/en.json` | 527 / 527 |
-| Top-Level-Namespaces                                  | 17 (identisch in beiden Locales) |
+| Gesamt-Leaf-Keys in `messages/de.json` / `messages/en.json` | 631 / 631 |
+| Top-Level-Namespaces                                  | 19 (identisch in beiden Locales) |
 | Shape-Diskrepanzen `de` ↔ `en`                        | 0 |
 | Mailer-Templates vollständig migriert                 | 8 / 8 ✅ |
 
@@ -30,15 +31,17 @@ Kein Code wurde im Rahmen dieses Audits geändert — reine Read-Only-Analyse.
 **Hardcoded-Strings (grobe Schätzung):**
 
 - UI-Block: **~190 Strings** (JSX-Labels, Toasts, Confirm-Dialoge, Empty-States, Form-Labels)
-- API-Routes + Lib: **~11 Strings** (kritisch, da sie bei jedem gatet Request über den Draht gehen)
+- API-Routes + Lib: **0** offene non-admin-Error-Strings (**Admin-Ausnahme bleibt bewusst deutsch**)
 - **Gesamt: ~200 Strings**
 
 **Fehlende Message-Keys (grobe Schätzung):**
 
 - Bestehende Namespaces, die erweitert werden müssen: ~60–80 Keys (`dashboard.overview.*`, `settings.mcp.instructions.*`, `billing.plans.features.*`, `errors.api.session.*`, `errors.api.teams.*`)
-- Neue Namespaces, die angelegt werden müssen:
-  - `confirmDialogs.*` (konsolidiert die ~10 `confirm()`-Strings)
-  - `toasts.*` (konsolidiert generische „gespeichert"/„gelöscht"/„kopiert"-Toasts)
+- Neue Namespaces, die angelegt wurden:
+  - `confirmDialogs.*` ✅
+  - `toasts.*` ✅
+  - `errors.api.session.*` ✅
+  - `errors.api.storageProvider.*` ✅
 - **Gesamt grob: ~80–100 neue oder zu erweiternde Keys**
 
 ---
@@ -217,8 +220,8 @@ Gruppierung pro Route-Familie. Zahlen sind echte Grep-Treffer, nicht geschätzt.
 | `app/api/profile/**` | ✅ | 0 | n/a | — |
 | `app/api/search/**` | ✅ | 0 | n/a | — |
 | `app/api/spaces/**` | ✅ | 0 | n/a | Englische Standard-Errors |
-| `app/api/storage-providers/**` | ❌ | **5** | nein | Zod-Regex-Messages + Connection-Test-Wrapper sind deutsch: „Ungültiger GitHub-Owner", „Ungültiger Repo-Name", „Ein Provider mit diesem Namen existiert bereits.", `\`Verbindungstest fehlgeschlagen: ${msg}\``, `\`GitHub-Verbindungstest fehlgeschlagen: ${msg}\`` |
-| `app/api/teams/**` | ⚠️ | code-basiert | teilweise | `TeamError.code` wird vom Frontend übersetzt; die deutschen `.message`-Strings aus `lib/teams/*` landen aber trotzdem im Error-Body |
+| `app/api/storage-providers/**` | ✅ | 0 | ja | Strukturierte Codes + deutscher Fallback via `codedApiError()` |
+| `app/api/teams/**` | ✅ | 0 | ja | Team-Create serialisiert strukturiert; `CREATE_DISABLED` bleibt vorerst aus UI-Kompatibilitätsgründen bestehen |
 | `app/api/tokens/**` | ✅ | 0 | n/a | — |
 
 ### N. Error-Messages in Lib (`lib/*` — außer `lib/admin/*`)
@@ -226,11 +229,11 @@ Gruppierung pro Route-Familie. Zahlen sind echte Grep-Treffer, nicht geschätzt.
 | Datei | Status | Hardcoded-Strings | Notiz |
 | --- | --- | --- | --- |
 | `lib/api/errors.ts` | ✅ | 0 | Englische Default-Messages (`"Unauthorized"`, `"Not found"`, …). Framework-OK. |
-| `lib/api/session.ts` | ❌ | **2** | Zeile 45: `throw new ApiAuthError("Konto gesperrt", 403)`; Zeile 75: `throw new ApiAuthError("Admin-Berechtigung erforderlich", 403)`. **Surface-Impact hoch** — jeder authentifizierte Call kann bei gesperrtem Account den deutschen Text zurückgeben. Für `Admin-Berechtigung` in diesem Audit streng genommen out-of-scope (Admin-Kontext), wird aber von `requireAdminSession()` auch in non-admin-Paths aufgerufen, wenn dort irrtümlich aufgerufen. |
-| `lib/teams/create.ts` | ⚠️ | **1** | Zeile 62: `TeamError("CREATE_DISABLED", "Team-Erstellung ist derzeit nicht freigeschaltet.")`. Die deutsche Variante **existiert bereits** als Key `errors.api.team.createDisabled` in `messages/de.json` — der Throw-Site muss nur umgestellt werden, dass er nicht mehr den Text mit-transportiert. |
+| `lib/api/session.ts` | ✅ | **0** non-admin / **1 Admin-Ausnahme** | `session.accountDisabled` läuft strukturiert; `Admin-Berechtigung erforderlich` bleibt bewusst deutsch im Admin-Scope |
+| `lib/teams/create.ts` | ✅ | 0 | `CREATE_DISABLED` bleibt als Legacy-Code erhalten, liefert aber jetzt strukturierten Response-Fallback |
 | `lib/teams/*.ts` (invites, members, transfer, etc.) | ⚠️ | ~3 | Einige `TeamError`/`InviteError` tragen weiterhin deutsche `.message` — `.code` ist der autoritative Kanal, aber die Message wird manchmal direkt an `apiError()` gereicht. |
 | `lib/quota.ts` | ✅ | 0 | Englische `QUOTA:…`-Codes + strukturierte `reason`-Felder. Frontend übersetzt. |
-| `lib/storage/github.ts` | ❌ | **4** | Throw-Messages in `ref()` und `testConnection()`: „GitHub: Repo … nicht erreichbar", „Token ungültig oder abgelaufen.", „Zugriff verweigert — Token braucht repo-Scope, oder Rate-Limit erreicht.", „Repo nicht gefunden — oder Token hat keinen Zugriff." — werden im storage-providers-Route in einen weiteren deutschen Wrapper gepackt |
+| `lib/storage/github.ts` | ✅ | 0 | GitHub-Testfehler laufen jetzt über strukturierte `storageProvider.github.*`-Codes |
 | `lib/storage/{index,s3,vercel-blob}.ts` | ✅ | 0 | — |
 | `lib/space-import.ts` | ✅ | 0 | Strukturierte `reason`-Felder |
 | `lib/mcp/*.ts` | ✅ | 0 | Englische Tool-Error-Messages (Standard für MCP) |
@@ -254,9 +257,9 @@ Gruppierung pro Route-Familie. Zahlen sind echte Grep-Treffer, nicht geschätzt.
 | `settings.storage.add.*` | Add-Dialog Basis | Fehler-Cases für S3/GitHub-Connection-Test, Form-Validierungs-Texte (~6 Keys) |
 | `billing.plans.features.*` | Plan-Namen + Preise | Feature-Listen je Tier (~20 Keys) — alternativ aus `plans`-DB |
 | `billing.invoices.*` | — | Empty-State, Status-Badges, Download-Label (~4 Keys) |
-| `errors.api.session.*` | — | `accountDisabled`, `adminRequired`, `roleMismatch` (~3 Keys) |
-| `errors.api.team.*` | Teilweise | `createDisabled` existiert, aber `lib/teams/create.ts` nutzt den Key noch nicht |
-| `errors.api.storageProvider.*` | — | `invalidGitHubOwner`, `invalidRepoName`, `duplicateProviderName`, `connectionTestFailed`, `githubConnectionTestFailed` (~5 Keys) |
+| `errors.api.session.*` | ✅ angelegt | `accountDisabled`, `sessionExpired`, `invalidCredentials` |
+| `errors.api.team.*` | Teilweise | `createDisabled` wird als Fallback bereits genutzt; Legacy-Code-Harmonisierung folgt im UI-Rollout |
+| `errors.api.storageProvider.*` | ✅ angelegt | `notFound`, `invalidType`, `missingCredentials`, `connectionFailed`, `inUse`, `github.*` |
 | `errors.github.*` | — | Provider-spezifische Error-Messages aus `lib/storage/github.ts` (~4 Keys) |
 | `profile.*` | Komplett | Mini-Gap: Locale-Switcher-Optionen („Deutsch" / „English") hart kodiert statt aus `enums.locale.*` |
 
@@ -264,8 +267,8 @@ Gruppierung pro Route-Familie. Zahlen sind echte Grep-Treffer, nicht geschätzt.
 
 | Namespace | Zweck | Voraussichtliche Keys |
 | --- | --- | --- |
-| `confirmDialogs.*` | Konsolidiert die ~10 `confirm()`-Strings aus Delete-/Revoke-Flows | ~10 Keys (`deleteSpace`, `deleteNote`, `deleteFile`, `revokeToken`, `removeProvider`, `removeMember`, `revokeInvite`, `clearEmbeddingKey`, `reindexSpace`, `deleteAccount`) |
-| `toasts.*` | Konsolidiert generische Status-Toasts | ~8 Keys (`savedSuccess`, `deletedSuccess`, `copiedSuccess`, `uploadSuccess`, `genericError`, `networkError`, `tooLarge`, `unauthorized`) |
+| `confirmDialogs.*` | ✅ angelegt | Basissatz für `delete`, `revoke`, `remove`, `leave`, `disconnect`, `defaults` |
+| `toasts.*` | ✅ angelegt | Basis-Keys für `success`, `error`, `loading` |
 | `dashboard.onboarding.*` | Dedizierter Namespace für die Onboarding-Card | ~12 Keys |
 
 **Geschätzte Gesamtausweitung der Message-Dateien:** +80 bis +100 Keys je Locale (derzeit 527 → ~610).
@@ -342,7 +345,7 @@ Wünschenswerte Reihenfolge, sortiert nach Abhängigkeit und User-Value:
 
 ### Runde 1 — Fundamente legen (parallelisierbar, 2–3 Sessions)
 
-1. **Session-Errors + Namespace-Erweiterungen** (`lib/api/session.ts` → Code-basiert; `errors.api.session.*`, `confirmDialogs.*`, `toasts.*` anlegen). Klein, aber Voraussetzung für viele andere Stellen.
+1. **Session-Errors + Namespace-Erweiterungen** (`lib/api/session.ts` → Code-basiert; `errors.api.session.*`, `confirmDialogs.*`, `toasts.*` anlegen). ✅ Runde 1 erledigt.
 2. **Storage-Provider-API-Errors** (`app/api/storage-providers/route.ts` + `lib/storage/github.ts` + `lib/teams/create.ts`). Zusammen ~11 Strings, alle in einer Session machbar.
 
 ### Runde 2 — Hoch-frequentierte UI-Bereiche (User-Value-First, 3 Sessions parallelisierbar)
