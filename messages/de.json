@@ -630,8 +630,30 @@
       "title": "Bucket-Inhalt",
       "titleInternal": "Dateien",
       "readOnly": "read-only",
+      "providerReadOnlyTitle": "Quelle ist read-only — nur Import in lokri, keine Uploads oder Löschungen.",
+      "errorTitle": "Bucket-Inhalt konnte nicht geladen werden",
+      "retry": "Erneut versuchen",
+      "loading": "Lade Inhalt…",
+      "loadingMore": "Lade…",
+      "loadFailed": "Ladefehler",
+      "pagingFailed": "Weitere Einträge konnten nicht geladen werden.",
+      "copyUrlSuccess": "URL kopiert.",
+      "visibilityChangeFailed": "Konnte Sichtbarkeit nicht ändern.",
+      "deleteFailed": "Löschen fehlgeschlagen.",
+      "deleted": "Gelöscht.",
+      "reindexFailed": "Neuindizieren fehlgeschlagen.",
+      "reindexSuccess": "Neu indiziert — {chunks} Chunks embedded.",
+      "reindexNoText": "Kein Text extrahierbar.",
+      "directoryActions": "Verzeichnis-Aktionen",
+      "itemActions": "Aktionen",
+      "selectAll": "Alle auswählen",
+      "entryCount": "{count} Einträge",
+      "goUp": "Eine Ebene nach oben",
+      "downloadTitle": "Öffnen",
       "hiddenCount": "{count} ausgeblendet — anzeigen",
       "hiddenToggle": "Ausgeblendete verstecken ({count})",
+      "hiddenBadge": "ausgeblendet",
+      "selectOne": "{name} auswählen",
       "empty": {
         "internal": "Noch keine Dateien — zieh sie hier rein oder lade sie über die Files-Seite hoch.",
         "external": "Dieser Pfad enthält keine sichtbaren Objekte — Dateien hier ablegen, um sie in den Bucket hochzuladen.",
@@ -644,6 +666,7 @@
         "uploading": "Upload läuft…"
       },
       "upload": {
+        "loading": "Lade {current}/{total} hoch…",
         "progress": "{current}/{total} · {filename}",
         "success": "{count, plural, one {# Datei hochgeladen.} other {# Dateien hochgeladen.}}",
         "partial": "{ok} hochgeladen, {failed} fehlgeschlagen.",
@@ -654,14 +677,27 @@
       "actions": {
         "import": "In lokri importieren",
         "alreadyImported": "Bereits importiert",
+        "alreadyImportedToast": "War schon importiert.",
+        "importSuccess": "Importiert — wird jetzt indiziert und via MCP durchsuchbar.",
+        "importFailed": "Import fehlgeschlagen.",
+        "bulkImportFailed": "Bulk-Import fehlgeschlagen.",
+        "bulkImportSummary": "Bulk-Import: {summary}",
+        "bulkImportNothing": "nichts zu tun",
+        "bulkImportTruncated": "Limit 200 expandierte Dateien pro Batch erreicht — weitere Auswahl nötig.",
         "copyUrl": "URL kopieren",
         "hide": "Ausblenden (auch für MCP)",
         "unhide": "Wieder einblenden",
+        "hideSuccess": "Ausgeblendet (auch für MCP).",
+        "unhideSuccess": "Wieder sichtbar.",
+        "hideInternalSuccess": "Für MCP ausgeblendet.",
+        "unhideInternalSuccess": "Für MCP sichtbar.",
         "reindex": "Neu indizieren",
         "delete": "Löschen",
         "deleteConfirm": "\"{name}\" wirklich löschen?",
         "recursiveImport": "Rekursiv importieren",
-        "hideDirectory": "Verzeichnis ausblenden"
+        "hideDirectory": "Verzeichnis ausblenden",
+        "recursiveImportSummary": "Rekursiv: {imported} importiert, {alreadyImported} schon da{quotaPart}",
+        "recursiveImportQuotaPart": ", {count} Quota übersprungen"
       },
       "bulk": {
         "selected": "{count} ausgewählt",
@@ -670,7 +706,9 @@
         "importing": "Importiere…",
         "hide": "Ausblenden",
         "unhide": "Einblenden",
-        "deselect": "Abwählen"
+        "deselect": "Abwählen",
+        "hideSuccess": "{count} ausgeblendet.",
+        "unhideSuccess": "{count} wieder sichtbar."
       }
     }
   },

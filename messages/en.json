@@ -630,8 +630,30 @@
       "title": "Bucket contents",
       "titleInternal": "Files",
       "readOnly": "read-only",
+      "providerReadOnlyTitle": "Source is read-only — import into lokri only, no uploads or deletions.",
+      "errorTitle": "Bucket contents could not be loaded",
+      "retry": "Try again",
+      "loading": "Loading contents…",
+      "loadingMore": "Loading…",
+      "loadFailed": "Loading failed",
+      "pagingFailed": "Could not load more entries.",
+      "copyUrlSuccess": "URL copied.",
+      "visibilityChangeFailed": "Could not change visibility.",
+      "deleteFailed": "Delete failed.",
+      "deleted": "Deleted.",
+      "reindexFailed": "Reindex failed.",
+      "reindexSuccess": "Reindexed — {chunks} chunks embedded.",
+      "reindexNoText": "No extractable text.",
+      "directoryActions": "Directory actions",
+      "itemActions": "Actions",
+      "selectAll": "Select all",
+      "entryCount": "{count} entries",
+      "goUp": "Go up one level",
+      "downloadTitle": "Open",
       "hiddenCount": "{count} hidden — show",
       "hiddenToggle": "Hide hidden ({count})",
+      "hiddenBadge": "hidden",
+      "selectOne": "Select {name}",
       "empty": {
         "internal": "No files yet — drop them here or upload via the Files page.",
         "external": "This path has no visible objects — drop files here to upload them into the bucket.",
@@ -644,6 +666,7 @@
         "uploading": "Upload in progress…"
       },
       "upload": {
+        "loading": "Uploading {current}/{total}…",
         "progress": "{current}/{total} · {filename}",
         "success": "{count, plural, one {# file uploaded.} other {# files uploaded.}}",
         "partial": "{ok} uploaded, {failed} failed.",
@@ -654,14 +677,27 @@
       "actions": {
         "import": "Import into lokri",
         "alreadyImported": "Already imported",
+        "alreadyImportedToast": "Already imported.",
+        "importSuccess": "Imported — it will now be indexed and searchable via MCP.",
+        "importFailed": "Import failed.",
+        "bulkImportFailed": "Bulk import failed.",
+        "bulkImportSummary": "Bulk import: {summary}",
+        "bulkImportNothing": "nothing to do",
+        "bulkImportTruncated": "Reached the limit of 200 expanded files per batch — select more to continue.",
         "copyUrl": "Copy URL",
         "hide": "Hide (also for MCP)",
         "unhide": "Unhide",
+        "hideSuccess": "Hidden (also for MCP).",
+        "unhideSuccess": "Visible again.",
+        "hideInternalSuccess": "Hidden from MCP.",
+        "unhideInternalSuccess": "Visible to MCP.",
         "reindex": "Reindex",
         "delete": "Delete",
         "deleteConfirm": "Really delete \"{name}\"?",
         "recursiveImport": "Import recursively",
-        "hideDirectory": "Hide directory"
+        "hideDirectory": "Hide directory",
+        "recursiveImportSummary": "Recursive: {imported} imported, {alreadyImported} already there{quotaPart}",
+        "recursiveImportQuotaPart": ", {count} skipped by quota"
       },
       "bulk": {
         "selected": "{count} selected",
@@ -670,7 +706,9 @@
         "importing": "Importing…",
         "hide": "Hide",
         "unhide": "Show",
-        "deselect": "Deselect"
+        "deselect": "Deselect",
+        "hideSuccess": "{count} hidden.",
+        "unhideSuccess": "{count} visible again."
       }
     }
   },
