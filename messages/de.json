@@ -647,9 +647,50 @@
     "title": "Notes",
     "subtitle": "Markdown-Notizen mit semantischer Suche.",
     "create": "Neue Note",
+    "list": {
+      "title": "Notes",
+      "clearFilter": "Filter entfernen",
+      "subtitleAll": "Alle Notes deines Accounts.",
+      "subtitleFiltered": "Notes aus dem Space \"{name}\".",
+      "new": "Neue Note"
+    },
     "empty": {
       "title": "Noch keine Notes",
       "body": "Notizen werden automatisch embedded und über MCP durchsuchbar. Schreib die erste."
+    },
+    "editor": {
+      "newTitle": "Neue Note",
+      "titleLabel": "Titel",
+      "spaceLabel": "Space (optional)",
+      "noSpace": "Kein Space",
+      "contentLabel": "Inhalt (Markdown)",
+      "markdownHelp": "Unterstützt: **bold** _italic_ # heading - list [link](url)",
+      "previewEmpty": "Noch nichts zu rendern.",
+      "tabs": {
+        "edit": "Bearbeiten",
+        "preview": "Vorschau"
+      },
+      "cancel": "Abbrechen",
+      "submitCreate": "Anlegen",
+      "submitUpdate": "Änderungen speichern",
+      "submitSaving": "Speichern…",
+      "errors": {
+        "saveFailed": "Konnte Note nicht speichern."
+      },
+      "success": {
+        "created": "Note angelegt.",
+        "updated": "Note aktualisiert."
+      }
+    },
+    "actions": {
+      "hiddenFromMcp": "Für MCP ausgeblendet",
+      "delete": "Löschen",
+      "deleteConfirm": "Note wirklich löschen?",
+      "deleteConfirmWithTitle": "Note \"{title}\" wirklich löschen?",
+      "errors": {
+        "deleteFailed": "Konnte Note nicht löschen."
+      },
+      "deleted": "Note gelöscht."
     },
     "form": {
       "title": "Titel",
@@ -659,7 +700,7 @@
       "submitting": "Speichert…"
     },
     "detail": {
-      "updatedAt": "Zuletzt geändert {datetime}",
+      "updatedAt": "Zuletzt aktualisiert: {datetime}",
       "delete": "Note löschen",
       "deleteConfirm": "Note \"{title}\" wirklich löschen?"
     }

@@ -647,9 +647,50 @@
     "title": "Notes",
     "subtitle": "Markdown notes with semantic search.",
     "create": "New note",
+    "list": {
+      "title": "Notes",
+      "clearFilter": "Clear filter",
+      "subtitleAll": "All notes in your account.",
+      "subtitleFiltered": "Notes in the space \"{name}\".",
+      "new": "New note"
+    },
     "empty": {
       "title": "No notes yet",
       "body": "Notes are automatically embedded and searchable via MCP. Write your first one."
+    },
+    "editor": {
+      "newTitle": "New note",
+      "titleLabel": "Title",
+      "spaceLabel": "Space (optional)",
+      "noSpace": "No space",
+      "contentLabel": "Content (Markdown)",
+      "markdownHelp": "Supports: **bold** _italic_ # heading - list [link](url)",
+      "previewEmpty": "Nothing to render yet.",
+      "tabs": {
+        "edit": "Edit",
+        "preview": "Preview"
+      },
+      "cancel": "Cancel",
+      "submitCreate": "Create",
+      "submitUpdate": "Save changes",
+      "submitSaving": "Saving…",
+      "errors": {
+        "saveFailed": "Could not save note."
+      },
+      "success": {
+        "created": "Note created.",
+        "updated": "Note updated."
+      }
+    },
+    "actions": {
+      "hiddenFromMcp": "Hidden from MCP",
+      "delete": "Delete",
+      "deleteConfirm": "Really delete this note?",
+      "deleteConfirmWithTitle": "Really delete note \"{title}\"?",
+      "errors": {
+        "deleteFailed": "Could not delete note."
+      },
+      "deleted": "Note deleted."
     },
     "form": {
       "title": "Title",
@@ -659,7 +700,7 @@
       "submitting": "Saving…"
     },
     "detail": {
-      "updatedAt": "Last updated {datetime}",
+      "updatedAt": "Last updated: {datetime}",
       "delete": "Delete note",
       "deleteConfirm": "Really delete note \"{title}\"?"
     }
