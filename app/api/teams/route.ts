@@ -2,8 +2,8 @@ import { eq } from "drizzle-orm";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import {
-  apiError,
   authErrorResponse,
+  codedApiError,
   parseJsonBody,
   serverError,
   zodError,
@@ -58,9 +58,7 @@ export async function POST(req: NextRequest) {
       });
     } catch (err) {
       if (err instanceof TeamError) {
-        return apiError(err.message, teamErrorStatus(err.code), {
-          code: err.code,
-        });
+        return codedApiError(teamErrorStatus(err.code), err.code, err.message);
       }
       throw err;
     }

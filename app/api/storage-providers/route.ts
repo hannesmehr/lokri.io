@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import {
   apiError,
+  codedApiError,
   parseJsonBody,
   serverError,
   authErrorResponse,
@@ -12,10 +13,18 @@ import { db } from "@/lib/db";
 import { storageProviders } from "@/lib/db/schema";
 import { limit, rateLimitResponse } from "@/lib/rate-limit";
 import { encryptJson } from "@/lib/storage/encryption";
-import { GitHubProvider, type GitHubConfig } from "@/lib/storage/github";
+import {
+  GitHubProvider,
+  GitHubProviderError,
+  type GitHubConfig,
+} from "@/lib/storage/github";
 import { S3Provider, type S3Config } from "@/lib/storage/s3";
 
 export const runtime = "nodejs";
+
+const STORAGE_PROVIDER_MESSAGES = {
+  connectionFailed: "Verbindung zum Provider fehlgeschlagen.",
+} as const;
 
 const s3ConfigSchema = z.object({
   endpoint: z.string().url().optional(),
@@ -109,9 +118,12 @@ export async function POST(req: NextRequest) {
       const cfg: S3Config = parsed.data.s3;
       try {
         await new S3Provider(cfg).testConnection();
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : "Unknown error";
-        return apiError(`Verbindungstest fehlgeschlagen: ${msg}`, 400);
+      } catch {
+        return codedApiError(
+          400,
+          "storageProvider.connectionFailed",
+          STORAGE_PROVIDER_MESSAGES.connectionFailed,
+        );
       }
       configToEncrypt = cfg;
     } else {
@@ -119,8 +131,14 @@ export async function POST(req: NextRequest) {
       try {
         await new GitHubProvider(cfg).testConnection();
       } catch (err) {
-        const msg = err instanceof Error ? err.message : "Unknown error";
-        return apiError(`GitHub-Verbindungstest fehlgeschlagen: ${msg}`, 400);
+        if (err instanceof GitHubProviderError) {
+          return codedApiError(400, err.code, err.message);
+        }
+        return codedApiError(
+          400,
+          "storageProvider.connectionFailed",
+          STORAGE_PROVIDER_MESSAGES.connectionFailed,
+        );
       }
       configToEncrypt = cfg;
     }

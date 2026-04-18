@@ -57,6 +57,8 @@ export async function createTeam(
     .limit(1);
   if (!user) throw new TeamError("NOT_FOUND", "User not found");
   if (!user.canCreateTeams) {
+    // TODO(i18n-rollout): `message`-Fallback entfernen nach Phase-2-Abschluss.
+    // Frontend mappt dann konsequent code → t('errors.api.team.createDisabled').
     throw new TeamError(
       "CREATE_DISABLED",
       "Team-Erstellung ist derzeit nicht freigeschaltet.",

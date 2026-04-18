@@ -1,8 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { NextResponse, type NextRequest } from "next/server";
 import {
-  apiError,
-  notFound,
+  codedApiError,
   serverError,
   authErrorResponse} from "@/lib/api/errors";
 import { ApiAuthError, requireSessionWithAccount } from "@/lib/api/session";
@@ -10,6 +9,11 @@ import { db } from "@/lib/db";
 import { files, storageProviders } from "@/lib/db/schema";
 
 export const runtime = "nodejs";
+
+const STORAGE_PROVIDER_MESSAGES = {
+  notFound: "Storage-Provider nicht gefunden.",
+  inUse: "Storage-Provider wird noch verwendet und kann nicht gelöscht werden.",
+} as const;
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -32,7 +36,13 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
         ),
       )
       .limit(1);
-    if (!existing) return notFound();
+    if (!existing) {
+      return codedApiError(
+        404,
+        "storageProvider.notFound",
+        STORAGE_PROVIDER_MESSAGES.notFound,
+      );
+    }
 
     // Count files still pointing at this provider.
     const fileCount = await db.$count(
@@ -43,9 +53,11 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
       ),
     );
     if (fileCount > 0) {
-      return apiError(
-        `Provider kann nicht gelöscht werden — ${fileCount} Datei(en) liegen noch darauf.`,
+      return codedApiError(
         409,
+        "storageProvider.inUse",
+        STORAGE_PROVIDER_MESSAGES.inUse,
+        { fileCount },
       );
     }
 

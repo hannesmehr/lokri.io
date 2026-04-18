@@ -58,6 +58,20 @@ interface TreeResponse {
   truncated: boolean;
 }
 
+export class GitHubProviderError extends Error {
+  readonly code:
+    | "storageProvider.github.invalidToken"
+    | "storageProvider.github.insufficientScope"
+    | "storageProvider.github.repoNotFound"
+    | "storageProvider.github.rateLimit";
+
+  constructor(code: GitHubProviderError["code"], message: string) {
+    super(message);
+    this.name = "GitHubProviderError";
+    this.code = code;
+  }
+}
+
 export class GitHubProvider implements StorageProvider {
   readonly name = "github" as const;
 
@@ -121,13 +135,33 @@ export class GitHubProvider implements StorageProvider {
       { headers: this.headers() },
     );
     if (!res.ok) {
-      if (res.status === 401) throw new Error("Token ungültig oder abgelaufen.");
-      if (res.status === 403)
-        throw new Error(
-          "Zugriff verweigert — Token braucht `repo`-Scope, oder Rate-Limit erreicht.",
+      if (res.status === 401) {
+        throw new GitHubProviderError(
+          "storageProvider.github.invalidToken",
+          "GitHub-Token ungültig oder abgelaufen.",
         );
-      if (res.status === 404)
-        throw new Error("Repo nicht gefunden — oder Token hat keinen Zugriff.");
+      }
+      if (
+        res.status === 403 &&
+        res.headers.get("x-ratelimit-remaining") === "0"
+      ) {
+        throw new GitHubProviderError(
+          "storageProvider.github.rateLimit",
+          "GitHub-Rate-Limit erreicht. Bitte später erneut versuchen.",
+        );
+      }
+      if (res.status === 403) {
+        throw new GitHubProviderError(
+          "storageProvider.github.insufficientScope",
+          "GitHub-Token hat nicht die benötigten Berechtigungen.",
+        );
+      }
+      if (res.status === 404) {
+        throw new GitHubProviderError(
+          "storageProvider.github.repoNotFound",
+          "Repository nicht gefunden oder nicht zugänglich.",
+        );
+      }
       throw new Error(`GitHub HTTP ${res.status}`);
     }
     // Also verify the branch (if the user set a custom ref) by resolving it
@@ -140,7 +174,10 @@ export class GitHubProvider implements StorageProvider {
       if (!refRes.ok && refRes.status !== 422) {
         // 422 = not a branch; could still be a tag/SHA — don't hard-fail.
         if (refRes.status === 404) {
-          throw new Error(`Branch/Ref "${this.config.ref}" nicht gefunden.`);
+          throw new GitHubProviderError(
+            "storageProvider.github.repoNotFound",
+            "Repository nicht gefunden oder nicht zugänglich.",
+          );
         }
       }
     }
