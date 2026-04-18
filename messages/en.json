@@ -1203,55 +1203,187 @@
   },
 
   "profile": {
-    "title": "Profile",
-    "subtitle": "Your personal settings.",
-    "navigation": {
-      "overview": "Overview",
-      "security": "Security",
-      "data": "Data"
+    "layout": {
+      "title": "Profile",
+      "subtitle": "Your personal settings.",
+      "navigation": {
+        "overview": "Overview",
+        "security": "Security",
+        "data": "Data"
+      }
     },
     "overview": {
-      "name": "Name",
-      "email": "Email",
-      "save": "Save"
+      "title": "Profile overview",
+      "subtitle": "Name, profile image, email, and language for your account.",
+      "profileCard": {
+        "title": "Public profile",
+        "description": "This is how you appear in invitations, team views, and emails.",
+        "save": "Save profile",
+        "saving": "Saving…"
+      },
+      "avatar": {
+        "change": "Change image",
+        "remove": "Remove image",
+        "help": "PNG or JPG, up to {max}. The image is stored directly with your profile.",
+        "errors": {
+          "tooLarge": "Image is too large (max {max}).",
+          "invalidType": "Please select an image file.",
+          "readFailed": "The image could not be read."
+        }
+      },
+      "name": {
+        "label": "Name",
+        "placeholder": "Your name",
+        "help": "This name appears in teams, invitations, and profile views."
+      },
+      "email": {
+        "title": "Change email address",
+        "description": "Your current address stays active until you confirm the new one.",
+        "currentLabel": "Current email address",
+        "currentVerified": "Current address is verified.",
+        "currentUnverified": "Current address is not verified yet.",
+        "newLabel": "New email address",
+        "placeholder": "new@example.com",
+        "help": "We send a confirmation link to the new address. Until you click it, {currentEmail} stays active.",
+        "submit": "Send confirmation link",
+        "sending": "Sending confirmation…",
+        "success": "Confirmation link sent to {email}.",
+        "errors": {
+          "invalid": "Enter a valid email address.",
+          "sameAsCurrent": "That is already your current email address.",
+          "requestFailed": "Could not start the email change."
+        }
+      }
     },
     "locale": {
       "title": "Language",
       "description": "Language of the web UI and our emails.",
       "label": "Select language",
-      "saved": "Language changed."
+      "saved": "Language changed.",
+      "options": {
+        "de": "German",
+        "en": "English"
+      }
     },
     "security": {
       "title": "Security",
       "password": {
-        "title": "Change password",
+        "title": "Password",
+        "description": "Changing your password signs out other active sessions.",
+        "trigger": "Change password",
         "current": "Current password",
         "next": "New password",
+        "confirm": "Confirm new password",
         "submit": "Change password",
-        "success": "Password changed."
+        "submitting": "Changing…",
+        "success": "Password changed. Other sessions were signed out.",
+        "cancel": "Cancel",
+        "errors": {
+          "tooShort": "At least 8 characters.",
+          "mismatch": "The new passwords do not match.",
+          "generic": "Password change failed."
+        }
       },
       "twoFactor": {
         "title": "Two-factor authentication",
-        "subtitle": "Extra protection via a TOTP app (1Password, Authy, Google Authenticator).",
-        "enable": "Enable",
-        "disable": "Disable",
-        "enabled": "Enabled",
-        "disabled": "Disabled"
+        "subtitle": "Additional protection with an authenticator app and one-time backup codes.",
+        "setup": {
+          "badge": "Not active",
+          "trigger": "Enable",
+          "title": "Enable 2FA",
+          "description": "Confirm your current password to start setup.",
+          "passwordLabel": "Password",
+          "next": "Continue",
+          "validating": "Validating…",
+          "cancel": "Cancel",
+          "qrTitle": "Connect authenticator app",
+          "qrDescription": "Scan the QR code in your authenticator app and then enter the 6-digit code to confirm.",
+          "qrAlt": "QR code for TOTP setup",
+          "manualToggle": "Cannot scan the QR code?",
+          "codeLabel": "6-digit code",
+          "verify": "Verify",
+          "verifying": "Verifying…",
+          "errors": {
+            "password": "Password could not be confirmed.",
+            "code": "Invalid code."
+          }
+        },
+        "active": {
+          "badge": "Active",
+          "enabledToast": "2FA enabled."
+        },
+        "disable": {
+          "trigger": "Disable",
+          "title": "Disable 2FA",
+          "description": "After disabling, email plus password will be enough to sign in again.",
+          "warning": "Only disable this if you lost access to your authenticator or intentionally want to stop using 2FA.",
+          "passwordLabel": "Password to confirm",
+          "submit": "Disable 2FA",
+          "submitting": "Disabling…",
+          "cancel": "Cancel",
+          "success": "2FA disabled.",
+          "errors": {
+            "password": "Password could not be confirmed."
+          }
+        },
+        "recoveryCodes": {
+          "title": "Backup codes",
+          "description": "Store these codes in a safe place. Each code works exactly once.",
+          "warningTitle": "Shown only once",
+          "warningBody": "After closing this dialog, you cannot see these codes again.",
+          "copy": "Copy codes",
+          "copied": "Backup codes copied.",
+          "finish": "Done"
+        }
       }
     },
     "data": {
-      "title": "My data",
+      "title": "Data portability",
+      "subtitle": "Export your data or import existing lokri archives.",
       "export": {
         "title": "Export",
-        "description": "Download a complete export of your data (JSON + files as ZIP).",
+        "description": "Download your spaces, notes, and files as a ZIP.",
+        "help": "The export is openly readable, markdown-based, and free of vendor lock-in.",
         "download": "Download export"
+      },
+      "import": {
+        "title": "Import",
+        "description": "Import a lokri export or a ZIP with markdown files.",
+        "help": "Supports lokri export ZIPs or Obsidian vaults. Maximum 50 MB per archive.",
+        "upload": "Upload ZIP",
+        "uploading": "Importing…",
+        "success": "Import finished: {result}.",
+        "skipped": "{count} entries were skipped. Details are in the browser console.",
+        "summary": {
+          "spaces": "{count} spaces",
+          "notes": "{count} notes",
+          "files": "{count} files",
+          "none": "nothing"
+        },
+        "errors": {
+          "tooLarge": "Archive is too large (max {max}).",
+          "generic": "Import failed."
+        }
+      },
+      "accountDeletion": {
+        "title": "Delete account",
+        "description": "Permanent and irreversible. All spaces, notes, files, tokens, and OAuth grants will be removed. We send a confirmation link by email.",
+        "trigger": "Delete account…",
+        "confirmDescription": "This action cannot be undone. Enter your email address to confirm.",
+        "warning": "After deletion, all content in this account is permanently removed.",
+        "confirmLabel": "Email to confirm",
+        "submit": "Request confirmation link",
+        "submitting": "Sending confirmation link…",
+        "sentTitle": "Check your inbox",
+        "sentDescription": {
+          "before": "We sent a confirmation link to",
+          "after": ". Your account is deleted only after you click it."
+        },
+        "sentConfirm": "Understood",
+        "errors": {
+          "generic": "Could not start account deletion."
+        }
       }
-    },
-    "dangerZone": {
-      "title": "Danger zone",
-      "deleteAccount": "Delete account",
-      "deleteConfirm": "Really delete your account? This cannot be undone. All notes, files, tokens, and spaces will be removed.",
-      "deleteInitiated": "Confirmation email on the way. Click the link to finalize the deletion."
     }
   },
 

@@ -1203,55 +1203,187 @@
   },
 
   "profile": {
-    "title": "Profil",
-    "subtitle": "Deine persönlichen Einstellungen.",
-    "navigation": {
-      "overview": "Übersicht",
-      "security": "Sicherheit",
-      "data": "Daten"
+    "layout": {
+      "title": "Profil",
+      "subtitle": "Deine persönlichen Einstellungen.",
+      "navigation": {
+        "overview": "Übersicht",
+        "security": "Sicherheit",
+        "data": "Daten"
+      }
     },
     "overview": {
-      "name": "Name",
-      "email": "E-Mail",
-      "save": "Speichern"
+      "title": "Profil-Übersicht",
+      "subtitle": "Name, Profilbild, E-Mail und Sprache deines Accounts.",
+      "profileCard": {
+        "title": "Öffentliches Profil",
+        "description": "So erscheinst du in Einladungen, Team-Ansichten und E-Mails.",
+        "save": "Profil speichern",
+        "saving": "Speichere…"
+      },
+      "avatar": {
+        "change": "Bild ändern",
+        "remove": "Bild entfernen",
+        "help": "PNG oder JPG, maximal {max}. Das Bild wird direkt in deinem Profil gespeichert.",
+        "errors": {
+          "tooLarge": "Bild ist zu groß (max {max}).",
+          "invalidType": "Bitte eine Bilddatei auswählen.",
+          "readFailed": "Bild konnte nicht gelesen werden."
+        }
+      },
+      "name": {
+        "label": "Name",
+        "placeholder": "Dein Name",
+        "help": "Dieser Name wird in Teams, Einladungen und Profilansichten angezeigt."
+      },
+      "email": {
+        "title": "E-Mail-Adresse ändern",
+        "description": "Die aktuelle Adresse bleibt aktiv, bis du die neue Adresse bestätigt hast.",
+        "currentLabel": "Aktuelle E-Mail-Adresse",
+        "currentVerified": "Aktuelle Adresse ist verifiziert.",
+        "currentUnverified": "Aktuelle Adresse ist noch nicht verifiziert.",
+        "newLabel": "Neue E-Mail-Adresse",
+        "placeholder": "neue@adresse.tld",
+        "help": "Wir senden einen Bestätigungs-Link an die neue Adresse. Bis zum Klick bleibt {currentEmail} aktiv.",
+        "submit": "Bestätigungs-Link senden",
+        "sending": "Sende Bestätigung…",
+        "success": "Bestätigungs-Link an {email} gesendet.",
+        "errors": {
+          "invalid": "Gib eine gültige E-Mail-Adresse ein.",
+          "sameAsCurrent": "Das ist bereits deine aktuelle E-Mail-Adresse.",
+          "requestFailed": "E-Mail-Änderung konnte nicht gestartet werden."
+        }
+      }
     },
     "locale": {
       "title": "Sprache",
       "description": "Sprache der Weboberfläche und unserer E-Mails.",
       "label": "Sprache wählen",
-      "saved": "Sprache geändert."
+      "saved": "Sprache geändert.",
+      "options": {
+        "de": "Deutsch",
+        "en": "English"
+      }
     },
     "security": {
       "title": "Sicherheit",
       "password": {
-        "title": "Passwort ändern",
+        "title": "Passwort",
+        "description": "Beim Passwort-Wechsel werden andere Sessions automatisch abgemeldet.",
+        "trigger": "Passwort ändern",
         "current": "Aktuelles Passwort",
         "next": "Neues Passwort",
+        "confirm": "Neues Passwort bestätigen",
         "submit": "Passwort ändern",
-        "success": "Passwort geändert."
+        "submitting": "Ändere…",
+        "success": "Passwort geändert. Andere Sessions wurden abgemeldet.",
+        "cancel": "Abbrechen",
+        "errors": {
+          "tooShort": "Mindestens 8 Zeichen.",
+          "mismatch": "Die neuen Passwörter stimmen nicht überein.",
+          "generic": "Passwort-Änderung fehlgeschlagen."
+        }
       },
       "twoFactor": {
         "title": "Zwei-Faktor-Authentifizierung",
-        "subtitle": "Zusätzlicher Schutz durch TOTP-App (1Password, Authy, Google Authenticator).",
-        "enable": "Aktivieren",
-        "disable": "Deaktivieren",
-        "enabled": "Aktiviert",
-        "disabled": "Nicht aktiviert"
+        "subtitle": "Zusätzlicher Schutz mit Authenticator-App und einmaligen Backup-Codes.",
+        "setup": {
+          "badge": "Nicht aktiv",
+          "trigger": "Aktivieren",
+          "title": "2FA aktivieren",
+          "description": "Bestätige dein aktuelles Passwort, um die Einrichtung zu starten.",
+          "passwordLabel": "Passwort",
+          "next": "Weiter",
+          "validating": "Prüfe…",
+          "cancel": "Abbrechen",
+          "qrTitle": "Authenticator-App verknüpfen",
+          "qrDescription": "Scanne den QR-Code in deiner Authenticator-App und gib dann den 6-stelligen Code zur Bestätigung ein.",
+          "qrAlt": "QR-Code für TOTP-Einrichtung",
+          "manualToggle": "QR-Code kann nicht gescannt werden?",
+          "codeLabel": "6-stelliger Code",
+          "verify": "Bestätigen",
+          "verifying": "Prüfe…",
+          "errors": {
+            "password": "Passwort konnte nicht bestätigt werden.",
+            "code": "Code ungültig."
+          }
+        },
+        "active": {
+          "badge": "Aktiv",
+          "enabledToast": "2FA aktiviert."
+        },
+        "disable": {
+          "trigger": "Deaktivieren",
+          "title": "2FA deaktivieren",
+          "description": "Nach dem Deaktivieren reicht wieder E-Mail plus Passwort für den Login.",
+          "warning": "Nur deaktivieren, wenn du deinen Authenticator-Zugang verloren hast oder bewusst auf 2FA verzichten willst.",
+          "passwordLabel": "Passwort zur Bestätigung",
+          "submit": "2FA deaktivieren",
+          "submitting": "Deaktiviere…",
+          "cancel": "Abbrechen",
+          "success": "2FA deaktiviert.",
+          "errors": {
+            "password": "Passwort konnte nicht bestätigt werden."
+          }
+        },
+        "recoveryCodes": {
+          "title": "Backup-Codes",
+          "description": "Speichere diese Codes an einem sicheren Ort. Jeder Code funktioniert genau einmal.",
+          "warningTitle": "Einmalig sichtbar",
+          "warningBody": "Nach dem Schließen kannst du diese Codes nicht erneut anzeigen.",
+          "copy": "Codes kopieren",
+          "copied": "Backup-Codes kopiert.",
+          "finish": "Fertig"
+        }
       }
     },
     "data": {
-      "title": "Meine Daten",
+      "title": "Daten-Portabilität",
+      "subtitle": "Exportiere deine Daten oder importiere bestehende lokri-Archive.",
       "export": {
-        "title": "Exportieren",
-        "description": "Lade einen vollständigen Export deiner Daten herunter (JSON + Dateien als ZIP).",
+        "title": "Export",
+        "description": "Lade deine Spaces, Notes und Files als ZIP herunter.",
+        "help": "Der Export ist offen lesbar, markdown-basiert und ohne Vendor-Lock-in.",
         "download": "Export herunterladen"
+      },
+      "import": {
+        "title": "Import",
+        "description": "Importiere einen lokri-Export oder ein ZIP mit Markdown-Dateien.",
+        "help": "Unterstützt lokri-Export-ZIP oder Obsidian-Vaults. Maximal 50 MB pro Archiv.",
+        "upload": "ZIP hochladen",
+        "uploading": "Importiere…",
+        "success": "Import fertig: {result}.",
+        "skipped": "{count} Einträge wurden übersprungen. Details stehen in der Browser-Konsole.",
+        "summary": {
+          "spaces": "{count} Spaces",
+          "notes": "{count} Notes",
+          "files": "{count} Files",
+          "none": "nichts"
+        },
+        "errors": {
+          "tooLarge": "Archiv ist zu groß (max {max}).",
+          "generic": "Import fehlgeschlagen."
+        }
+      },
+      "accountDeletion": {
+        "title": "Konto löschen",
+        "description": "Permanent und irreversibel. Alle Spaces, Notes, Files, Tokens und OAuth-Freigaben werden entfernt. Wir schicken dir einen Bestätigungs-Link per E-Mail.",
+        "trigger": "Konto löschen…",
+        "confirmDescription": "Diese Aktion kann nicht rückgängig gemacht werden. Gib zur Bestätigung deine E-Mail-Adresse ein.",
+        "warning": "Nach dem Löschen sind alle Inhalte dieses Accounts unwiederbringlich entfernt.",
+        "confirmLabel": "E-Mail zur Bestätigung",
+        "submit": "Bestätigungs-Link anfordern",
+        "submitting": "Sende Bestätigungs-Link…",
+        "sentTitle": "Prüfe dein Postfach",
+        "sentDescription": {
+          "before": "Wir haben an",
+          "after": "einen Bestätigungs-Link gesendet. Erst nach dem Klick wird dein Account gelöscht."
+        },
+        "sentConfirm": "Verstanden",
+        "errors": {
+          "generic": "Löschung konnte nicht gestartet werden."
+        }
       }
-    },
-    "dangerZone": {
-      "title": "Gefahrenzone",
-      "deleteAccount": "Konto löschen",
-      "deleteConfirm": "Konto wirklich löschen? Dieser Schritt ist unumkehrbar. Alle Notes, Files, Tokens und Spaces werden entfernt.",
-      "deleteInitiated": "Bestätigungs-Mail unterwegs. Klicke den Link darin, um das Konto endgültig zu löschen."
     }
   },
 
