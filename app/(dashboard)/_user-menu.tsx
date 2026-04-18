@@ -45,7 +45,7 @@ export function UserMenu({ user, isAdmin = false }: Props) {
             type="button"
             className="flex items-center gap-1.5 rounded-full border bg-background px-1 py-1 text-sm transition-colors hover:bg-muted"
           >
-            <span className="grid h-6 w-6 place-items-center rounded-full bg-gradient-to-br from-indigo-500 to-fuchsia-500 text-[10px] font-semibold text-white">
+            <span className="grid h-6 w-6 place-items-center rounded-full bg-foreground text-[10px] font-semibold text-background">
               {initials}
             </span>
             <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />

@@ -1,14 +1,13 @@
 import { and, desc, eq, isNull } from "drizzle-orm";
-import { FileText, Key, Plus, Sparkles, StickyNote, Upload } from "lucide-react";
+import { FileText, Key, Plus, StickyNote, Upload } from "lucide-react";
 import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  ActivityEmpty,
+  ActivityList,
+  ActivityRow,
+} from "@/components/activity-list";
+import { KpiCard } from "@/components/kpi-card";
+import { QuickActionCard } from "@/components/quick-action-card";
 import { requireSessionWithAccount } from "@/lib/api/session";
 import { db } from "@/lib/db";
 import {
@@ -20,86 +19,75 @@ import {
 import { formatBytes, formatRelative } from "@/lib/format";
 import { getQuota } from "@/lib/quota";
 import { OnboardingCard } from "./_onboarding-card";
-import { QuotaRing } from "./_quota-ring";
 
+/**
+ * Dashboard-Home — Phase-1-Showcase für das neue Design-System.
+ *
+ * Strukturell: Header (H1 + Sub + Plan-Badge) → Onboarding-Card (falls
+ * aktiv) → Quick-Actions-Grid → KPI-Tiles → Activity-Grid. Alle Styles
+ * laufen ausschließlich über semantische Tokens (CSS-Vars); Light +
+ * Dark testen sich automatisch mit.
+ */
 export default async function DashboardPage() {
   const { session, ownerAccountId } = await requireSessionWithAccount();
   const [quota, recentNotes, recentFiles, spaceCount, tokenCount] =
     await Promise.all([
-    getQuota(ownerAccountId),
-    db
-      .select({
-        id: notesTable.id,
-        title: notesTable.title,
-        updatedAt: notesTable.updatedAt,
-      })
-      .from(notesTable)
-      .where(eq(notesTable.ownerAccountId, ownerAccountId))
-      .orderBy(desc(notesTable.updatedAt))
-      .limit(5),
-    db
-      .select({
-        id: filesTable.id,
-        filename: filesTable.filename,
-        sizeBytes: filesTable.sizeBytes,
-        mimeType: filesTable.mimeType,
-        createdAt: filesTable.createdAt,
-      })
-      .from(filesTable)
-      .where(eq(filesTable.ownerAccountId, ownerAccountId))
-      .orderBy(desc(filesTable.createdAt))
-      .limit(5),
-    db
-      .$count(spacesTable, eq(spacesTable.ownerAccountId, ownerAccountId)),
-    db.$count(
-      apiTokens,
-      and(
-        eq(apiTokens.ownerAccountId, ownerAccountId),
-        isNull(apiTokens.revokedAt),
+      getQuota(ownerAccountId),
+      db
+        .select({
+          id: notesTable.id,
+          title: notesTable.title,
+          updatedAt: notesTable.updatedAt,
+        })
+        .from(notesTable)
+        .where(eq(notesTable.ownerAccountId, ownerAccountId))
+        .orderBy(desc(notesTable.updatedAt))
+        .limit(5),
+      db
+        .select({
+          id: filesTable.id,
+          filename: filesTable.filename,
+          sizeBytes: filesTable.sizeBytes,
+          mimeType: filesTable.mimeType,
+          createdAt: filesTable.createdAt,
+        })
+        .from(filesTable)
+        .where(eq(filesTable.ownerAccountId, ownerAccountId))
+        .orderBy(desc(filesTable.createdAt))
+        .limit(5),
+      db.$count(spacesTable, eq(spacesTable.ownerAccountId, ownerAccountId)),
+      db.$count(
+        apiTokens,
+        and(
+          eq(apiTokens.ownerAccountId, ownerAccountId),
+          isNull(apiTokens.revokedAt),
+        ),
       ),
-    ),
-  ]);
+    ]);
 
-  const firstName = session.user.name?.split(" ")[0] ?? "Hallo";
+  const firstName = session.user.name?.split(" ")[0] ?? null;
 
   return (
-    <div className="space-y-8">
-      {/* Hero */}
-      <div
-        className="relative overflow-hidden rounded-2xl border bg-gradient-to-br from-indigo-500/8 via-background to-fuchsia-500/10 p-8 sm:p-10"
-        style={{
-          backgroundImage:
-            "radial-gradient(ellipse 600px 200px at 20% 0%, color-mix(in oklch, var(--chart-1) 15%, transparent), transparent 70%)," +
-            "radial-gradient(ellipse 500px 300px at 100% 100%, color-mix(in oklch, var(--chart-2) 18%, transparent), transparent 60%)," +
-            "radial-gradient(circle at 1px 1px, color-mix(in oklch, var(--foreground) 8%, transparent) 1px, transparent 0)",
-          backgroundSize: "auto, auto, 20px 20px",
-        }}
-      >
-        <div className="relative flex flex-wrap items-start justify-between gap-6">
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              <Sparkles className="h-3.5 w-3.5" />
-              Dashboard
-            </div>
-            <h1 className="font-display mt-2 text-4xl leading-[1.05] sm:text-5xl">
-              Willkommen,{" "}
-              <span className="italic text-brand">{firstName}</span>.
-            </h1>
-            <p className="mt-3 max-w-xl text-sm text-muted-foreground sm:text-base">
-              Dein persönlicher MCP-Wissens-Pool — erreichbar aus allen
-              KI-Clients, die du über{" "}
-              <em className="font-display italic">Settings → MCP-Tokens</em>{" "}
-              verbindest.
-            </p>
-          </div>
-          <Badge
-            variant="secondary"
-            className="border-indigo-500/20 bg-indigo-500/10 text-indigo-700 dark:text-indigo-300"
-          >
-            Plan: {quota.planId}
-          </Badge>
+    <div className="space-y-6">
+      {/* Header */}
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            {firstName ? `Hi, ${firstName}` : "Dashboard"}
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            MCP-Gateway für deine KI-Clients.
+          </p>
         </div>
-      </div>
+        <Link
+          href="/billing"
+          className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs transition-colors hover:border-foreground/20"
+          aria-label={`Plan: ${quota.planId} — zum Billing`}
+        >
+          <span className="text-muted-foreground">Plan</span>
+          <span className="font-mono font-medium">{quota.planId}</span>
+        </Link>
+      </header>
 
       <OnboardingCard
         hasSpace={spaceCount > 0}
@@ -109,217 +97,121 @@ export default async function DashboardPage() {
 
       {/* Quick actions */}
       <div className="grid gap-3 sm:grid-cols-3">
-        <QuickAction
+        <QuickActionCard
           href="/notes/new"
           icon={<Plus className="h-4 w-4" />}
           label="Neue Note"
           description="Markdown oder Plaintext, wird automatisch embedded."
         />
-        <QuickAction
+        <QuickActionCard
           href="/files"
           icon={<Upload className="h-4 w-4" />}
           label="File hochladen"
           description="Drag & Drop, bis 10 MB pro Datei."
         />
-        <QuickAction
-          href="/settings"
+        <QuickActionCard
+          href="/settings/mcp"
           icon={<Key className="h-4 w-4" />}
           label="MCP-Token"
           description="Claude Desktop, ChatGPT, Cursor anbinden."
         />
       </div>
 
-      {/* Quota rings */}
-      <div>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+      {/* Kontingent */}
+      <section className="space-y-3">
+        <h2 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           Kontingent
         </h2>
-        <div className="grid gap-4 lg:grid-cols-3">
-          <Card>
-            <CardContent className="pt-6">
-              <QuotaRing
-                label="Speicher"
-                value={quota.usedBytes}
-                max={quota.maxBytes}
-                colorVar="var(--chart-1)"
-                kind="bytes"
-              />
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <QuotaRing
-                label="Files"
-                value={quota.filesCount}
-                max={quota.maxFiles}
-                colorVar="var(--chart-2)"
-                kind="count"
-                unitSuffix="Dateien"
-              />
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <QuotaRing
-                label="Notes"
-                value={quota.notesCount}
-                max={quota.maxNotes}
-                colorVar="var(--chart-3)"
-                kind="count"
-                unitSuffix="Notes"
-              />
-            </CardContent>
-          </Card>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <KpiCard
+            label="Storage"
+            value={formatBytes(quota.usedBytes)}
+            valueSuffix={<span className="font-mono">von {formatBytes(quota.maxBytes)}</span>}
+            progress={{ used: quota.usedBytes, max: quota.maxBytes }}
+          />
+          <KpiCard
+            label="Files"
+            value={quota.filesCount.toLocaleString("de-DE")}
+            valueSuffix={<span className="font-mono">von {quota.maxFiles}</span>}
+            progress={{ used: quota.filesCount, max: quota.maxFiles }}
+          />
+          <KpiCard
+            label="Notes"
+            value={quota.notesCount.toLocaleString("de-DE")}
+            valueSuffix={<span className="font-mono">von {quota.maxNotes}</span>}
+            progress={{ used: quota.notesCount, max: quota.maxNotes }}
+          />
         </div>
-      </div>
+      </section>
 
       {/* Activity */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <StickyNote className="h-4 w-4 text-muted-foreground" />
-                <CardTitle className="text-base">Letzte Notes</CardTitle>
-              </div>
-              <Link
-                href="/notes"
-                className="text-xs text-muted-foreground underline-offset-4 hover:underline"
-              >
-                Alle ansehen
-              </Link>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {recentNotes.length === 0 ? (
-              <EmptyActivity
-                icon={<StickyNote className="h-6 w-6 text-muted-foreground" />}
-                label="Noch keine Notes"
-                cta="Erste anlegen"
-                href="/notes/new"
-              />
-            ) : (
-              <ul className="space-y-1">
-                {recentNotes.map((n) => (
-                  <li key={n.id}>
-                    <Link
-                      href={`/notes/${n.id}`}
-                      className="flex items-center justify-between gap-3 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-muted/50"
-                    >
-                      <span className="truncate">{n.title}</span>
-                      <span className="shrink-0 text-xs text-muted-foreground">
+      <div className="grid gap-3 lg:grid-cols-2">
+        <ActivityList
+          title="Letzte Notes"
+          icon={<StickyNote className="h-4 w-4" />}
+          moreHref="/notes"
+        >
+          {recentNotes.length === 0 ? (
+            <ActivityEmpty
+              icon={<StickyNote className="h-5 w-5" />}
+              label="Noch keine Notes"
+              cta="Erste anlegen"
+              ctaHref="/notes/new"
+            />
+          ) : (
+            <ul>
+              {recentNotes.map((n) => (
+                <li key={n.id}>
+                  <ActivityRow
+                    href={`/notes/${n.id}`}
+                    primary={n.title}
+                    trailing={
+                      <span className="font-mono text-[11px]">
                         {formatRelative(n.updatedAt)}
                       </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
+                    }
+                  />
+                </li>
+              ))}
+            </ul>
+          )}
+        </ActivityList>
 
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <FileText className="h-4 w-4 text-muted-foreground" />
-                <CardTitle className="text-base">Letzte Files</CardTitle>
-              </div>
-              <Link
-                href="/files"
-                className="text-xs text-muted-foreground underline-offset-4 hover:underline"
-              >
-                Alle ansehen
-              </Link>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {recentFiles.length === 0 ? (
-              <EmptyActivity
-                icon={<FileText className="h-6 w-6 text-muted-foreground" />}
-                label="Noch keine Files"
-                cta="Erste hochladen"
-                href="/files"
-              />
-            ) : (
-              <ul className="space-y-1">
-                {recentFiles.map((f) => (
-                  <li
-                    key={f.id}
-                    className="flex items-center justify-between gap-3 rounded-md px-2 py-1.5 text-sm"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate">{f.filename}</div>
-                      <div className="text-xs text-muted-foreground">
+        <ActivityList
+          title="Letzte Files"
+          icon={<FileText className="h-4 w-4" />}
+          moreHref="/files"
+        >
+          {recentFiles.length === 0 ? (
+            <ActivityEmpty
+              icon={<FileText className="h-5 w-5" />}
+              label="Noch keine Files"
+              cta="Erste hochladen"
+              ctaHref="/files"
+            />
+          ) : (
+            <ul>
+              {recentFiles.map((f) => (
+                <li key={f.id}>
+                  <ActivityRow
+                    primary={f.filename}
+                    secondary={
+                      <span className="font-mono">
                         {f.mimeType} · {formatBytes(f.sizeBytes)}
-                      </div>
-                    </div>
-                    <span className="shrink-0 text-xs text-muted-foreground">
-                      {formatRelative(f.createdAt)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
+                      </span>
+                    }
+                    trailing={
+                      <span className="font-mono text-[11px]">
+                        {formatRelative(f.createdAt)}
+                      </span>
+                    }
+                  />
+                </li>
+              ))}
+            </ul>
+          )}
+        </ActivityList>
       </div>
-    </div>
-  );
-}
-
-function QuickAction({
-  href,
-  icon,
-  label,
-  description,
-}: {
-  href: string;
-  icon: React.ReactNode;
-  label: string;
-  description: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="group relative overflow-hidden rounded-xl border bg-card p-4 transition-all hover:-translate-y-0.5 hover:border-foreground/20 hover:shadow-md"
-    >
-      <div className="flex items-start gap-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500/15 to-fuchsia-500/15 text-indigo-700 dark:text-indigo-300">
-          {icon}
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="font-medium">{label}</div>
-          <div className="mt-0.5 text-xs text-muted-foreground">
-            {description}
-          </div>
-        </div>
-      </div>
-    </Link>
-  );
-}
-
-function EmptyActivity({
-  icon,
-  label,
-  cta,
-  href,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  cta: string;
-  href: string;
-}) {
-  return (
-    <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed py-8 text-center">
-      {icon}
-      <div className="text-sm text-muted-foreground">{label}</div>
-      <Button
-        size="sm"
-        variant="outline"
-        nativeButton={false}
-        render={<Link href={href}>{cta}</Link>}
-      />
     </div>
   );
 }
