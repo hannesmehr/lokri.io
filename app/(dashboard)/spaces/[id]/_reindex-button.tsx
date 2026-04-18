@@ -1,6 +1,7 @@
 "use client";
 
 import { Loader2, RefreshCw } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -24,36 +25,41 @@ interface Summary {
  * whole page stays static.
  */
 export function ReindexSpaceButton({ spaceId }: Props) {
+  const t = useTranslations("spaces.detail.reindex");
+  const tToasts = useTranslations("toasts");
   const [loading, setLoading] = useState(false);
 
   async function run() {
     if (
-      !confirm(
-        "Alle Dateien dieses Spaces neu indizieren? Bestehende Embeddings werden ersetzt. Je nach Größe kann das einige Minuten dauern.",
-      )
+      !confirm(t("confirm"))
     ) {
       return;
     }
     setLoading(true);
-    const toastId = toast.loading("Indiziere Space neu…");
+    const toastId = toast.loading(t("loading"));
     try {
       const res = await fetch(`/api/spaces/${spaceId}/reindex`, {
         method: "POST",
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
-        toast.error(body.error ?? "Reindex fehlgeschlagen", { id: toastId });
+        toast.error(body.error ?? tToasts("error.generic"), { id: toastId });
         return;
       }
       const { summary } = (await res.json()) as { summary: Summary };
-      const parts = [
-        `${summary.indexed} indiziert`,
-        summary.noText > 0 ? `${summary.noText} ohne Text` : null,
-        summary.failed > 0 ? `${summary.failed} fehlgeschlagen` : null,
-      ].filter(Boolean);
-      const msg = `${parts.join(" · ")} (${summary.chunks} Chunks gesamt)`;
+      const msg =
+        summary.noText > 0 || summary.failed > 0
+          ? t("partial", {
+              indexed: summary.indexed,
+              noText: summary.noText,
+              failed: summary.failed,
+            })
+          : t("success", {
+              indexed: summary.indexed,
+              chunks: summary.chunks,
+            });
       if (summary.truncated) {
-        toast.warning(`${msg} — weitere Dateien übrig. Nochmal klicken.`, {
+        toast.warning(`${msg} — ${t("truncated")}`, {
           id: toastId,
         });
       } else if (summary.failed > 0) {
@@ -62,7 +68,7 @@ export function ReindexSpaceButton({ spaceId }: Props) {
         toast.success(msg, { id: toastId });
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Netzwerkfehler", {
+      toast.error(err instanceof Error ? err.message : tToasts("error.networkFailed"), {
         id: toastId,
       });
     } finally {
@@ -83,7 +89,7 @@ export function ReindexSpaceButton({ spaceId }: Props) {
       ) : (
         <RefreshCw className="h-3.5 w-3.5" />
       )}
-      {loading ? "Indiziere…" : "Neu indizieren"}
+      {loading ? t("working") : t("button")}
     </Button>
   );
 }

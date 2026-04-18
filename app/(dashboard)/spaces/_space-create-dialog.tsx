@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -24,6 +25,7 @@ interface Provider {
 }
 
 export function SpaceCreateDialog() {
+  const t = useTranslations("spaces.createDialog");
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -53,11 +55,13 @@ export function SpaceCreateDialog() {
     });
     setLoading(false);
     if (!res.ok) {
-      const data = await res.json().catch(() => ({ error: "Fehler" }));
-      toast.error(data.error || "Konnte Space nicht anlegen.");
+      const body = await res.json().catch(() => ({}));
+      // Shared Phase-2 pattern: prefer structured API codes, fall back to raw error text.
+      const message = body?.error ?? t("errors.generic");
+      toast.error(message);
       return;
     }
-    toast.success("Space angelegt.");
+    toast.success(t("success"));
     setName("");
     setDescription("");
     setStorageProviderId("");
@@ -67,18 +71,15 @@ export function SpaceCreateDialog() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button>Neuer Space</Button>} />
+      <DialogTrigger render={<Button>{t("submit")}</Button>} />
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Neuer Space</DialogTitle>
-          <DialogDescription>
-            Gruppiere Notes und Files. Optional: einen eigenen Storage-Provider
-            zuweisen — dann landen Uploads dieses Spaces in deinem Bucket.
-          </DialogDescription>
+          <DialogTitle>{t("title")}</DialogTitle>
+          <DialogDescription>{t("description")}</DialogDescription>
         </DialogHeader>
         <form onSubmit={onSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Name</Label>
+            <Label htmlFor="name">{t("name")}</Label>
             <Input
               id="name"
               required
@@ -89,7 +90,7 @@ export function SpaceCreateDialog() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="description">Beschreibung (optional)</Label>
+            <Label htmlFor="description">{t("descriptionLabel")}</Label>
             <Textarea
               id="description"
               rows={3}
@@ -99,14 +100,14 @@ export function SpaceCreateDialog() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="provider">Storage</Label>
+            <Label htmlFor="provider">{t("storage")}</Label>
             <select
               id="provider"
               className="flex h-9 w-full rounded-md border bg-background px-3 py-1 text-sm"
               value={storageProviderId}
               onChange={(e) => setStorageProviderId(e.target.value)}
             >
-              <option value="">lokri-managed (Standard)</option>
+              <option value="">{t("storageDefault")}</option>
               {providers.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
@@ -115,20 +116,22 @@ export function SpaceCreateDialog() {
             </select>
             {providers.length === 0 ? (
               <p className="text-xs text-muted-foreground">
-                Keine externen Provider. Leg einen in{" "}
-                <Link
-                  href="/settings/storage"
-                  className="underline underline-offset-4"
-                >
-                  Settings → Storage
-                </Link>{" "}
-                an.
+                {t.rich("noProviders", {
+                  link: (chunks) => (
+                    <Link
+                      href="/settings/storage"
+                      className="underline underline-offset-4"
+                    >
+                      {chunks}
+                    </Link>
+                  ),
+                })}
               </p>
             ) : null}
           </div>
           <DialogFooter>
             <Button type="submit" disabled={loading}>
-              {loading ? "Anlegen…" : "Anlegen"}
+              {loading ? t("submitting") : t("submit")}
             </Button>
           </DialogFooter>
         </form>

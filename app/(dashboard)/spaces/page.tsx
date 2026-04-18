@@ -1,6 +1,7 @@
 import { desc, eq } from "drizzle-orm";
 import { Folder, FolderPlus } from "lucide-react";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import {
   Card,
   CardContent,
@@ -15,17 +16,9 @@ import { formatRelative } from "@/lib/format";
 import { SpaceCreateDialog } from "./_space-create-dialog";
 import { SpaceDeleteButton } from "./_space-delete-button";
 
-// A few accent gradients cycled across space cards so the wall isn't grey.
-const ACCENTS = [
-  "from-indigo-500/15 to-fuchsia-500/10",
-  "from-emerald-500/15 to-teal-500/10",
-  "from-amber-500/15 to-rose-500/10",
-  "from-sky-500/15 to-indigo-500/10",
-  "from-violet-500/15 to-pink-500/10",
-  "from-lime-500/15 to-emerald-500/10",
-];
-
 export default async function SpacesPage() {
+  const t = await getTranslations("spaces.list");
+  const tEmpty = await getTranslations("spaces.empty");
   const { ownerAccountId } = await requireSessionWithAccount();
   const rows = await db
     .select()
@@ -37,9 +30,11 @@ export default async function SpacesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="font-display text-4xl leading-tight">Spaces</h1>
+          <h1 className="text-4xl font-semibold tracking-tight leading-tight">
+            {t("title")}
+          </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Gruppiere Notes und Files zu Themen.
+            {t("subtitle")}
           </p>
         </div>
         <SpaceCreateDialog />
@@ -51,32 +46,25 @@ export default async function SpacesPage() {
             <div className="mb-2 grid h-12 w-12 place-items-center rounded-full bg-muted text-muted-foreground">
               <FolderPlus className="h-6 w-6" />
             </div>
-            <CardTitle>Noch keine Spaces</CardTitle>
-            <CardDescription>
-              Spaces sind optional — lege deinen ersten an, um Inhalte
-              thematisch zu gruppieren.
-            </CardDescription>
+            <CardTitle>{tEmpty("title")}</CardTitle>
+            <CardDescription>{tEmpty("body")}</CardDescription>
           </CardHeader>
         </Card>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {rows.map((s, i) => (
+          {rows.map((s) => (
             <Card
               key={s.id}
-              className="group relative overflow-hidden transition-all hover:-translate-y-0.5 hover:shadow-md"
+              className="group border bg-card transition-colors hover:border-foreground/20"
             >
-              <div
-                className={`absolute inset-0 bg-gradient-to-br opacity-60 transition-opacity group-hover:opacity-80 ${ACCENTS[i % ACCENTS.length]}`}
-                aria-hidden
-              />
-              <div className="relative">
+              <div>
                 <CardHeader>
                   <div className="mb-2 flex items-center gap-2">
-                    <div className="grid h-8 w-8 place-items-center rounded-md bg-background/70 text-foreground backdrop-blur-sm">
+                    <div className="grid h-8 w-8 place-items-center rounded-md border bg-muted text-foreground">
                       <Folder className="h-4 w-4" />
                     </div>
-                    <span className="text-xs text-muted-foreground">
-                      aktualisiert {formatRelative(s.updatedAt)}
+                    <span className="font-mono text-xs text-muted-foreground">
+                      {t("updatedAt", { relative: formatRelative(s.updatedAt) })}
                     </span>
                   </div>
                   <CardTitle className="line-clamp-1">
@@ -89,7 +77,7 @@ export default async function SpacesPage() {
                   </CardTitle>
                   <CardDescription className="line-clamp-2 min-h-[2.5rem]">
                     {s.description || (
-                      <span className="italic">Keine Beschreibung</span>
+                      <span className="italic">{t("emptyDescription")}</span>
                     )}
                   </CardDescription>
                 </CardHeader>
@@ -99,19 +87,19 @@ export default async function SpacesPage() {
                       href={`/spaces/${s.id}`}
                       className="font-medium text-foreground hover:underline"
                     >
-                      Öffnen →
+                      {t("open")} →
                     </Link>
                     <Link
                       href={`/notes?spaceId=${s.id}`}
                       className="hover:text-foreground"
                     >
-                      Notes
+                      {t("notes")}
                     </Link>
                     <Link
                       href={`/files?spaceId=${s.id}`}
                       className="hover:text-foreground"
                     >
-                      Files
+                      {t("files")}
                     </Link>
                   </div>
                   <SpaceDeleteButton id={s.id} name={s.name} />

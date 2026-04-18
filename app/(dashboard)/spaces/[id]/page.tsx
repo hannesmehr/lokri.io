@@ -1,7 +1,9 @@
 import { and, eq } from "drizzle-orm";
 import { CloudCog, FileText, Folder, HardDrive, StickyNote } from "lucide-react";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { notFound as nextNotFound } from "next/navigation";
+import { KpiCard } from "@/components/kpi-card";
 import {
   Card,
   CardContent,
@@ -19,6 +21,7 @@ import { ReindexSpaceButton } from "./_reindex-button";
 type Params = { params: Promise<{ id: string }> };
 
 export default async function SpaceDetailPage({ params }: Params) {
+  const t = await getTranslations("spaces.detail");
   const { ownerAccountId } = await requireSessionWithAccount();
   const { id } = await params;
 
@@ -67,9 +70,9 @@ export default async function SpaceDetailPage({ params }: Params) {
             href="/spaces"
             className="text-xs text-muted-foreground underline-offset-4 hover:underline"
           >
-            ← Spaces
+            {t("back")}
           </Link>
-          <h1 className="mt-1 font-display text-4xl leading-tight">
+          <h1 className="mt-1 text-4xl font-semibold tracking-tight leading-tight">
             {space.name}
           </h1>
           {space.description ? (
@@ -77,9 +80,10 @@ export default async function SpaceDetailPage({ params }: Params) {
               {space.description}
             </p>
           ) : null}
-          <p className="mt-2 text-xs text-muted-foreground">
-            Erstellt {formatRelative(space.createdAt)} · zuletzt geändert{" "}
-            {formatRelative(space.updatedAt)}
+          <p className="mt-2 flex flex-wrap gap-1 font-mono text-xs text-muted-foreground">
+            <span>{t("createdAt", { relative: formatRelative(space.createdAt) })}</span>
+            <span>·</span>
+            <span>{t("updatedAt", { relative: formatRelative(space.updatedAt) })}</span>
           </p>
         </div>
         {fileCount > 0 ? (
@@ -90,73 +94,70 @@ export default async function SpaceDetailPage({ params }: Params) {
       </div>
 
       {/* Quick stats */}
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 md:grid-cols-3">
         <Stat
           icon={<StickyNote className="h-4 w-4" />}
-          label="Notes"
+          label={t("stats.notes")}
           value={noteCount}
           href={`/notes?spaceId=${space.id}`}
         />
         <Stat
           icon={<FileText className="h-4 w-4" />}
-          label="Files (intern)"
+          label={t("stats.files")}
           value={fileCount}
           href={`/files?spaceId=${space.id}`}
         />
-        <div className="rounded-xl border bg-card/60 p-4">
-          <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            {provider ? (
-              <CloudCog className="h-3.5 w-3.5" />
+        <KpiCard
+          label={t("stats.storage")}
+          value={
+            provider ? (
+              <span className="text-base font-semibold">{provider.name}</span>
             ) : (
-              <HardDrive className="h-3.5 w-3.5" />
-            )}
-            Storage
-          </div>
-          <div className="mt-1.5 text-sm">
-            {provider ? (
-              <span className="inline-flex items-center gap-1">
-                <span className="font-medium">{provider.name}</span>
-                <span className="text-xs text-muted-foreground">
-                  ({provider.type.toUpperCase()})
-                </span>
-              </span>
-            ) : (
-              <span className="text-muted-foreground">
-                lokri-managed (Standard)
-              </span>
-            )}
-          </div>
-        </div>
+              <span className="text-base font-semibold">{t("storageManaged")}</span>
+            )
+          }
+          valueSuffix={
+            provider ? (
+              <span>{provider.type.toUpperCase()}</span>
+            ) : undefined
+          }
+          meta={
+            <span className="inline-flex items-center gap-1.5">
+              {provider ? (
+                <CloudCog className="h-3.5 w-3.5" />
+              ) : (
+                <HardDrive className="h-3.5 w-3.5" />
+              )}
+              {provider ? provider.name : t("stats.internal")}
+            </span>
+          }
+        />
       </div>
 
       {/* Unified browser — internal and external behave identically */}
       <Card>
         <CardHeader>
           <div className="flex items-center gap-3">
-            <div className="grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br from-emerald-500/15 to-teal-500/15 text-emerald-700 dark:text-emerald-400">
+            <div className="grid h-9 w-9 place-items-center rounded-lg border bg-muted text-foreground">
               <Folder className="h-4 w-4" />
             </div>
             <div>
               <CardTitle>
-                {provider ? "Bucket-Inhalt" : "Dateien"}
+                {provider ? t("browserTitle") : t("browserTitleInternal")}
               </CardTitle>
               <CardDescription>
                 {provider ? (
-                  <>
-                    Live-Listing deines Buckets unter dem konfigurierten
-                    Path-Prefix. Dateien, die andere Tools bereits hochgeladen
-                    haben, tauchen hier automatisch auf.
-                  </>
+                  t("browserDescriptionExternal")
                 ) : (
                   <>
-                    Alle Dateien im Space. Uploads macht du weiterhin auf der
+                    {t("browserDescriptionInternalPrefix")}{" "}
                     <Link
                       href={`/files?spaceId=${space.id}`}
-                      className="ml-1 underline underline-offset-4"
+                      className="underline underline-offset-4"
                     >
-                      Files-Seite
+                      {t("browserDescriptionInternalLink")}
                     </Link>
-                    .
+                    {t("browserDescriptionInternalSuffix")}
                   </>
                 )}
               </CardDescription>
@@ -188,13 +189,14 @@ function Stat({
   return (
     <Link
       href={href}
-      className="rounded-xl border bg-card/60 p-4 transition-colors hover:bg-muted/40"
+      className="rounded-lg border bg-card p-4 transition-colors hover:border-foreground/20"
     >
-      <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        {icon}
-        {label}
-      </div>
-      <div className="mt-1.5 text-2xl font-semibold tabular-nums">{value}</div>
+      <KpiCard
+        label={label}
+        value={value}
+        meta={<span className="inline-flex items-center gap-1.5">{icon}</span>}
+        className="border-0 bg-transparent p-0"
+      />
     </Link>
   );
 }
