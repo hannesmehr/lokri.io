@@ -1,10 +1,12 @@
 "use client";
 
 import {
+  Activity,
   FileText,
   Key,
   LayoutDashboard,
   Receipt,
+  ScrollText,
   Users,
   Wallet,
 } from "lucide-react";
@@ -32,6 +34,8 @@ const ITEMS: Array<{
   { href: "/admin/accounts", label: "Accounts", icon: <Wallet className="h-4 w-4" /> },
   { href: "/admin/invoices", label: "Rechnungen", icon: <Receipt className="h-4 w-4" /> },
   { href: "/admin/tokens", label: "Tokens", icon: <Key className="h-4 w-4" /> },
+  { href: "/admin/audit", label: "Audit", icon: <ScrollText className="h-4 w-4" /> },
+  { href: "/admin/system", label: "System", icon: <Activity className="h-4 w-4" /> },
 ];
 
 export function AdminSidebar() {
