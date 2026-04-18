@@ -1,6 +1,12 @@
 "use client";
 
-import { Check, Copy, ShieldCheck, ShieldOff } from "lucide-react";
+import {
+  Check,
+  Copy,
+  ShieldCheck,
+  ShieldOff,
+} from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -25,52 +31,41 @@ interface Props {
 }
 
 export function TwoFactorSection({ enabled, onChanged }: Props) {
+  const t = useTranslations("profile.security.twoFactor");
+
   return (
-    <div className="flex items-center justify-between gap-4 rounded-xl border p-4">
-      <div className="flex items-start gap-3">
-        <div
-          className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${
-            enabled
-              ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
-              : "bg-muted text-muted-foreground"
-          }`}
-        >
-          {enabled ? (
-            <ShieldCheck className="h-4 w-4" />
-          ) : (
-            <ShieldOff className="h-4 w-4" />
-          )}
-        </div>
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="font-medium">Zwei-Faktor-Authentifizierung</span>
+    <div className="rounded-xl border p-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border bg-muted text-foreground">
             {enabled ? (
-              <Badge
-                variant="secondary"
-                className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-              >
-                aktiv
-              </Badge>
-            ) : null}
+              <ShieldCheck className="h-4 w-4" />
+            ) : (
+              <ShieldOff className="h-4 w-4" />
+            )}
           </div>
-          <p className="mt-1 text-sm text-muted-foreground">
-            TOTP-Code aus Authenticator-App + Backup-Codes. Schützt deinen
-            Login zusätzlich zu Email + Passwort.
-          </p>
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-medium">{t("title")}</span>
+              <Badge variant="outline">
+                {enabled ? t("active.badge") : t("setup.badge")}
+              </Badge>
+            </div>
+            <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
+          </div>
         </div>
+        {enabled ? (
+          <DisableDialog onChanged={onChanged} />
+        ) : (
+          <EnableDialog onChanged={onChanged} />
+        )}
       </div>
-      {enabled ? (
-        <DisableDialog onChanged={onChanged} />
-      ) : (
-        <EnableDialog onChanged={onChanged} />
-      )}
     </div>
   );
 }
 
-// ---------- Enable flow ----------
-
 function EnableDialog({ onChanged }: { onChanged?: () => void }) {
+  const t = useTranslations("profile.security.twoFactor");
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<"password" | "qr" | "backup">("password");
   const [password, setPassword] = useState("");
@@ -83,12 +78,10 @@ function EnableDialog({ onChanged }: { onChanged?: () => void }) {
   async function enable() {
     setError(null);
     setLoading(true);
-    const { data, error: err } = await authClient.twoFactor.enable({
-      password,
-    });
+    const { data, error: err } = await authClient.twoFactor.enable({ password });
     setLoading(false);
     if (err || !data) {
-      setError(err?.message ?? "Falsches Passwort.");
+      setError(err?.message ?? t("setup.errors.password"));
       return;
     }
     setTotpUri(data.totpURI);
@@ -104,46 +97,51 @@ function EnableDialog({ onChanged }: { onChanged?: () => void }) {
     });
     setLoading(false);
     if (err) {
-      setError(err.message ?? "Code ungültig.");
+      setError(err.message ?? t("setup.errors.code"));
       return;
     }
     setStep("backup");
   }
 
+  function reset() {
+    setStep("password");
+    setPassword("");
+    setCode("");
+    setTotpUri(null);
+    setBackupCodes([]);
+    setError(null);
+  }
+
   function finish() {
     setOpen(false);
     onChanged?.();
-    toast.success("2FA aktiviert.");
-    // Reset after close animation
-    setTimeout(() => {
-      setStep("password");
-      setPassword("");
-      setCode("");
-      setTotpUri(null);
-      setBackupCodes([]);
-    }, 300);
+    toast.success(t("active.enabledToast"));
+    setTimeout(reset, 300);
   }
 
   function copyCodes() {
     void navigator.clipboard.writeText(backupCodes.join("\n"));
-    toast.success("Backup-Codes kopiert.");
+    toast.success(t("recoveryCodes.copied"));
   }
 
   return (
-    <Dialog open={open} onOpenChange={(v) => (v ? setOpen(true) : finish())}>
-      <DialogTrigger render={<Button size="sm">Aktivieren</Button>} />
+    <Dialog
+      open={open}
+      onOpenChange={(value) => {
+        setOpen(value);
+        if (!value && step !== "backup") reset();
+      }}
+    >
+      <DialogTrigger render={<Button size="sm">{t("setup.trigger")}</Button>} />
       <DialogContent>
-        {step === "password" && (
+        {step === "password" ? (
           <>
             <DialogHeader>
-              <DialogTitle>2FA aktivieren</DialogTitle>
-              <DialogDescription>
-                Bestätige dein aktuelles Passwort, um mit der Einrichtung zu
-                starten.
-              </DialogDescription>
+              <DialogTitle>{t("setup.title")}</DialogTitle>
+              <DialogDescription>{t("setup.description")}</DialogDescription>
             </DialogHeader>
             <div className="space-y-2">
-              <Label htmlFor="current-password">Passwort</Label>
+              <Label htmlFor="current-password">{t("setup.passwordLabel")}</Label>
               <Input
                 id="current-password"
                 type="password"
@@ -151,51 +149,48 @@ function EnableDialog({ onChanged }: { onChanged?: () => void }) {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
-              {error && (
+              {error ? (
                 <p className="text-sm text-destructive" role="alert">
                   {error}
                 </p>
-              )}
+              ) : null}
             </div>
             <DialogFooter>
+              <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
+                {t("setup.cancel")}
+              </Button>
               <Button onClick={enable} disabled={loading || !password}>
-                {loading ? "Prüfe…" : "Weiter"}
+                {loading ? t("setup.validating") : t("setup.next")}
               </Button>
             </DialogFooter>
           </>
-        )}
+        ) : null}
 
-        {step === "qr" && totpUri && (
+        {step === "qr" && totpUri ? (
           <>
             <DialogHeader>
-              <DialogTitle>Authenticator-App verknüpfen</DialogTitle>
-              <DialogDescription>
-                Scann den QR-Code in deiner Authenticator-App (1Password,
-                Google Authenticator, Authy, Raycast…) und gib dann den 6-stelligen
-                Code zur Bestätigung ein.
-              </DialogDescription>
+              <DialogTitle>{t("setup.qrTitle")}</DialogTitle>
+              <DialogDescription>{t("setup.qrDescription")}</DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
-              <div className="flex justify-center rounded-lg border bg-white p-4">
-                {/* Google Charts as a zero-dep QR renderer — fine for the  */}
-                {/* infrequent 2FA-enroll flow. */}
+              <div className="flex justify-center rounded-xl border bg-white p-4">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  alt="TOTP QR code"
+                  alt={t("setup.qrAlt")}
                   width={192}
                   height={192}
                   src={`https://api.qrserver.com/v1/create-qr-code/?size=192x192&data=${encodeURIComponent(totpUri)}`}
+                  className="h-auto max-w-full"
                 />
               </div>
               <details className="text-xs text-muted-foreground">
-                <summary className="cursor-pointer">
-                  Kannst den QR-Code nicht scannen?
-                </summary>
-                <pre className="mt-2 overflow-x-auto rounded-md border bg-muted/40 p-2">
+                <summary className="cursor-pointer">{t("setup.manualToggle")}</summary>
+                <pre className="mt-2 overflow-x-auto rounded-md border bg-muted p-3 font-mono text-xs">
                   <code>{totpUri}</code>
                 </pre>
               </details>
               <div className="space-y-2">
-                <Label htmlFor="totp-code">6-stelliger Code</Label>
+                <Label htmlFor="totp-code">{t("setup.codeLabel")}</Label>
                 <Input
                   id="totp-code"
                   inputMode="numeric"
@@ -206,67 +201,69 @@ function EnableDialog({ onChanged }: { onChanged?: () => void }) {
                   onChange={(e) =>
                     setCode(e.target.value.replace(/\D/g, "").slice(0, 6))
                   }
+                  className="font-mono text-center tracking-[0.3em]"
                 />
-                {error && (
+                {error ? (
                   <p className="text-sm text-destructive" role="alert">
                     {error}
                   </p>
-                )}
+                ) : null}
               </div>
             </div>
             <DialogFooter>
+              <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
+                {t("setup.cancel")}
+              </Button>
               <Button onClick={verify} disabled={loading || code.length !== 6}>
-                {loading ? "Prüfe…" : "Bestätigen"}
+                {loading ? t("setup.verifying") : t("setup.verify")}
               </Button>
             </DialogFooter>
           </>
-        )}
+        ) : null}
 
-        {step === "backup" && (
+        {step === "backup" ? (
           <>
             <DialogHeader>
-              <DialogTitle>Backup-Codes</DialogTitle>
-              <DialogDescription>
-                Speichere diese Codes an einem sicheren Ort. Jeder Code
-                funktioniert genau einmal, falls du keinen Zugriff auf deine
-                Authenticator-App hast.
-              </DialogDescription>
+              <DialogTitle>{t("recoveryCodes.title")}</DialogTitle>
+              <DialogDescription>{t("recoveryCodes.description")}</DialogDescription>
             </DialogHeader>
             <Alert>
-              <AlertTitle>Einmalig sichtbar</AlertTitle>
-              <AlertDescription>
-                Nach dem Schließen kannst du die Codes nicht mehr anzeigen.
-              </AlertDescription>
+              <AlertTitle>{t("recoveryCodes.warningTitle")}</AlertTitle>
+              <AlertDescription>{t("recoveryCodes.warningBody")}</AlertDescription>
             </Alert>
-            <pre className="grid grid-cols-2 gap-1 rounded-md border bg-muted/40 p-3 font-mono text-xs">
-              {backupCodes.map((c) => (
-                <code key={c}>{c}</code>
+            <pre className="grid grid-cols-2 gap-1 rounded-md border bg-muted p-3 font-mono text-xs">
+              {backupCodes.map((backupCode) => (
+                <code key={backupCode}>{backupCode}</code>
               ))}
             </pre>
             <DialogFooter className="gap-2">
               <Button variant="outline" onClick={copyCodes}>
                 <Copy className="h-3.5 w-3.5" />
-                Kopieren
+                {t("recoveryCodes.copy")}
               </Button>
               <Button onClick={finish}>
                 <Check className="h-3.5 w-3.5" />
-                Fertig
+                {t("recoveryCodes.finish")}
               </Button>
             </DialogFooter>
           </>
-        )}
+        ) : null}
       </DialogContent>
     </Dialog>
   );
 }
 
-// ---------- Disable flow ----------
-
 function DisableDialog({ onChanged }: { onChanged?: () => void }) {
+  const t = useTranslations("profile.security.twoFactor");
   const [open, setOpen] = useState(false);
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  function reset() {
+    setPassword("");
+    setError(null);
+  }
 
   async function disable() {
     setError(null);
@@ -274,43 +271,40 @@ function DisableDialog({ onChanged }: { onChanged?: () => void }) {
     const { error: err } = await authClient.twoFactor.disable({ password });
     setLoading(false);
     if (err) {
-      setError(err.message ?? "Falsches Passwort.");
+      setError(err.message ?? t("disable.errors.password"));
       return;
     }
     setOpen(false);
-    setPassword("");
+    reset();
     onChanged?.();
-    toast.success("2FA deaktiviert.");
+    toast.success(t("disable.success"));
   }
 
   return (
     <Dialog
       open={open}
-      onOpenChange={(v) => {
-        setOpen(v);
-        if (!v) {
-          setPassword("");
-          setError(null);
-        }
+      onOpenChange={(value) => {
+        setOpen(value);
+        if (!value) reset();
       }}
     >
       <DialogTrigger
         render={
           <Button variant="outline" size="sm">
-            Deaktivieren
+            {t("disable.trigger")}
           </Button>
         }
       />
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>2FA deaktivieren</DialogTitle>
-          <DialogDescription>
-            Nach dem Deaktivieren reicht Email + Passwort zum Login. Empfohlen
-            nur, wenn du deinen Authenticator-Zugang verloren hast.
-          </DialogDescription>
+          <DialogTitle>{t("disable.title")}</DialogTitle>
+          <DialogDescription>{t("disable.description")}</DialogDescription>
         </DialogHeader>
+        <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-sm text-muted-foreground">
+          {t("disable.warning")}
+        </div>
         <div className="space-y-2">
-          <Label htmlFor="disable-password">Passwort zur Bestätigung</Label>
+          <Label htmlFor="disable-password">{t("disable.passwordLabel")}</Label>
           <Input
             id="disable-password"
             type="password"
@@ -318,19 +312,22 @@ function DisableDialog({ onChanged }: { onChanged?: () => void }) {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
-          {error && (
+          {error ? (
             <p className="text-sm text-destructive" role="alert">
               {error}
             </p>
-          )}
+          ) : null}
         </div>
         <DialogFooter>
+          <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
+            {t("disable.cancel")}
+          </Button>
           <Button
             variant="destructive"
             onClick={disable}
             disabled={loading || !password}
           >
-            {loading ? "Deaktiviere…" : "2FA deaktivieren"}
+            {loading ? t("disable.submitting") : t("disable.submit")}
           </Button>
         </DialogFooter>
       </DialogContent>

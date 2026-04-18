@@ -1,6 +1,7 @@
 "use client";
 
 import { AlertTriangle } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,8 @@ import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth-client";
 
 export function DangerZone({ userEmail }: { userEmail: string }) {
+  const t = useTranslations("profile.data.accountDeletion");
+  const tConfirm = useTranslations("confirmDialogs.delete");
   const [open, setOpen] = useState(false);
   const [confirmEmail, setConfirmEmail] = useState("");
   const [loading, setLoading] = useState(false);
@@ -35,7 +38,7 @@ export function DangerZone({ userEmail }: { userEmail: string }) {
     });
     setLoading(false);
     if (error) {
-      toast.error(error.message ?? "Löschung fehlgeschlagen.");
+      toast.error(error.message ?? t("errors.generic"));
       return;
     }
     setSent(true);
@@ -56,18 +59,16 @@ export function DangerZone({ userEmail }: { userEmail: string }) {
         </div>
         <div className="flex-1 space-y-3">
           <div>
-            <h3 className="font-semibold text-destructive">Account löschen</h3>
+            <h3 className="font-semibold text-destructive">{t("title")}</h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              Permanent und irreversibel. Alle Spaces, Notes, Files, Tokens und
-              OAuth-Consents werden gelöscht. Wir schicken dir einen Bestätigungs-Link
-              per Email.
+              {t("description")}
             </p>
           </div>
           <Dialog open={open} onOpenChange={(v) => (v ? setOpen(true) : close())}>
             <DialogTrigger
               render={
                 <Button variant="destructive" size="sm">
-                  Account löschen…
+                  {t("trigger")}
                 </Button>
               }
             />
@@ -75,33 +76,30 @@ export function DangerZone({ userEmail }: { userEmail: string }) {
               {sent ? (
                 <>
                   <DialogHeader>
-                    <DialogTitle>Check deine Mails</DialogTitle>
+                    <DialogTitle>{t("sentTitle")}</DialogTitle>
                     <DialogDescription>
-                      Wir haben an{" "}
+                      {t("sentDescription.before")}{" "}
                       <span className="font-medium text-foreground">
                         {userEmail}
                       </span>{" "}
-                      einen Bestätigungs-Link geschickt. Erst nach dem Klick auf
-                      den Link wird dein Account gelöscht.
+                      {t("sentDescription.after")}
                     </DialogDescription>
                   </DialogHeader>
                   <DialogFooter>
-                    <Button onClick={close}>Verstanden</Button>
+                    <Button onClick={close}>{t("sentConfirm")}</Button>
                   </DialogFooter>
                 </>
               ) : (
                 <>
                   <DialogHeader>
-                    <DialogTitle>Account endgültig löschen?</DialogTitle>
-                    <DialogDescription>
-                      Diese Aktion kann nicht rückgängig gemacht werden. Gib
-                      zur Bestätigung deine Email ein.
-                    </DialogDescription>
+                    <DialogTitle>{tConfirm("title")}</DialogTitle>
+                    <DialogDescription>{t("confirmDescription")}</DialogDescription>
                   </DialogHeader>
                   <div className="space-y-2">
-                    <Label htmlFor="confirm-email">
-                      Email zur Bestätigung
-                    </Label>
+                    <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-sm text-muted-foreground">
+                      {t("warning")}
+                    </div>
+                    <Label htmlFor="confirm-email">{t("confirmLabel")}</Label>
                     <Input
                       id="confirm-email"
                       type="email"
@@ -113,16 +111,14 @@ export function DangerZone({ userEmail }: { userEmail: string }) {
                   </div>
                   <DialogFooter className="gap-2">
                     <Button variant="ghost" onClick={close} disabled={loading}>
-                      Abbrechen
+                      {tConfirm("cancel")}
                     </Button>
                     <Button
                       variant="destructive"
                       onClick={requestDeletion}
                       disabled={!emailMatches || loading}
                     >
-                      {loading
-                        ? "Sende Bestätigungs-Link…"
-                        : "Bestätigungs-Link anfordern"}
+                      {loading ? t("submitting") : t("submit")}
                     </Button>
                   </DialogFooter>
                 </>

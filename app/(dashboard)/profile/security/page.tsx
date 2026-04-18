@@ -1,4 +1,5 @@
 import { Lock, Shield } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import {
   Card,
   CardContent,
@@ -12,22 +13,20 @@ import { TwoFactorSection } from "../_two-factor-section";
 
 export default async function ProfileSecurityPage() {
   const { session } = await requireSessionWithAccount();
+  const t = await getTranslations("profile.security");
 
   return (
     <div className="space-y-6">
-      {/* Passwort */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br from-amber-500/15 to-rose-500/15 text-amber-700 dark:text-amber-400">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg border bg-muted text-foreground">
                 <Lock className="h-4 w-4" />
               </div>
               <div>
-                <CardTitle>Passwort</CardTitle>
-                <CardDescription>
-                  Andere Sessions werden beim Passwort-Wechsel abgemeldet.
-                </CardDescription>
+                <CardTitle>{t("password.title")}</CardTitle>
+                <CardDescription>{t("password.description")}</CardDescription>
               </div>
             </div>
             <ChangePasswordDialog />
@@ -35,18 +34,15 @@ export default async function ProfileSecurityPage() {
         </CardHeader>
       </Card>
 
-      {/* 2FA */}
       <Card>
         <CardHeader>
           <div className="flex items-center gap-3">
-            <div className="grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br from-violet-500/15 to-pink-500/15 text-violet-700 dark:text-violet-400">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg border bg-muted text-foreground">
               <Shield className="h-4 w-4" />
             </div>
             <div>
-              <CardTitle>Zwei-Faktor-Authentifizierung</CardTitle>
-              <CardDescription>
-                TOTP-Code aus einer Authenticator-App + Backup-Codes.
-              </CardDescription>
+              <CardTitle>{t("twoFactor.title")}</CardTitle>
+              <CardDescription>{t("twoFactor.subtitle")}</CardDescription>
             </div>
           </div>
         </CardHeader>

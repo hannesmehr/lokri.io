@@ -20,7 +20,7 @@ export function LocaleSwitcher() {
   const router = useRouter();
   const active = useLocale() as Locale;
   const t = useTranslations("profile.locale");
-  const tCommon = useTranslations("common.status");
+  const tToasts = useTranslations("toasts");
   const [value, setValue] = useState<Locale>(active);
   const [isPending, startTransition] = useTransition();
 
@@ -32,7 +32,7 @@ export function LocaleSwitcher() {
       body: JSON.stringify({ locale: next }),
     });
     if (!res.ok) {
-      toast.error(tCommon("error"));
+      toast.error(tToasts("error.generic"));
       setValue(active);
       return;
     }
@@ -46,9 +46,8 @@ export function LocaleSwitcher() {
     <div className="space-y-2">
       <div className="flex items-center gap-2">
         <Languages className="h-4 w-4 text-muted-foreground" />
-        <Label htmlFor="locale-select">{t("title")}</Label>
+        <Label htmlFor="locale-select">{t("label")}</Label>
       </div>
-      <p className="text-sm text-muted-foreground">{t("description")}</p>
       <select
         id="locale-select"
         value={value}
@@ -59,7 +58,7 @@ export function LocaleSwitcher() {
       >
         {locales.map((loc) => (
           <option key={loc} value={loc}>
-            {loc === "de" ? "Deutsch" : "English"}
+            {t(`options.${loc}`)}
           </option>
         ))}
       </select>
