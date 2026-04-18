@@ -4,13 +4,21 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ------------------------------------------------------------------
+ * Design Tokens (Phase 1 — Tech-Look Redesign)
+ *
+ * Grundrichtung: shadcn "neutral" (reines Grau ohne Blau-/Grünstich)
+ * mit gedämpftem Lila als Brand-Akzent. Dark Mode als gleichwertige
+ * Zweit-Variante. Mehr Kontrast über Borders als über Shadows.
+ *
+ * Siehe docs/DESIGN_SYSTEM.md für Prinzipien und Anti-Patterns.
+ * ------------------------------------------------------------------ */
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
-  --font-serif: var(--font-serif);
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-serif);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -42,24 +50,27 @@
   --color-card: var(--card);
   --color-brand: var(--brand);
   --color-brand-foreground: var(--brand-foreground);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
+  --radius-sm: calc(var(--radius) - 0.25rem);
+  --radius-md: calc(var(--radius) - 0.125rem);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  --radius-xl: calc(var(--radius) + 0.25rem);
 }
 
 :root {
-  --background: oklch(1 0 0);
+  /* Light Mode — shadcn "neutral" Basis, minimal wärmer als pures Weiß. */
+  --background: oklch(0.99 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
+
+  /* Primary bleibt neutral-dunkel (shadcn-Konvention für "neutral") —
+     die Brand-Farbe sitzt separat auf --brand und wird gezielt für
+     Akzente eingesetzt. */
   --primary: oklch(0.205 0 0);
   --primary-foreground: oklch(0.985 0 0);
+
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
@@ -67,22 +78,32 @@
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
+
+  /* Borders bewusst dezent — Tech-Look lebt von feinen Trennlinien,
+     nicht von kräftigen Umrandungen. */
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
 
-  /* Signature brand — warm indigo → fuchsia midpoint. */
-  --brand: oklch(0.58 0.22 295);
+  /* Brand = Lila für CTAs, Links, Focus-Highlights. Gegenüber Phase 0
+     (Chroma 0.22) deutlich entsättigt — nicht mehr „Pastell-Akzent",
+     sondern ein klarer Solid-Primary-Ton, der mit Text-Weiß auf sich
+     selbst AA-kontrastiert. */
+  --brand: oklch(0.55 0.17 295);
   --brand-foreground: oklch(0.985 0 0);
 
-  /* Vibrant chart palette, shared with the UI for gradients / badges. */
-  --chart-1: oklch(0.58 0.22 265); /* indigo */
-  --chart-2: oklch(0.65 0.28 330); /* fuchsia */
-  --chart-3: oklch(0.80 0.17 75);  /* amber */
-  --chart-4: oklch(0.70 0.17 155); /* emerald */
-  --chart-5: oklch(0.75 0.14 210); /* cyan */
+  /* Chart-Palette unverändert — Admin-only, nicht Teil dieses Redesigns.
+     Falls Dashboard-Home Chart-Farben anzeigen will, bitte --brand
+     oder neutrale Greys nutzen, nicht die Chart-Slots. */
+  --chart-1: oklch(0.58 0.22 265);
+  --chart-2: oklch(0.65 0.28 330);
+  --chart-3: oklch(0.80 0.17 75);
+  --chart-4: oklch(0.70 0.17 155);
+  --chart-5: oklch(0.75 0.14 210);
 
-  --radius: 0.75rem;
+  /* 0.5rem = 8px. Mittlerer Radius — nicht scharf, nicht rund. */
+  --radius: 0.5rem;
+
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
@@ -94,14 +115,18 @@
 }
 
 .dark {
+  /* Dark Mode — zinc-950-artig, nicht pures Schwarz. Card einen Tick
+     heller als Background, damit sich Flächen ohne Schatten absetzen. */
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
+
   --primary: oklch(0.922 0 0);
   --primary-foreground: oklch(0.205 0 0);
+
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
@@ -109,11 +134,15 @@
   --accent: oklch(0.269 0 0);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
+
+  /* Im Dark Mode steigern wir den Border-Kontrast minimal, damit
+     Cards ohne Shadow lesbar absetzen. */
+  --border: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.556 0 0);
 
-  --brand: oklch(0.66 0.22 295);
+  /* Brand im Dark etwas aufgehellt, Chroma gleich. */
+  --brand: oklch(0.68 0.17 295);
   --brand-foreground: oklch(0.145 0 0);
 
   --chart-1: oklch(0.68 0.22 265);
@@ -128,7 +157,7 @@
   --sidebar-primary-foreground: oklch(0.985 0 0);
   --sidebar-accent: oklch(0.269 0 0);
   --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-border: oklch(1 0 0 / 12%);
   --sidebar-ring: oklch(0.556 0 0);
 }
 
@@ -149,10 +178,18 @@
   body {
     @apply bg-background text-foreground;
   }
-  /* Editorial headings opt-in via `font-display` / `font-serif`. */
+  /*
+   * `.font-display` — Legacy-Klasse aus Phase 0 (zeigte auf Instrument
+   * Serif). In Phase 1 intern auf Sans umgebogen: semibold + tight
+   * tracking, damit Headings visuell sofort modern aussehen, ohne
+   * dass die 37 Call-Sites einzeln angefasst werden müssen. Der Phase-2-
+   * Rollout entfernt die Klasse überall und ersetzt sie durch
+   * font-semibold/text-tighter je nach Kontext.
+   */
   .font-display {
-    font-family: var(--font-serif), "Iowan Old Style", "Times New Roman", serif;
-    font-feature-settings: "liga" on, "calt" on;
+    font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+    font-style: normal;
+    font-weight: 600;
     letter-spacing: -0.02em;
   }
   .tabular-nums {

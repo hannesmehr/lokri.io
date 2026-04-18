@@ -1,0 +1,261 @@
+# Design System — lokri.io (Phase 1)
+
+**Stand:** Phase 1 Redesign — Tokens + Showcase landed.
+**Scope:** User-Bereich (Auth, Dashboard, Marketing). Admin-Bereich nutzt dieselben Tokens, wurde aber in Phase 1 nicht visuell überarbeitet.
+
+---
+
+## Prinzipien
+
+1. **Vercel/Linear-inspiriert, nüchtern, technisch.**
+   Wir bauen eine Developer-Tools-Oberfläche, keine Content-Site. Entscheidungen fallen immer zugunsten von Klarheit + Dichte vor Ornament.
+
+2. **Dark-Mode ist gleichberechtigt, nicht nachträglich.**
+   Jede neue Komponente muss in Light und Dark geprüft werden. Keine hardcoded Farben — alles läuft über CSS-Vars / Tailwind-Tokens.
+
+3. **Kontrast über Borders, nicht über Schatten.**
+   Shadows werden sparsam eingesetzt (max. `shadow-sm` bei Hover). Cards grenzen sich über `border` und minimalen Background-Kontrast vom Surrounding ab.
+
+4. **Lila ist Akzent, nicht Fläche.**
+   `--brand` ist für Primary-Actions, Links im Content, Focus-States und Highlights reserviert — nicht für Hintergrundflächen oder Icon-Tints. Keine Pastell-Gradient-Hintergründe mehr.
+
+5. **Typografie durch Gewicht und Größe, nicht durch Schriftart.**
+   Eine Schriftfamilie (Geist Sans) + Mono für Codes. Unterschiede zwischen H1/H2/Body entstehen über Size + Weight + Tracking, nicht über serifige Kontraste.
+
+6. **Literarische Microcopy raus.**
+   "Willkommen, *Hannes*." wird "Dashboard". "Dein persönlicher MCP-Wissens-Pool — erreichbar aus allen KI-Clients, die du …" wird "MCP-Gateway für deine KI-Clients". Kurz, funktional, technisch.
+
+---
+
+## Fonts
+
+Geladen via `next/font/google` in `app/layout.tsx`:
+
+| Rolle | Font | CSS-Var |
+| --- | --- | --- |
+| Body + Headings | **Geist Sans** | `--font-sans` |
+| Code / IDs / Tokens / File-Sizes | **Geist Mono** | `--font-geist-mono` (exposed als `--font-mono`) |
+
+**Aktiviert:** OpenType-Features `cv11` (unambiguous `i`), `ss01` (open digits — saubere `0 6 9`), `ss03` (alternate `g`/`a`). Setzt sich global via `html { font-feature-settings }` in `globals.css`.
+
+Tailwind-Nutzung:
+- `font-sans` — Default, muss meistens nicht explizit gesetzt werden
+- `font-mono` — für alles, was aussieht wie Code: Token-Prefixes, UUIDs, File-Sizes, CLI-Snippets
+
+### Legacy: `.font-display`
+
+Diese Klasse wurde in Phase 0 auf `Instrument Serif` gelegt. In Phase 1 ist sie **intern auf Sans umgebogen** (siehe `globals.css`): Geist Sans + `font-weight: 600` + `letter-spacing: -0.02em`. Damit sehen alle 37 Call-Sites sofort modern aus, ohne dass wir jede Datei anfassen. Der Phase-2-Rollout räumt die Klasse dann weg und ersetzt sie durch explizite Tailwind-Klassen (`font-semibold text-tighter`).
+
+**Neuen Code:** Nicht mehr auf `.font-display` verlassen — stattdessen `font-semibold tracking-tight` nutzen.
+
+---
+
+## Typografie-Scale
+
+Keine custom Tailwind-Config — wir nutzen die Default-Scale. Konvention für die wichtigsten Kontexte:
+
+| Rolle | Tailwind-Klasse | Size / Line-Height | Weight | Tracking |
+| --- | --- | --- | --- | --- |
+| Page-H1 | `text-2xl font-semibold tracking-tight` | 24px / 1.25 | 600 | tight |
+| Section-H2 | `text-lg font-semibold tracking-tight` | 18px / 1.4 | 600 | tight |
+| Card-Title | `text-base font-semibold` | 16px / 1.5 | 600 | normal |
+| Body-default | `text-sm` | 14px / 1.5 | 400 | normal |
+| Body-small | `text-xs text-muted-foreground` | 12px / 1.5 | 400 | normal |
+| Eyebrow / Label | `text-xs font-medium uppercase tracking-wide text-muted-foreground` | 12px / 1.5 | 500 | wide |
+| Big Number (KPI) | `text-3xl font-semibold tabular-nums` | 30px / 1.1 | 600 | normal |
+| Mono / Code | `font-mono text-xs` oder `font-mono text-sm` | 12–14px | 400 | normal |
+
+Alle User-Bereich-Headings sitzen jetzt auf `text-2xl`/`text-lg`, nicht mehr auf den früheren `text-4xl`/`text-5xl`. Tech-Tools bauen keine Magazin-Hero-Headlines.
+
+---
+
+## Farb-Palette
+
+Shadcn "neutral" als Basis — reines Grau ohne Blau-/Grünstich. Brand separat auf `--brand`. Chart-Palette bleibt bunt (Admin-only, nicht Teil dieses Redesigns).
+
+### Light Mode
+
+| Token | oklch | Zweck |
+| --- | --- | --- |
+| `--background` | `oklch(0.99 0 0)` | Page-Hintergrund (minimal wärmer als `#FFF`) |
+| `--foreground` | `oklch(0.145 0 0)` | Default-Text |
+| `--card` | `oklch(1 0 0)` | Card-Flächen (weißer als BG, leicht erhöht) |
+| `--muted` | `oklch(0.97 0 0)` | Hover-States, Subtile Flächen |
+| `--muted-foreground` | `oklch(0.51 0 0)` | Secondary-Text, Icon-Tints |
+| `--border` | `oklch(0.922 0 0)` | Trennlinien, Card-Rahmen |
+| `--primary` | `oklch(0.205 0 0)` | Default-Button-Fläche (fast-schwarz) |
+| `--primary-foreground` | `oklch(0.985 0 0)` | Text auf Primary |
+| `--brand` | `oklch(0.55 0.17 295)` | Lila-Akzent für CTAs, Links, Focus |
+| `--brand-foreground` | `oklch(0.985 0 0)` | Text auf Brand |
+| `--destructive` | `oklch(0.577 0.245 27.325)` | Delete-Actions, Error-States |
+
+### Dark Mode
+
+| Token | oklch | Zweck |
+| --- | --- | --- |
+| `--background` | `oklch(0.145 0 0)` | zinc-950-artig, nicht pures Schwarz |
+| `--foreground` | `oklch(0.985 0 0)` | Helles Text-Weiß |
+| `--card` | `oklch(0.205 0 0)` | Leicht heller als BG — hebt Cards ohne Shadow ab |
+| `--muted` | `oklch(0.269 0 0)` | Hover / subtile Flächen |
+| `--muted-foreground` | `oklch(0.72 0 0)` | Secondary-Text |
+| `--border` | `oklch(1 0 0 / 12%)` | Minimal kontrastreicher als Light, weiterhin dezent |
+| `--primary` | `oklch(0.922 0 0)` | Near-white für Primary-Button |
+| `--primary-foreground` | `oklch(0.205 0 0)` | Dunkler Text auf Primary |
+| `--brand` | `oklch(0.68 0.17 295)` | Lila, aufgehellt für Dark-Kontrast |
+| `--brand-foreground` | `oklch(0.145 0 0)` | Dunkler Text auf Brand |
+| `--destructive` | `oklch(0.704 0.191 22.216)` | Heller-rot für Dark |
+
+Brand hat gegenüber Phase 0 eine **Chroma-Reduktion von 0.22 → 0.17** — damit ist der Ton deutlich nüchterner (kein Neon-Violett mehr), aber noch klar als Lila erkennbar.
+
+### Verwendung
+
+| Intention | Tailwind-Klasse |
+| --- | --- |
+| Primary-Button (Standard) | `bg-primary text-primary-foreground` |
+| Brand-Button (CTA mit Lila) | `bg-brand text-brand-foreground hover:bg-brand/90` |
+| Link im Fließtext | `text-brand hover:text-brand/80 underline-offset-4 hover:underline` |
+| Secondary/Ghost-Button | `hover:bg-muted` |
+| Badge | `bg-muted text-foreground` oder `bg-brand/10 text-brand` für Akzent |
+| Destructive | `bg-destructive text-white` |
+| Subtile Card | `bg-card border` |
+
+### Anti-Patterns
+
+- ❌ **Pastell-Gradient-Flächen** — `bg-gradient-to-br from-indigo-500/8 via-background to-fuchsia-500/10` ist out.
+- ❌ **Bunte Icon-Kreise mit Gradient-Background** — `bg-gradient-to-br from-indigo-500/15 to-fuchsia-500/15` für Feature-Icons ist out.
+- ❌ **Hardcoded Tailwind-Farb-Klassen** in neuem Code — `text-indigo-700`, `bg-amber-50`, `border-emerald-500/20`. Läuft immer über CSS-Vars / semantische Tokens.
+- ❌ **Literarische Serif-Headings** — `font-display italic text-brand` für „Willkommen, *Hannes*.".
+- ❌ **Shadow-Lift-Hovers** — `hover:shadow-md hover:-translate-y-0.5` auf Cards. Stattdessen: `hover:border-foreground/20`.
+
+---
+
+## Border-Radius
+
+| Token | Wert | Verwendung |
+| --- | --- | --- |
+| `--radius` | `0.5rem` (8px) | Basis |
+| `--radius-sm` | `0.25rem` (4px) | Badges, kleine Pills, inline Chips |
+| `--radius-md` | `0.375rem` (6px) | Inputs, kleine Buttons |
+| `--radius-lg` | `0.5rem` (8px) | Cards, Dialogs, Popovers, Standard-Buttons |
+| `--radius-xl` | `0.75rem` (12px) | Nur wenn wirklich prominente Flächen (Hero-Boxen o.ä.) — sparsam |
+
+Gegenüber Phase 0 **deutlich reduziert** (war `0.75rem` Basis mit Multipliern bis `1.95rem`). Tech-Look mag mittlere Radien — nicht scharf, nicht rund.
+
+---
+
+## Shadows
+
+**Nahezu keine.** Vercel/Linear nutzen Shadows fast nie — Cards grenzen sich über Border + Background-Stufung ab.
+
+| Wann | Wie |
+| --- | --- |
+| Dropdown / Popover | `shadow-sm` (Standard von shadcn) |
+| Toasts | `shadow-sm` |
+| Card (ruhend) | **keine Shadow** — nur `border` |
+| Card (hover) | **keine Shadow-Lift** — stattdessen `hover:border-foreground/20` |
+| Modal / Dialog | `shadow-sm` ist okay; stärker nur, wenn explizit Fokus-Abgrenzung nötig ist |
+
+Im Dark Mode sind Shadows ohnehin unsichtbar — Border-Kontrast übernimmt.
+
+---
+
+## Spacing
+
+Tailwind-Default-Scale, keine Custom-Tokens. Konventionen für konsistente Abstände:
+
+| Kontext | Klasse |
+| --- | --- |
+| Page-Container (vertical rhythm) | `space-y-6` |
+| Section-Block intern | `space-y-4` |
+| Card-Padding | `p-4` oder `p-6` (Cards mit viel Inhalt) |
+| Grid-Gaps (Cards-Grid) | `gap-3` (dicht) oder `gap-4` (Standard) |
+| Inline-Gaps (Button-Reihen) | `gap-2` |
+| List-Item-Padding | `px-2 py-1.5` oder `px-3 py-2` |
+| Page-Header → Content | `space-y-6` zwischen Breadcrumb, H1, Content |
+
+---
+
+## Beispiel-Komponenten
+
+### KPI-Card (`components/kpi-card.tsx` aus Phase 1)
+
+```tsx
+<KpiCard
+  label="Storage"
+  value="218 MB"
+  valueSuffix="von 20 GB"
+  progress={{ used: 218_000_000, max: 20_000_000_000 }}
+/>
+```
+
+Rendert: Eyebrow-Label oben, großer Wert (tabular-nums), darunter Progress-Bar mit `aria-valuenow`, klein-Prozent rechts neben der Bar. Farb-Coding: >80 % → `bg-amber-500`, >95 % → `bg-destructive` (nur diese zwei Ausnahmen von der „keine Tailwind-Farben direkt"-Regel, weil Warn-Signale semantisch sind und nicht dekorativ).
+
+### Button-Varianten
+
+```tsx
+<Button>Default</Button>                                {/* bg-primary */}
+<Button variant="outline">Secondary</Button>            {/* border + hover:bg-muted */}
+<Button variant="ghost">Tertiary</Button>               {/* hover:bg-muted */}
+<Button variant="destructive">Delete</Button>           {/* bg-destructive */}
+<Button className="bg-brand text-brand-foreground hover:bg-brand/90">CTA</Button>
+```
+
+### List-Item (für Recent-Notes / Recent-Files)
+
+```tsx
+<Link
+  href={`/notes/${n.id}`}
+  className="flex items-center justify-between gap-3 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-muted/50"
+>
+  <span className="truncate">{n.title}</span>
+  <span className="shrink-0 font-mono text-xs text-muted-foreground">
+    {formatRelative(n.updatedAt)}
+  </span>
+</Link>
+```
+
+### Plan-Badge
+
+```tsx
+<Badge variant="outline" className="font-mono text-xs">
+  {quota.planId}
+</Badge>
+```
+
+Keine eingefärbten Badges mehr (`bg-indigo-500/10 text-indigo-700`) — stattdessen Outline + Mono für Plan-IDs.
+
+---
+
+## Dark-Mode-Integration
+
+**`next-themes` ist installiert und gemountet** (siehe `components/theme-provider.tsx`). Toggle sitzt in der Top-Nav (User-Bereich) und in der Admin-Sidebar. Attribute-Mode: `class="dark"` auf `<html>`.
+
+Drei Wahlmöglichkeiten: Light, Dark, System (Default = System, respektiert `prefers-color-scheme`). Persistiert in `localStorage` pro Browser — keine User-Preference in der DB (Follow-up-Epic).
+
+**Hydration:** `<html suppressHydrationWarning>` muss gesetzt sein, weil `next-themes` das `class`-Attribute clientseitig nachträgt. Ist in `app/layout.tsx` eingerichtet.
+
+Für neue Components: **immer beides testen**. Abkürzung im Dev: Toggle im UI + Hard-Refresh.
+
+---
+
+## Migration-Hinweise
+
+- Alte `font-display`-Calls funktionieren weiter (sehen jetzt nur Sans statt Serif aus). Neuer Code nutzt `font-semibold tracking-tight`.
+- Alte hardcoded Farben (`text-indigo-700`, `bg-amber-50` etc.) werden im Rollout stufenweise gegen semantische Tokens getauscht. Neuer Code: **nie** hardcoded Tailwind-Farben.
+- `--font-serif` + `--font-heading` sind aus `globals.css` entfernt. Alte Tailwind-Klasse `font-serif` / `font-heading` rendert jetzt auf System-Default-Serif — taucht im Code aktuell nicht auf, also unkritisch.
+
+---
+
+## Anti-Patterns — Checkliste vor PR
+
+Wenn in einem Redesign-PR auftaucht:
+
+- [ ] Hardcoded Tailwind-Farben (`text-{color}-{shade}`, `bg-{color}-{shade}`)
+- [ ] `bg-gradient-*` / `from-*` / `via-*` / `to-*`
+- [ ] `font-display` oder `font-serif` in **neuem** Code
+- [ ] Serifen-Italic-Headings
+- [ ] `hover:shadow-md` oder größer auf normalen Cards
+- [ ] Cards mit `bg-card/50` + Pastell-Tint
+- [ ] Lange Prosa-Untertitel unter Page-Headings
+
+→ Review-Kommentar: „Phase-1-Design-System: siehe `docs/DESIGN_SYSTEM.md` → Anti-Patterns".
