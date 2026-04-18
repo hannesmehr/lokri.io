@@ -56,6 +56,7 @@ export async function getQuota(ownerAccountId: string): Promise<QuotaStatus> {
     .select({
       planId: plans.id,
       planExpiresAt: ownerAccounts.planExpiresAt,
+      quotaOverride: ownerAccounts.quotaOverride,
       usedBytes: usageQuota.usedBytes,
       filesCount: usageQuota.filesCount,
       notesCount: usageQuota.notesCount,
@@ -87,6 +88,17 @@ export async function getQuota(ownerAccountId: string): Promise<QuotaStatus> {
     !row.isSeatBased &&
     (row.planExpiresAt === null || expired);
 
+  const override = row.quotaOverride ?? null;
+  const applyOverride = (limits: {
+    maxBytes: number;
+    maxFiles: number;
+    maxNotes: number;
+  }) => ({
+    maxBytes: override?.bytes ?? limits.maxBytes,
+    maxFiles: override?.files ?? limits.maxFiles,
+    maxNotes: override?.notes ?? limits.maxNotes,
+  });
+
   if (!needsFallback) {
     // Seat multiplication for team-plan accounts: active seat count
     // multiplies the per-seat base limits. Current semantics counts every
@@ -100,14 +112,17 @@ export async function getQuota(ownerAccountId: string): Promise<QuotaStatus> {
         .where(eq(ownerAccountMembers.ownerAccountId, ownerAccountId));
       seatMultiplier = Math.max(1, Number(seatRow?.n ?? 1));
     }
+    const scaled = applyOverride({
+      maxBytes: row.maxBytes * seatMultiplier,
+      maxFiles: row.maxFiles * seatMultiplier,
+      maxNotes: row.maxNotes * seatMultiplier,
+    });
     return {
       planId: row.planId,
       usedBytes: row.usedBytes,
       filesCount: row.filesCount,
       notesCount: row.notesCount,
-      maxBytes: row.maxBytes * seatMultiplier,
-      maxFiles: row.maxFiles * seatMultiplier,
-      maxNotes: row.maxNotes * seatMultiplier,
+      ...scaled,
     };
   }
 
@@ -123,14 +138,19 @@ export async function getQuota(ownerAccountId: string): Promise<QuotaStatus> {
   if (!free) {
     throw new Error("Free plan row missing — re-run pnpm db:seed.");
   }
+  // Admin-Override darf auch auf dem Free-Fallback greifen — ein "bumpen"
+  // soll unabhängig vom Ablaufstatus wirksam sein.
+  const scaled = applyOverride({
+    maxBytes: free.maxBytes,
+    maxFiles: free.maxFiles,
+    maxNotes: free.maxNotes,
+  });
   return {
     planId: FREE_PLAN_ID,
     usedBytes: row.usedBytes,
     filesCount: row.filesCount,
     notesCount: row.notesCount,
-    maxBytes: free.maxBytes,
-    maxFiles: free.maxFiles,
-    maxNotes: free.maxNotes,
+    ...scaled,
   };
 }
 
@@ -227,6 +247,12 @@ export async function reserveQuota(
     return { ok: true };
   }
 
+  // Override-Logik: COALESCE((quota_override->>'bytes')::bigint, …) —
+  // Admin-Override ersetzt das Plan-Limit (nach Free-Fallback, vor
+  // Seat-Multiplikation). Seat-Multiplikation übernimmt die JS-Pfad-
+  // Variante in `getQuota`; `reserveQuota` läuft nur gegen single-seat
+  // Quota-Checks, Team-Seats werden auf der Applikationsschicht
+  // vor-multipliziert (siehe bestehende Caller).
   const result = await executor.execute(sql`
     WITH limits AS (
       SELECT
@@ -234,24 +260,33 @@ export async function reserveQuota(
         uq.used_bytes,
         uq.files_count,
         uq.notes_count,
-        CASE
-          WHEN oa.plan_id <> ${FREE_PLAN_ID}
-            AND (oa.plan_expires_at IS NULL OR oa.plan_expires_at < now())
-          THEN fp.max_bytes
-          ELSE cp.max_bytes
-        END AS max_bytes,
-        CASE
-          WHEN oa.plan_id <> ${FREE_PLAN_ID}
-            AND (oa.plan_expires_at IS NULL OR oa.plan_expires_at < now())
-          THEN fp.max_files
-          ELSE cp.max_files
-        END AS max_files,
-        CASE
-          WHEN oa.plan_id <> ${FREE_PLAN_ID}
-            AND (oa.plan_expires_at IS NULL OR oa.plan_expires_at < now())
-          THEN fp.max_notes
-          ELSE cp.max_notes
-        END AS max_notes
+        COALESCE(
+          (oa.quota_override->>'bytes')::bigint,
+          CASE
+            WHEN oa.plan_id <> ${FREE_PLAN_ID}
+              AND (oa.plan_expires_at IS NULL OR oa.plan_expires_at < now())
+            THEN fp.max_bytes
+            ELSE cp.max_bytes
+          END
+        ) AS max_bytes,
+        COALESCE(
+          (oa.quota_override->>'files')::int,
+          CASE
+            WHEN oa.plan_id <> ${FREE_PLAN_ID}
+              AND (oa.plan_expires_at IS NULL OR oa.plan_expires_at < now())
+            THEN fp.max_files
+            ELSE cp.max_files
+          END
+        ) AS max_files,
+        COALESCE(
+          (oa.quota_override->>'notes')::int,
+          CASE
+            WHEN oa.plan_id <> ${FREE_PLAN_ID}
+              AND (oa.plan_expires_at IS NULL OR oa.plan_expires_at < now())
+            THEN fp.max_notes
+            ELSE cp.max_notes
+          END
+        ) AS max_notes
       FROM usage_quota uq
       INNER JOIN owner_accounts oa ON oa.id = uq.owner_account_id
       INNER JOIN plans cp ON cp.id = oa.plan_id

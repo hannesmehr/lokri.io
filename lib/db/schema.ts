@@ -354,6 +354,20 @@ export const ownerAccounts = pgTable(
     planExpiresAt: timestamp("plan_expires_at", { withTimezone: true }),
     /** Last successful renewal — for UI ("zuletzt verlängert am …"). */
     planRenewedAt: timestamp("plan_renewed_at", { withTimezone: true }),
+    /**
+     * Admin-Override der Plan-Limits. Wenn gesetzt (eines oder mehrere
+     * Felder), ersetzt der entsprechende Wert das Plan-Limit in
+     * `getQuota` — auch nach Seat-Multiplikation bei Team-Plänen.
+     *
+     * Format: `{ bytes?: number; files?: number; notes?: number }`.
+     * Wird vom Admin-Panel gepflegt; im Audit landet ein `admin.account.
+     * quota_override_set`-Event mit diff.
+     */
+    quotaOverride: jsonb("quota_override").$type<{
+      bytes?: number;
+      files?: number;
+      notes?: number;
+    } | null>(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

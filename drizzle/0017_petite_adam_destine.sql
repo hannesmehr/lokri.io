@@ -1,0 +1,1 @@
+ALTER TABLE "owner_accounts" ADD COLUMN "quota_override" jsonb;
