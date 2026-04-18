@@ -403,6 +403,77 @@
       "notes": "Notes",
       "files": "Files"
     },
+    "home": {
+      "welcome": "Hi, {name}",
+      "titleFallback": "Dashboard",
+      "subtitle": "MCP-Gateway für deine KI-Clients.",
+      "planLabel": "Plan",
+      "planAriaLabel": "Plan: {planId} — zum Billing",
+      "quickActions": {
+        "newNote": {
+          "label": "Neue Note",
+          "description": "Markdown oder Plaintext, wird automatisch embedded."
+        },
+        "uploadFile": {
+          "label": "File hochladen",
+          "description": "Drag & Drop, bis 10 MB pro Datei."
+        },
+        "mcpToken": {
+          "label": "MCP-Token",
+          "description": "Claude Desktop, ChatGPT, Cursor anbinden."
+        }
+      },
+      "sections": {
+        "quota": "Kontingent",
+        "recentNotes": "Letzte Notes",
+        "recentFiles": "Letzte Files"
+      },
+      "kpis": {
+        "storage": "Storage",
+        "files": "Files",
+        "notes": "Notes",
+        "ofBytes": "von {max}",
+        "ofCount": "von {max}",
+        "progressAriaLabel": "{label}: {percent}% belegt"
+      },
+      "empty": {
+        "notes": {
+          "label": "Noch keine Notes",
+          "cta": "Erste anlegen"
+        },
+        "files": {
+          "label": "Noch keine Files",
+          "cta": "Erste hochladen"
+        }
+      },
+      "viewAll": "Alle ansehen"
+    },
+    "onboarding": {
+      "title": "Erste Schritte",
+      "progress": "{completed}/{total} abgeschlossen",
+      "stepLabel": "Schritt {step}",
+      "stepStatus": {
+        "done": "Schritt {step} abgeschlossen",
+        "open": "Schritt {step} offen"
+      },
+      "steps": {
+        "space": {
+          "label": "Space anlegen",
+          "description": "Gruppiert Notes und Files thematisch. Optional, aber hilft beim Sortieren.",
+          "cta": "Zu Spaces"
+        },
+        "note": {
+          "label": "Erste Note",
+          "description": "Markdown-Text, wird automatisch für die semantische Suche indiziert.",
+          "cta": "Note schreiben"
+        },
+        "client": {
+          "label": "KI-Client verbinden",
+          "description": "Generiere einen MCP-Token und trag ihn in Claude Desktop, ChatGPT oder Cursor ein.",
+          "cta": "MCP einrichten"
+        }
+      }
+    },
     "overview": {
       "title": "Dashboard",
       "subtitle": "Schneller Blick auf deine Inhalte.",
@@ -418,6 +489,71 @@
         "noNotes": "Noch keine Notes",
         "noFiles": "Noch keine Files",
         "viewAll": "Alle anzeigen"
+      }
+    }
+  },
+
+  "search": {
+    "triggerLabel": "Suchen & Springen…",
+    "placeholder": "Suchen, springen, oder Kommando ausführen…",
+    "noResults": "Keine Treffer.",
+    "commandsHeading": "Kommandos",
+    "contentSearchHeading": "Inhaltssuche",
+    "loading": "Inhaltssuche läuft…",
+    "dialog": {
+      "title": "Command Palette",
+      "description": "Springe zu Spaces, Notes, Files oder führe Aktionen aus."
+    },
+    "groups": {
+      "spaces": "Spaces",
+      "notes": "Notes",
+      "files": "Files"
+    },
+    "commands": {
+      "navHome": {
+        "label": "Dashboard",
+        "keywords": "start übersicht"
+      },
+      "newNote": {
+        "label": "Neue Note",
+        "keywords": "create neu add"
+      },
+      "newSpace": {
+        "label": "Neuen Space anlegen",
+        "hint": "Spaces-Seite öffnen",
+        "keywords": "create neu add"
+      },
+      "profile": {
+        "label": "Profil",
+        "keywords": "account einstellungen 2fa"
+      },
+      "billing": {
+        "label": "Billing",
+        "keywords": "plan rechnung payment"
+      },
+      "settings": {
+        "label": "Einstellungen",
+        "keywords": "config storage mcp"
+      },
+      "storage": {
+        "label": "Storage-Provider",
+        "keywords": "s3 bucket external"
+      },
+      "mcp": {
+        "label": "MCP-Verbindung einrichten",
+        "keywords": "claude cursor chatgpt token"
+      },
+      "impressum": {
+        "label": "Impressum",
+        "keywords": "legal kontakt"
+      },
+      "datenschutz": {
+        "label": "Datenschutz",
+        "keywords": "privacy dsgvo gdpr"
+      },
+      "logout": {
+        "label": "Abmelden",
+        "keywords": "logout sign out"
       }
     }
   },

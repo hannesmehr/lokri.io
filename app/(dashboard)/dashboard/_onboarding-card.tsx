@@ -1,5 +1,6 @@
 import { Check, FolderPlus, Plug, StickyNote } from "lucide-react";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -27,34 +28,32 @@ interface Props {
  * entfernt; Done-State wird über Opacity + Check-Icon signalisiert,
  * Active-State über einen subtilen Ring um den nächsten offenen Schritt.
  */
-export function OnboardingCard({ hasSpace, hasNote, hasToken }: Props) {
+export async function OnboardingCard({ hasSpace, hasNote, hasToken }: Props) {
+  const t = await getTranslations("dashboard.onboarding");
   if (hasSpace && hasNote && hasToken) return null;
 
   const steps: Step[] = [
     {
-      label: "Space anlegen",
-      description:
-        "Gruppiert Notes und Files thematisch. Optional, aber hilft beim Sortieren.",
+      label: t("steps.space.label"),
+      description: t("steps.space.description"),
       href: "/spaces",
-      cta: "Zu Spaces",
+      cta: t("steps.space.cta"),
       icon: <FolderPlus className="h-4 w-4" />,
       done: hasSpace,
     },
     {
-      label: "Erste Note",
-      description:
-        "Markdown-Text, wird automatisch für die semantische Suche indiziert.",
+      label: t("steps.note.label"),
+      description: t("steps.note.description"),
       href: "/notes/new",
-      cta: "Note schreiben",
+      cta: t("steps.note.cta"),
       icon: <StickyNote className="h-4 w-4" />,
       done: hasNote,
     },
     {
-      label: "KI-Client verbinden",
-      description:
-        "Generiere einen MCP-Token und trag ihn in Claude Desktop, ChatGPT oder Cursor ein.",
+      label: t("steps.client.label"),
+      description: t("steps.client.description"),
       href: "/settings",
-      cta: "MCP einrichten",
+      cta: t("steps.client.cta"),
       icon: <Plug className="h-4 w-4" />,
       done: hasToken,
     },
@@ -66,9 +65,9 @@ export function OnboardingCard({ hasSpace, hasNote, hasToken }: Props) {
     <section className="rounded-lg border bg-card">
       <header className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
         <div>
-          <h2 className="text-sm font-semibold">Erste Schritte</h2>
+          <h2 className="text-sm font-semibold">{t("title")}</h2>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            <span className="font-mono">{completed}/3</span> abgeschlossen
+            {t("progress", { completed, total: steps.length })}
           </p>
         </div>
         <div className="flex items-center gap-1.5">
@@ -85,8 +84,8 @@ export function OnboardingCard({ hasSpace, hasNote, hasToken }: Props) {
               )}
               aria-label={
                 s.done
-                  ? `Schritt ${i + 1} abgeschlossen`
-                  : `Schritt ${i + 1} offen`
+                  ? t("stepStatus.done", { step: i + 1 })
+                  : t("stepStatus.open", { step: i + 1 })
               }
             >
               {s.done ? <Check className="h-3 w-3" /> : i + 1}
@@ -112,7 +111,7 @@ export function OnboardingCard({ hasSpace, hasNote, hasToken }: Props) {
                 {s.done ? <Check className="h-3.5 w-3.5" /> : s.icon}
               </span>
               <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                Schritt {i + 1}
+                {t("stepLabel", { step: i + 1 })}
               </span>
             </div>
             <div className="mt-2 text-sm font-medium">{s.label}</div>

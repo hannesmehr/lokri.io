@@ -1,6 +1,7 @@
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { FileText, Key, Plus, StickyNote, Upload } from "lucide-react";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import {
   ActivityEmpty,
   ActivityList,
@@ -29,6 +30,7 @@ import { OnboardingCard } from "./_onboarding-card";
  * Dark testen sich automatisch mit.
  */
 export default async function DashboardPage() {
+  const t = await getTranslations("dashboard.home");
   const { session, ownerAccountId } = await requireSessionWithAccount();
   const [quota, recentNotes, recentFiles, spaceCount, tokenCount] =
     await Promise.all([
@@ -73,18 +75,18 @@ export default async function DashboardPage() {
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl lg:text-4xl">
-            {firstName ? `Hi, ${firstName}` : "Dashboard"}
+            {firstName ? t("welcome", { name: firstName }) : t("titleFallback")}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            MCP-Gateway für deine KI-Clients.
+            {t("subtitle")}
           </p>
         </div>
         <Link
           href="/billing"
           className="inline-flex min-h-9 items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs transition-colors hover:border-foreground/20"
-          aria-label={`Plan: ${quota.planId} — zum Billing`}
+          aria-label={t("planAriaLabel", { planId: quota.planId })}
         >
-          <span className="text-muted-foreground">Plan</span>
+          <span className="text-muted-foreground">{t("planLabel")}</span>
           <span className="font-mono font-medium">{quota.planId}</span>
         </Link>
       </header>
@@ -100,20 +102,20 @@ export default async function DashboardPage() {
         <QuickActionCard
           href="/notes/new"
           icon={<Plus className="h-4 w-4" />}
-          label="Neue Note"
-          description="Markdown oder Plaintext, wird automatisch embedded."
+          label={t("quickActions.newNote.label")}
+          description={t("quickActions.newNote.description")}
         />
         <QuickActionCard
           href="/files"
           icon={<Upload className="h-4 w-4" />}
-          label="File hochladen"
-          description="Drag & Drop, bis 10 MB pro Datei."
+          label={t("quickActions.uploadFile.label")}
+          description={t("quickActions.uploadFile.description")}
         />
         <QuickActionCard
           href="/settings/mcp"
           icon={<Key className="h-4 w-4" />}
-          label="MCP-Token"
-          description="Claude Desktop, ChatGPT, Cursor anbinden."
+          label={t("quickActions.mcpToken.label")}
+          description={t("quickActions.mcpToken.description")}
         />
       </div>
 
@@ -122,26 +124,38 @@ export default async function DashboardPage() {
           bei 640–767px Card-Breite um. Ab 768px fits wieder sauber. */}
       <section className="space-y-3">
         <h2 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          Kontingent
+          {t("sections.quota")}
         </h2>
         <div className="grid gap-3 md:grid-cols-3">
           <KpiCard
-            label="Storage"
+            label={t("kpis.storage")}
             value={formatBytes(quota.usedBytes)}
-            valueSuffix={`von ${formatBytes(quota.maxBytes)}`}
+            valueSuffix={t("kpis.ofBytes", { max: formatBytes(quota.maxBytes) })}
             progress={{ used: quota.usedBytes, max: quota.maxBytes }}
+            progressAriaLabel={t("kpis.progressAriaLabel", {
+              label: t("kpis.storage"),
+              percent: Math.round((quota.usedBytes / quota.maxBytes) * 100),
+            })}
           />
           <KpiCard
-            label="Files"
+            label={t("kpis.files")}
             value={quota.filesCount.toLocaleString("de-DE")}
-            valueSuffix={`von ${quota.maxFiles}`}
+            valueSuffix={t("kpis.ofCount", { max: quota.maxFiles })}
             progress={{ used: quota.filesCount, max: quota.maxFiles }}
+            progressAriaLabel={t("kpis.progressAriaLabel", {
+              label: t("kpis.files"),
+              percent: Math.round((quota.filesCount / quota.maxFiles) * 100),
+            })}
           />
           <KpiCard
-            label="Notes"
+            label={t("kpis.notes")}
             value={quota.notesCount.toLocaleString("de-DE")}
-            valueSuffix={`von ${quota.maxNotes}`}
+            valueSuffix={t("kpis.ofCount", { max: quota.maxNotes })}
             progress={{ used: quota.notesCount, max: quota.maxNotes }}
+            progressAriaLabel={t("kpis.progressAriaLabel", {
+              label: t("kpis.notes"),
+              percent: Math.round((quota.notesCount / quota.maxNotes) * 100),
+            })}
           />
         </div>
       </section>
@@ -154,15 +168,16 @@ export default async function DashboardPage() {
           oben ab (Summary-Widgets volle Breite, List-Sections schmaler). */}
       <div className="mx-auto grid w-full max-w-4xl gap-3 lg:grid-cols-2">
         <ActivityList
-          title="Letzte Notes"
+          title={t("sections.recentNotes")}
           icon={<StickyNote className="h-4 w-4" />}
           moreHref="/notes"
+          moreLabel={t("viewAll")}
         >
           {recentNotes.length === 0 ? (
             <ActivityEmpty
               icon={<StickyNote className="h-5 w-5" />}
-              label="Noch keine Notes"
-              cta="Erste anlegen"
+              label={t("empty.notes.label")}
+              cta={t("empty.notes.cta")}
               ctaHref="/notes/new"
             />
           ) : (
@@ -185,15 +200,16 @@ export default async function DashboardPage() {
         </ActivityList>
 
         <ActivityList
-          title="Letzte Files"
+          title={t("sections.recentFiles")}
           icon={<FileText className="h-4 w-4" />}
           moreHref="/files"
+          moreLabel={t("viewAll")}
         >
           {recentFiles.length === 0 ? (
             <ActivityEmpty
               icon={<FileText className="h-5 w-5" />}
-              label="Noch keine Files"
-              cta="Erste hochladen"
+              label={t("empty.files.label")}
+              cta={t("empty.files.cta")}
               ctaHref="/files"
             />
           ) : (

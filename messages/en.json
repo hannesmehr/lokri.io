@@ -403,6 +403,77 @@
       "notes": "Notes",
       "files": "Files"
     },
+    "home": {
+      "welcome": "Hi, {name}",
+      "titleFallback": "Dashboard",
+      "subtitle": "MCP gateway for your AI clients.",
+      "planLabel": "Plan",
+      "planAriaLabel": "Plan: {planId} — go to billing",
+      "quickActions": {
+        "newNote": {
+          "label": "New note",
+          "description": "Markdown or plain text, embedded automatically."
+        },
+        "uploadFile": {
+          "label": "Upload file",
+          "description": "Drag and drop, up to 10 MB per file."
+        },
+        "mcpToken": {
+          "label": "MCP token",
+          "description": "Connect Claude Desktop, ChatGPT, and Cursor."
+        }
+      },
+      "sections": {
+        "quota": "Quota",
+        "recentNotes": "Recent notes",
+        "recentFiles": "Recent files"
+      },
+      "kpis": {
+        "storage": "Storage",
+        "files": "Files",
+        "notes": "Notes",
+        "ofBytes": "of {max}",
+        "ofCount": "of {max}",
+        "progressAriaLabel": "{label}: {percent}% used"
+      },
+      "empty": {
+        "notes": {
+          "label": "No notes yet",
+          "cta": "Create first"
+        },
+        "files": {
+          "label": "No files yet",
+          "cta": "Upload first"
+        }
+      },
+      "viewAll": "View all"
+    },
+    "onboarding": {
+      "title": "First steps",
+      "progress": "{completed}/{total} completed",
+      "stepLabel": "Step {step}",
+      "stepStatus": {
+        "done": "Step {step} completed",
+        "open": "Step {step} open"
+      },
+      "steps": {
+        "space": {
+          "label": "Create a space",
+          "description": "Groups notes and files by topic. Optional, but helpful for staying organized.",
+          "cta": "Go to spaces"
+        },
+        "note": {
+          "label": "First note",
+          "description": "Markdown text, indexed automatically for semantic search.",
+          "cta": "Write note"
+        },
+        "client": {
+          "label": "Connect AI client",
+          "description": "Generate an MCP token and enter it in Claude Desktop, ChatGPT, or Cursor.",
+          "cta": "Set up MCP"
+        }
+      }
+    },
     "overview": {
       "title": "Dashboard",
       "subtitle": "A quick glance at your content.",
@@ -418,6 +489,71 @@
         "noNotes": "No notes yet",
         "noFiles": "No files yet",
         "viewAll": "View all"
+      }
+    }
+  },
+
+  "search": {
+    "triggerLabel": "Search & jump…",
+    "placeholder": "Search, jump, or run a command…",
+    "noResults": "No results.",
+    "commandsHeading": "Commands",
+    "contentSearchHeading": "Content search",
+    "loading": "Searching content…",
+    "dialog": {
+      "title": "Command palette",
+      "description": "Jump to spaces, notes, files, or run actions."
+    },
+    "groups": {
+      "spaces": "Spaces",
+      "notes": "Notes",
+      "files": "Files"
+    },
+    "commands": {
+      "navHome": {
+        "label": "Dashboard",
+        "keywords": "start overview"
+      },
+      "newNote": {
+        "label": "New note",
+        "keywords": "create new add"
+      },
+      "newSpace": {
+        "label": "Create new space",
+        "hint": "Open spaces page",
+        "keywords": "create new add"
+      },
+      "profile": {
+        "label": "Profile",
+        "keywords": "account settings 2fa"
+      },
+      "billing": {
+        "label": "Billing",
+        "keywords": "plan invoice payment"
+      },
+      "settings": {
+        "label": "Settings",
+        "keywords": "config storage mcp"
+      },
+      "storage": {
+        "label": "Storage providers",
+        "keywords": "s3 bucket external"
+      },
+      "mcp": {
+        "label": "Set up MCP connection",
+        "keywords": "claude cursor chatgpt token"
+      },
+      "impressum": {
+        "label": "Imprint",
+        "keywords": "legal contact"
+      },
+      "datenschutz": {
+        "label": "Privacy policy",
+        "keywords": "privacy gdpr dsgvo"
+      },
+      "logout": {
+        "label": "Sign out",
+        "keywords": "logout sign out"
       }
     }
   },

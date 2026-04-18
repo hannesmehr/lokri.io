@@ -33,6 +33,7 @@ interface Props {
   };
   /** Zusätzliche Info-Zeile unter der Progress-Bar, z.B. „noch 12 MB übrig". */
   meta?: ReactNode;
+  progressAriaLabel?: string;
   className?: string;
 }
 
@@ -42,6 +43,7 @@ export function KpiCard({
   valueSuffix,
   progress,
   meta,
+  progressAriaLabel,
   className,
 }: Props) {
   const pct =
@@ -84,7 +86,7 @@ export function KpiCard({
             aria-valuenow={Math.round(pct)}
             aria-valuemin={0}
             aria-valuemax={100}
-            aria-label={`${label}: ${Math.round(pct)}% belegt`}
+            aria-label={progressAriaLabel ?? undefined}
           >
             <div
               className={cn("h-full transition-all", barColor)}
