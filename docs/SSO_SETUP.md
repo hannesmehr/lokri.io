@@ -1,8 +1,8 @@
 # SSO-Setup — Microsoft Entra ID
 
-**Stand:** Phase 1 abgeschlossen (Blocks 1–4). Phase 2 (Admin-UI zur
-Team-SSO-Konfiguration) ist in Arbeit — siehe „Was Phase 2 ergänzt"
-unten.
+**Stand:** Phase 1, Phase 2 und Phase 3 abgeschlossen. Team-Owner
+können SSO jetzt ohne Super-Admin-Hilfe selbst konfigurieren, inklusive
+Admin-Consent-Link und Email-First-Login.
 
 ## Überblick
 
@@ -176,6 +176,66 @@ Super-Admins Teams ohne CLI-Script auf SSO flippen können. Erfasst:
 
 Der CLI-Shortcut `scripts/enable-sso-for-team.ts` bleibt nach Phase 2
 im Repo — Dev-Only, für Scripted-Tests und Recovery-Szenarien.
+
+## Was Phase 3 ergänzt
+
+Phase 3 macht SSO zu einem echten **Self-Service-Feature** im
+User-Scope:
+
+- Team-Owner sehen unter `/team/security` eine eigene SSO-Section
+- Team-Member sehen dort den aktuellen SSO-Status read-only
+- Team-Owner können Tenant-ID, Allowed-Domains und Enable-Status selbst
+  pflegen
+- lokri zeigt einen **Admin-Consent-Link**, den der Team-Owner an den
+  Entra-Admin seiner Organisation weiterleiten kann
+- `/login` nutzt jetzt einen **Email-First-Flow**:
+  - Email eingeben
+  - lokri prüft per Discovery, ob das Team SSO aktiviert hat
+  - bei SSO-Teams folgt der Redirect zu Microsoft
+  - sonst erscheint der Passwort-Schritt wie gewohnt
+- SSO-Fehlercodes aus dem Callback werden auf der Login-Seite
+  lokalisiert gerendert
+- Nach SSO-Aktivierung sehen bestehende Team-Member im Dashboard einen
+  einmaligen Hinweis, dass ihr Team jetzt Microsoft-Login unterstützt
+
+## End-User-Guide
+
+### Für Team-Owner: SSO aktivieren
+
+1. Öffne in deinem Team den Bereich `/team/security`
+2. In der Section **Single Sign-On** trägst du eure Entra-`tenantId`
+   und die erlaubten Email-Domains ein
+3. Im Block **Setup in Azure Portal** findest du die Werte, die euer
+   Entra-Admin für die App-Registrierung braucht:
+   - Redirect-URI / Callback-URL
+   - Supported account types
+   - lokri Client-ID
+4. Kopiere den **Admin-Consent-Link** und schicke ihn an euren
+   Entra-Admin
+5. Nach der Freigabe kehrst du zu `/team/security` zurück und klickst
+   auf **Verifizieren**
+6. Wenn der Test erfolgreich ist, kann SSO für dein Team aktiviert
+   bleiben
+
+### Für Entra-Admins: Admin-Consent
+
+Der Consent-Link führt auf `login.microsoftonline.com/.../adminconsent`
+und autorisiert die lokri-App einmalig für euren Tenant. Danach kann
+lokri Benutzer aus eurem Tenant gegen die gespeicherte Team-Config
+prüfen. Der Link selbst enthält keine Tokens oder Secrets.
+
+### Für End-User: Login mit Email-First
+
+1. Auf `/login` gibst du zuerst nur deine Email-Adresse ein
+2. Gehört deine Email zu einem Team mit aktivem SSO, zeigt lokri kurz
+   an, dass SSO für deine Organisation erkannt wurde
+3. Danach wirst du zu Microsoft weitergeleitet
+4. Wenn für deine Email kein Team-SSO aktiv ist, erscheint stattdessen
+   der Passwort-Schritt
+
+Typische Fehler wie `sso.domainNotAllowed`,
+`sso.providerUnreachable` oder `sso.tokenVerificationFailed` werden auf
+der Login-Seite lokalisiert angezeigt.
 
 ## Test-Checkliste (Phase 1)
 

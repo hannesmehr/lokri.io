@@ -1,8 +1,8 @@
 # SSO für Teams — Strategischer Plan
 
-**Stand:** Phase 1 in Umsetzung. Dieses Dokument fixiert die
-Grundsatz-Entscheidungen, damit sie über Phasen-Grenzen hinweg nicht
-neu verhandelt werden.
+**Stand:** Phase 1 bis Phase 3 abgeschlossen. Dieses Dokument fixiert
+die Grundsatz-Entscheidungen, damit sie über Phasen-Grenzen hinweg
+nicht neu verhandelt werden.
 
 **Ziel:** Microsoft Entra ID SSO für Team-Accounts in lokri.io. KMU
 mit M365-Umgebung können ihre Team-Member via Entra ID
@@ -85,10 +85,10 @@ direktem DB-Eintrag konfiguriert. Keine UI.
   24 Contract-Tests
 - **Block 4 ✅:** Doku + Cleanup + Push
 
-### Phase 2 🔄: Admin-UI zur Team-SSO-Konfiguration
+### Phase 2 ✅: Admin-UI zur Team-SSO-Konfiguration
 
-**In Arbeit.** Im Super-Admin-Bereich (`/admin/accounts/[id]`) bekommt
-jeder Team-Account eine Section „Team-SSO". Erfasst:
+Im Super-Admin-Bereich (`/admin/accounts/[id]`) bekommt jeder
+Team-Account eine Section „Team-SSO". Erfasst:
 
 - `GET /api/admin/accounts/[id]/sso` — Config + Fallback-Admin-Status
 - `PUT /api/admin/accounts/[id]/sso` — Upsert mit Fallback-Admin-Guard
@@ -100,12 +100,20 @@ jeder Team-Account eine Section „Team-SSO". Erfasst:
 Der Dev-CLI-Shortcut `scripts/enable-sso-for-team.ts` bleibt für
 Scripted-Tests und Recovery-Szenarien im Repo.
 
-### Phase 3: Team-Owner-Self-Service + UX-Polish
+### Phase 3 ✅: Team-Owner-Self-Service + UX-Polish
 
-Team-Owner können in ihrem Team-Settings-Bereich SSO aktivieren/
-konfigurieren. Login-Page UX verfeinert, Error-States durchgearbeitet.
+Team-Owner können in ihrem Team-Bereich SSO selbst aktivieren und
+konfigurieren. Zusätzlich wurden die User-Flows fertiggezogen:
 
-### Phase 4 (optional): Google Workspace SSO
+- `/team/security` mit Owner-Form und Readonly-View für Non-Owner
+- User-Scope-API-Routen für Team-SSO-Config
+- Admin-Consent-Link + Return-Handling
+- Setup-Info-Block für Azure Portal (Admin-UI + User-UI)
+- Email-First-Login auf `/login`
+- lokalisierte SSO-Error-UX
+- Dashboard-Hinweis für Teams mit neu verfügbarem SSO
+
+### Phase 4 (offen): Google Workspace SSO
 
 Analog zu Entra, aber mit Google als OIDC-Provider. Kommt, wenn der
 erste Entra-Kunde live ist.
