@@ -254,7 +254,7 @@ function Stepper({ current }: { current: Step }) {
               n < current
                 ? "flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white"
                 : n === current
-                  ? "flex h-6 w-6 items-center justify-center rounded-full bg-amber-500 text-white"
+                  ? "flex h-6 w-6 items-center justify-center rounded-full bg-brand text-brand-foreground"
                   : "flex h-6 w-6 items-center justify-center rounded-full border bg-muted/40 text-muted-foreground"
             }
           >
@@ -660,7 +660,7 @@ function Step4Confirm({
         <CardTitle>Schritt 4 · Bestätigen</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="rounded-md border border-amber-500/40 bg-amber-500/5 p-3 text-sm">
+        <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-300">
           Achtung: Im nächsten Schritt wird ein Order-Eintrag{" "}
           <strong>gestellt</strong> (paymentMethod <code>manual</code>,
           status <code>captured</code>), die Rechnung erzeugt und als PDF
@@ -684,11 +684,7 @@ function Step4Confirm({
             <ArrowLeft className="h-4 w-4" />
             Zurück
           </Button>
-          <Button
-            onClick={onCommit}
-            disabled={!canCommit}
-            className="bg-amber-600 text-white hover:bg-amber-700"
-          >
+          <Button onClick={onCommit} disabled={!canCommit}>
             {committing ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (

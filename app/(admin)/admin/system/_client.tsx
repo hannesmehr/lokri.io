@@ -1,17 +1,11 @@
 "use client";
 
-import {
-  AlertTriangle,
-  CheckCircle2,
-  Database,
-  Loader2,
-  Play,
-  RefreshCw,
-} from "lucide-react";
+import { Database, Loader2, Play, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import useSWR from "swr";
 import { formatBytes, formatNumber } from "../../_charts/formatters";
+import { AdminHealthTile } from "@/components/admin/admin-health-tile";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -140,20 +134,30 @@ export function SystemHealthClient() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-3">
-            <StatusTile
+            <AdminHealthTile
               label="Hängende Orders (> 1 h alt)"
-              value={health?.paypal.staleCreated}
-              warn={(v) => v > 0}
+              value={
+                health
+                  ? formatNumber(health.paypal.staleCreated)
+                  : undefined
+              }
+              warn={(health?.paypal.staleCreated ?? 0) > 0}
             />
-            <StatusTile
+            <AdminHealthTile
               label="Fehlerhafte Orders"
-              value={health?.paypal.failed}
-              warn={(v) => v > 0}
+              value={
+                health ? formatNumber(health.paypal.failed) : undefined
+              }
+              warn={(health?.paypal.failed ?? 0) > 0}
             />
-            <StatusTile
+            <AdminHealthTile
               label="Captured ohne Invoice"
-              value={health?.paypal.capturedWithoutInvoice}
-              warn={(v) => v > 0}
+              value={
+                health
+                  ? formatNumber(health.paypal.capturedWithoutInvoice)
+                  : undefined
+              }
+              warn={(health?.paypal.capturedWithoutInvoice ?? 0) > 0}
             />
           </div>
           <Button
@@ -263,39 +267,6 @@ export function SystemHealthClient() {
 
       {/* Sektion E: Wartungs-Ops */}
       <MaintenanceSection health={health} onRefresh={() => void mutate()} />
-    </div>
-  );
-}
-
-function StatusTile({
-  label,
-  value,
-  warn,
-}: {
-  label: string;
-  value: number | undefined;
-  warn?: (v: number) => boolean;
-}) {
-  const isWarn = value != null && warn ? warn(value) : false;
-  return (
-    <div
-      className={
-        isWarn
-          ? "rounded-md border border-amber-500/40 bg-amber-500/5 p-3"
-          : "rounded-md border p-3"
-      }
-    >
-      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-        {isWarn ? (
-          <AlertTriangle className="h-3 w-3 text-amber-600" />
-        ) : (
-          <CheckCircle2 className="h-3 w-3 text-emerald-600" />
-        )}
-        {label}
-      </div>
-      <div className="mt-1 text-2xl font-semibold tabular-nums">
-        {value == null ? "—" : formatNumber(value)}
-      </div>
     </div>
   );
 }
@@ -444,7 +415,7 @@ function MaintenanceOp({
         </div>
       ) : null}
       {dryResult !== null ? (
-        <div className="mt-3 rounded-md border border-amber-500/40 bg-amber-500/5 p-2 text-xs">
+        <div className="mt-3 rounded-md border bg-muted/40 p-2 text-xs">
           Dry-Run: <strong>{formatNumber(dryResult)}</strong> Einträge würden
           verarbeitet werden.
         </div>
@@ -460,9 +431,9 @@ function MaintenanceOp({
         </Button>
         <Button
           size="sm"
+          variant="destructive"
           onClick={() => void run("apply")}
           disabled={loading || dryResult === null}
-          className="bg-amber-600 text-white hover:bg-amber-700"
         >
           {loading ? (
             <Loader2 className="h-3.5 w-3.5 animate-spin" />

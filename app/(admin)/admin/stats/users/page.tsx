@@ -1,4 +1,4 @@
-import { Breadcrumbs } from "../../../_breadcrumbs";
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { UserStatsClient } from "./_client";
 
 /**
@@ -8,19 +8,14 @@ import { UserStatsClient } from "./_client";
 export default function AdminUserStatsPage() {
   return (
     <div className="space-y-6">
-      <Breadcrumbs
-        items={[
+      <AdminPageHeader
+        breadcrumbs={[
           { label: "Dashboard", href: "/admin" },
           { label: "User-Stats" },
         ]}
+        title="User-Stats"
+        description="Signup-Kurve, Verifizierungsrate und Activity-Indikatoren. Retention-Cohorts sind noch nicht sauber berechenbar — siehe Hinweise unten."
       />
-      <div>
-        <h1 className="font-display text-3xl leading-tight">User-Stats</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Signup-Kurve, Verifizierungsrate und Activity-Indikatoren. Retention-
-          Cohorts sind noch nicht sauber berechenbar — siehe Hinweise unten.
-        </p>
-      </div>
       <UserStatsClient />
     </div>
   );

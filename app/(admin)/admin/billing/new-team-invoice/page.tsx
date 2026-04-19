@@ -1,4 +1,4 @@
-import { Breadcrumbs } from "../../../_breadcrumbs";
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { requireAdminSession } from "@/lib/api/session";
 import { db } from "@/lib/db";
 import { plans } from "@/lib/db/schema";
@@ -27,22 +27,14 @@ export default async function NewTeamInvoicePage() {
 
   return (
     <div className="space-y-6">
-      <Breadcrumbs
-        items={[
+      <AdminPageHeader
+        breadcrumbs={[
           { label: "Rechnungen", href: "/admin/invoices" },
           { label: "Team-Rechnung erstellen" },
         ]}
+        title="Team-Rechnung erstellen"
+        description="Fünf Schritte: Account wählen, Parameter setzen, Preview prüfen, bestätigen, Ergebnis. Optional wird eine Mail mit PDF-Link an den Kunden geschickt."
       />
-      <div>
-        <h1 className="font-display text-3xl leading-tight">
-          Team-Rechnung erstellen
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Fünf Schritte: Account wählen, Parameter setzen, Preview prüfen,
-          bestätigen, Ergebnis. Optional wird eine Mail mit PDF-Link an
-          den Kunden geschickt.
-        </p>
-      </div>
       <NewTeamInvoiceWizard plans={planRows} />
     </div>
   );

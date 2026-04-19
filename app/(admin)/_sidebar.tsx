@@ -2,7 +2,6 @@
 
 import {
   Activity,
-  FileText,
   Key,
   LayoutDashboard,
   Menu,

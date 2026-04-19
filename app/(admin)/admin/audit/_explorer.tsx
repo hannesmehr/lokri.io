@@ -4,6 +4,16 @@ import { Download, FileJson, Loader2, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import useSWR from "swr";
+import { AdminActionBadge } from "@/components/admin/admin-action-badge";
+import {
+  AdminTable,
+  AdminTableBody,
+  AdminTableEmpty,
+  AdminTableHead,
+  AdminTableLoading,
+  AdminTd,
+  AdminTh,
+} from "@/components/admin/admin-table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -239,95 +249,87 @@ export function AuditExplorer() {
         </div>
       ) : null}
 
-      <div className="overflow-x-auto rounded-lg border">
-        <table className="w-full text-sm">
-          <thead className="bg-muted/40 text-xs text-muted-foreground">
-            <tr>
-              <th className="px-3 py-2 text-left">Zeit</th>
-              <th className="px-3 py-2 text-left">Action</th>
-              <th className="px-3 py-2 text-left">Actor</th>
-              <th className="px-3 py-2 text-left">Account</th>
-              <th className="px-3 py-2 text-left">Target</th>
-              <th className="px-3 py-2 text-left">IP</th>
-              <th className="px-3 py-2 text-left"></th>
-            </tr>
-          </thead>
-          <tbody className="divide-y">
-            {data?.events.map((e) => (
-              <tr key={e.id} className="hover:bg-muted/30">
-                <td className="px-3 py-2 text-xs text-muted-foreground">
-                  {new Date(e.createdAt).toLocaleString("de-DE", {
-                    year: "numeric",
-                    month: "2-digit",
-                    day: "2-digit",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    second: "2-digit",
-                  })}
-                </td>
-                <td className="px-3 py-2">
-                  <ActionBadge action={e.action} />
-                </td>
-                <td className="px-3 py-2 text-xs">
-                  {e.actorEmail ? (
-                    <Link
-                      href={`/admin/users/${e.actorUserId}`}
-                      className="hover:underline"
-                    >
-                      {e.actorEmail}
-                    </Link>
-                  ) : (
-                    <span className="text-muted-foreground">system</span>
-                  )}
-                </td>
-                <td className="px-3 py-2 text-xs">
+      <AdminTable>
+        <AdminTableHead>
+          <tr>
+            <AdminTh>Zeit</AdminTh>
+            <AdminTh>Action</AdminTh>
+            <AdminTh>Actor</AdminTh>
+            <AdminTh>Account</AdminTh>
+            <AdminTh>Target</AdminTh>
+            <AdminTh>IP</AdminTh>
+            <AdminTh>{""}</AdminTh>
+          </tr>
+        </AdminTableHead>
+        <AdminTableBody>
+          {data?.events.map((e) => (
+            <tr key={e.id} className="hover:bg-muted/30">
+              <AdminTd className="text-xs text-muted-foreground">
+                {new Date(e.createdAt).toLocaleString("de-DE", {
+                  year: "numeric",
+                  month: "2-digit",
+                  day: "2-digit",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  second: "2-digit",
+                })}
+              </AdminTd>
+              <AdminTd>
+                <AdminActionBadge action={e.action} />
+              </AdminTd>
+              <AdminTd className="text-xs">
+                {e.actorEmail ? (
                   <Link
-                    href={`/admin/accounts/${e.ownerAccountId}`}
+                    href={`/admin/users/${e.actorUserId}`}
                     className="hover:underline"
                   >
-                    {e.ownerAccountName}
+                    {e.actorEmail}
                   </Link>
-                </td>
-                <td className="px-3 py-2 text-xs">
-                  {e.targetType ? (
-                    <span className="text-muted-foreground">
-                      {e.targetType}
-                      {e.targetId ? `/${e.targetId.slice(0, 8)}` : ""}
-                    </span>
-                  ) : (
-                    <span className="text-muted-foreground">—</span>
-                  )}
-                </td>
-                <td className="px-3 py-2 text-[10px] text-muted-foreground">
-                  {e.ipAddress ?? "—"}
-                </td>
-                <td className="px-3 py-2">
-                  <Link
-                    href={`/admin/audit/${e.id}`}
-                    className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
-                  >
-                    Detail →
-                  </Link>
-                </td>
-              </tr>
-            ))}
-            {!data && !error && isLoading ? (
-              <tr>
-                <td colSpan={7} className="px-3 py-8 text-center text-sm text-muted-foreground">
-                  <Loader2 className="mx-auto h-4 w-4 animate-spin" />
-                </td>
-              </tr>
-            ) : null}
-            {data && data.events.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="px-3 py-8 text-center text-sm text-muted-foreground">
-                  Keine Events gefunden.
-                </td>
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
-      </div>
+                ) : (
+                  <span className="text-muted-foreground">system</span>
+                )}
+              </AdminTd>
+              <AdminTd className="text-xs">
+                <Link
+                  href={`/admin/accounts/${e.ownerAccountId}`}
+                  className="hover:underline"
+                >
+                  {e.ownerAccountName}
+                </Link>
+              </AdminTd>
+              <AdminTd className="text-xs">
+                {e.targetType ? (
+                  <span className="text-muted-foreground">
+                    {e.targetType}
+                    {e.targetId ? `/${e.targetId.slice(0, 8)}` : ""}
+                  </span>
+                ) : (
+                  <span className="text-muted-foreground">—</span>
+                )}
+              </AdminTd>
+              <AdminTd className="text-[10px] text-muted-foreground">
+                {e.ipAddress ?? "—"}
+              </AdminTd>
+              <AdminTd>
+                <Link
+                  href={`/admin/audit/${e.id}`}
+                  className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+                >
+                  Detail →
+                </Link>
+              </AdminTd>
+            </tr>
+          ))}
+          {!data && !error && isLoading ? (
+            <AdminTableLoading colSpan={7} />
+          ) : null}
+          {data && data.events.length === 0 ? (
+            <AdminTableEmpty colSpan={7}>
+              Keine Events gefunden.
+            </AdminTableEmpty>
+          ) : null}
+        </AdminTableBody>
+      </AdminTable>
 
       {data && pageCount > 1 ? (
         <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -356,19 +358,3 @@ export function AuditExplorer() {
   );
 }
 
-function ActionBadge({ action }: { action: string }) {
-  const isAdmin = action.startsWith("admin.");
-  const isLogin = action.startsWith("login.");
-  const cls = isAdmin
-    ? "border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-200"
-    : isLogin
-      ? "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300"
-      : "bg-muted/40 text-muted-foreground";
-  return (
-    <span
-      className={`inline-block rounded border px-1.5 py-0.5 font-mono text-[10px] ${cls}`}
-    >
-      {action}
-    </span>
-  );
-}
