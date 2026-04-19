@@ -127,6 +127,13 @@
       "when": 1776528499538,
       "tag": "0017_petite_adam_destine",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1776584308335,
+      "tag": "0018_sleepy_karnak",
+      "breakpoints": true
     }
   ]
 }

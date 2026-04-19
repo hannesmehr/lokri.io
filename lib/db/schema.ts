@@ -44,6 +44,15 @@ export const memberRoleEnum = pgEnum("member_role", [
   "viewer",
 ]);
 
+/**
+ * SSO-Provider für Team-basierte Single-Sign-On-Konfiguration.
+ *
+ * Phase 1: nur `entra` (Microsoft Entra ID). Google Workspace und
+ * ggf. SAML folgen in späteren Phasen — der Enum wird dann erweitert
+ * (Drizzle `ALTER TYPE ADD VALUE`, non-breaking).
+ */
+export const ssoProviderEnum = pgEnum("sso_provider", ["entra"]);
+
 // ---------------------------------------------------------------------------
 // Better-Auth tables (plural naming per project spec)
 //
@@ -945,5 +954,118 @@ export const auditEvents = pgTable(
       t.createdAt.desc(),
     ),
     index("audit_events_action_idx").on(t.action),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// SSO — Team-basierte Single-Sign-On-Konfiguration + User-Identity-Linking
+//
+// Zwei Tabellen pro `docs/sso-overview-plan.md`:
+//
+//   * `team_sso_configs` — eine Row pro Team-Account (UNIQUE auf
+//     `owner_account_id`), speichert Provider + Tenant-ID + erlaubte
+//     Email-Domains. Nur existiert → Toggle `enabled` aktiviert SSO.
+//   * `user_sso_identities` — verbindet lokri-User mit externer
+//     Identity (Entra `sub` = Object-ID). Angelegt per JIT-Linking
+//     beim ersten erfolgreichen SSO-Login. **Keine Token-Felder** —
+//     wir speichern weder Access- noch Refresh-Tokens, nur die
+//     stabile Subject-ID.
+//
+// Provider-Enum aktuell nur `entra`; bei späteren Phasen (Google
+// Workspace, SAML) wird via Migration erweitert.
+//
+// Namenskonvention: Wir nennen die FK-Spalte bewusst
+// `owner_account_id`, nicht `account_id` wie im Plan-Dokument.
+// Grund: „accounts" bedeutet in unserem Schema die Better-Auth-
+// Provider-Tabelle (auth_accounts); unsere Tenancy-Layer heißt
+// durchgehend `owner_accounts`.
+// ---------------------------------------------------------------------------
+
+export const teamSsoConfigs = pgTable(
+  "team_sso_configs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    /** Unique pro Team: genau eine SSO-Config pro Owner-Account. */
+    ownerAccountId: uuid("owner_account_id")
+      .notNull()
+      .unique()
+      .references(() => ownerAccounts.id, { onDelete: "cascade" }),
+    provider: ssoProviderEnum("provider").notNull(),
+    /** Entra Tenant-ID (UUID-String) — wird gegen den `tid`-Claim
+     *  im ID-Token validiert, um Tenant-Mismatch-Attacks zu
+     *  verhindern. */
+    tenantId: text("tenant_id").notNull(),
+    /**
+     * Email-Domains, für die dieses Team-SSO greift (z.B.
+     * `["firma-x.de", "firma-x.com"]`). Leere Liste ⇒ kein Match
+     * möglich ⇒ effektiv deaktiviert trotz `enabled=true`.
+     *
+     * Wir speichern als `text[]` statt jsonb, damit GIN-Index auf
+     * Domain-Lookup in Phase 3 (Discovery-Endpoint) greifen kann.
+     */
+    allowedDomains: text("allowed_domains")
+      .array()
+      .notNull()
+      .default(sql`ARRAY[]::text[]`),
+    enabled: boolean("enabled").notNull().default(false),
+    /** Letzter erfolgreicher Verbindungs-Test via Entra-Discovery.
+     *  Null bis der Test zum ersten Mal läuft. */
+    lastVerifiedAt: timestamp("last_verified_at", { withTimezone: true }),
+    /** Fehlertext des letzten fehlgeschlagenen Tests / Logins.
+     *  Admin-facing im Team-SSO-Settings-Panel (Phase 2). */
+    lastError: text("last_error"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdateFn(() => new Date()),
+  },
+  (t) => [index("team_sso_configs_tenant_id_idx").on(t.tenantId)],
+);
+
+export const userSsoIdentities = pgTable(
+  "user_sso_identities",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    provider: ssoProviderEnum("provider").notNull(),
+    tenantId: text("tenant_id").notNull(),
+    /**
+     * Stabiler Identifier aus dem ID-Token:
+     *   - Entra: `oid` (Object-ID) bzw. `sub` (je nach Token-Version)
+     *   - Google (später): `sub`
+     *
+     * Nicht die Email — Emails wechseln, Subject bleibt. Die Email-
+     * Verknüpfung läuft über JIT-Matching beim ersten Login; danach
+     * reicht (provider, tenant_id, subject) als Identity-Lookup.
+     */
+    subject: text("subject").notNull(),
+    linkedAt: timestamp("linked_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    lastLogin: timestamp("last_login", { withTimezone: true }),
+  },
+  (t) => [
+    index("user_sso_identities_user_id_idx").on(t.userId),
+    // Eine Entra-Identity kann nur einem lokri-User gehören.
+    // Verhindert Identity-Hijacking, falls zwei User denselben
+    // externen `sub` claimen würden.
+    uniqueIndex("user_sso_identities_provider_subject_unique_idx").on(
+      t.provider,
+      t.tenantId,
+      t.subject,
+    ),
+    // Ein User hat pro (provider, tenant) genau eine Identity.
+    // Verhindert Duplikate beim JIT-Linking, wenn der Callback
+    // race-bedingt zweimal läuft.
+    uniqueIndex("user_sso_identities_user_provider_tenant_unique_idx").on(
+      t.userId,
+      t.provider,
+      t.tenantId,
+    ),
   ],
 );
