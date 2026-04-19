@@ -41,7 +41,7 @@ export function EmbeddingKeyManager({
 }: {
   initial: ActiveKey | null;
 }) {
-  const t = useTranslations("settings.embeddingKey");
+  const t = useTranslations("settings.general.embeddingKey");
   const tErrors = useTranslations("errors.api.embeddingKey");
   const tToasts = useTranslations("toasts");
   const tConfirm = useTranslations("confirmDialogs");

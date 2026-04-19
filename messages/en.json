@@ -32,7 +32,6 @@
       "description": "How lokri.io handles your data."
     }
   },
-
   "common": {
     "buttons": {
       "save": "Save",
@@ -102,7 +101,6 @@
       "loadingMore": "Loading…"
     }
   },
-
   "confirmDialogs": {
     "delete": {
       "title": "Confirm deletion",
@@ -139,7 +137,6 @@
       "cancel": "Cancel"
     }
   },
-
   "toasts": {
     "success": {
       "saved": "Saved.",
@@ -163,7 +160,6 @@
       "loading": "Loading…"
     }
   },
-
   "enums": {
     "role": {
       "owner": "Owner",
@@ -205,7 +201,6 @@
       "yearly": "yearly"
     }
   },
-
   "errors": {
     "common": {
       "unknown": "Something went wrong.",
@@ -312,7 +307,6 @@
       }
     }
   },
-
   "email": {
     "shared": {
       "greeting": "Hi {name}",
@@ -386,7 +380,6 @@
       "ignoreHint": "If you have nothing to do with this account, simply ignore this email."
     }
   },
-
   "auth": {
     "login": {
       "title": "Sign in",
@@ -464,7 +457,6 @@
       }
     }
   },
-
   "dashboard": {
     "nav": {
       "dashboard": "Dashboard",
@@ -561,7 +553,6 @@
       }
     }
   },
-
   "search": {
     "triggerLabel": "Search & jump…",
     "placeholder": "Search, jump, or run a command…",
@@ -626,7 +617,6 @@
       }
     }
   },
-
   "spaces": {
     "title": "Spaces",
     "subtitle": "Thematic groups for notes and files.",
@@ -781,7 +771,6 @@
       }
     }
   },
-
   "notes": {
     "title": "Notes",
     "subtitle": "Markdown notes with semantic search.",
@@ -844,7 +833,6 @@
       "deleteConfirm": "Really delete note \"{title}\"?"
     }
   },
-
   "files": {
     "title": "Files",
     "subtitle": "Files — local or from connected storage providers.",
@@ -900,7 +888,6 @@
       "deleted": "File deleted."
     }
   },
-
   "settings": {
     "title": "Settings",
     "subtitle": "Account-wide settings and storage providers.",
@@ -908,8 +895,8 @@
       "general": "General",
       "mcp": "MCP",
       "storage": "Storage",
-      "embeddingKey": "Embedding key",
-      "team": "Team"
+      "team": "Team",
+      "billing": "Billing"
     },
     "scopeHint": {
       "personal": "This setting applies to your personal account.",
@@ -932,7 +919,76 @@
       },
       "languageTitle": "Language",
       "languageDescription": "Language of the web UI. Saved in a cookie and on your profile.",
-      "dangerZone": "Danger zone"
+      "dangerZone": "Danger zone",
+      "embeddingKey": {
+        "heading": "Own embedding API key (BYOK)",
+        "description": "Instead of routing through the Vercel AI Gateway, every embedding request hits your own OpenAI account directly. No markup on our side, full audit trail on yours.",
+        "intro": {
+          "title": "Bring your own key",
+          "description": "Without a key, lokri uses the default gateway route. With your own key, new embeddings run directly through your OpenAI account."
+        },
+        "currentKey": {
+          "title": "Current key",
+          "activeBadge": "active",
+          "inactiveBadge": "not configured",
+          "activeDescription": "New embedding requests run directly against your provider.",
+          "inactiveDescription": "No custom key is configured right now. lokri uses the gateway fallback.",
+          "masked": "Masked key: {value}",
+          "createdAt": "Added on {datetime}",
+          "lastVerifiedAt": "Last used {datetime}",
+          "neverVerified": "Not used yet"
+        },
+        "form": {
+          "providerLabel": "Provider",
+          "providerNote": "OpenAI only for v1",
+          "modelLabel": "Model",
+          "modelHint": "Both models emit 1536-dim vectors and fit our pgvector column.",
+          "apiKeyLabel": "OpenAI API key",
+          "apiKeyPlaceholder": "sk-...",
+          "apiKeyHint": "The key is AES-256-GCM encrypted in the DB and never returned in plain text."
+        },
+        "actions": {
+          "save": "Test & save",
+          "saving": "Testing connection…",
+          "rotate": "Replace key",
+          "delete": "Remove key",
+          "showKey": "Show key",
+          "hideKey": "Hide key"
+        },
+        "toasts": {
+          "saved": "Key saved — embeddings now run via your account.",
+          "saveFailed": "Could not save the key.",
+          "deleteFailed": "Could not remove the key."
+        },
+        "dialogs": {
+          "deleteDescription": "Without your own key, no new embeddings can be created directly via your provider. lokri will fall back to the gateway route.",
+          "rotateWarningTitle": "Model switch warning",
+          "rotateWarningBody": "Switching from {modelA} to {modelB} leaves existing vectors in an incompatible space. For clean operation, {reindexLabel} every space once after a model switch.",
+          "reindexLabel": "reindex"
+        }
+      },
+      "widgets": {
+        "account": {
+          "label": "Account",
+          "hint": "Type and display name of the active account.",
+          "editAction": "Edit name"
+        },
+        "plan": {
+          "label": "Plan",
+          "hintRenewal": "Renews {date}",
+          "hintNoRenewal": "No expiry",
+          "openBilling": "Open billing →"
+        },
+        "storage": {
+          "label": "Storage",
+          "hintAvailable": "Up to {max} available",
+          "hintUsed": "{used} of {max} used"
+        },
+        "embeddingKey": {
+          "sectionTitle": "Embedding key",
+          "sectionDescription": "Bring your own OpenAI key and skip the lokri gateway for embedding requests."
+        }
+      }
     },
     "mcp": {
       "title": "MCP",
@@ -1153,57 +1209,6 @@
         }
       }
     },
-    "embeddingKey": {
-      "pageHeader": {
-        "title": "Embedding key",
-        "description": "Bring your own OpenAI key and skip the lokri gateway for embedding requests."
-      },
-      "heading": "Own embedding API key (BYOK)",
-      "description": "Instead of routing through the Vercel AI Gateway, every embedding request hits your own OpenAI account directly. No markup on our side, full audit trail on yours.",
-      "intro": {
-        "title": "Bring your own key",
-        "description": "Without a key, lokri uses the default gateway route. With your own key, new embeddings run directly through your OpenAI account."
-      },
-      "currentKey": {
-        "title": "Current key",
-        "activeBadge": "active",
-        "inactiveBadge": "not configured",
-        "activeDescription": "New embedding requests run directly against your provider.",
-        "inactiveDescription": "No custom key is configured right now. lokri uses the gateway fallback.",
-        "masked": "Masked key: {value}",
-        "createdAt": "Added on {datetime}",
-        "lastVerifiedAt": "Last used {datetime}",
-        "neverVerified": "Not used yet"
-      },
-      "form": {
-        "providerLabel": "Provider",
-        "providerNote": "OpenAI only for v1",
-        "modelLabel": "Model",
-        "modelHint": "Both models emit 1536-dim vectors and fit our pgvector column.",
-        "apiKeyLabel": "OpenAI API key",
-        "apiKeyPlaceholder": "sk-...",
-        "apiKeyHint": "The key is AES-256-GCM encrypted in the DB and never returned in plain text."
-      },
-      "actions": {
-        "save": "Test & save",
-        "saving": "Testing connection…",
-        "rotate": "Replace key",
-        "delete": "Remove key",
-        "showKey": "Show key",
-        "hideKey": "Hide key"
-      },
-      "toasts": {
-        "saved": "Key saved — embeddings now run via your account.",
-        "saveFailed": "Could not save the key.",
-        "deleteFailed": "Could not remove the key."
-      },
-      "dialogs": {
-        "deleteDescription": "Without your own key, no new embeddings can be created directly via your provider. lokri will fall back to the gateway route.",
-        "rotateWarningTitle": "Model switch warning",
-        "rotateWarningBody": "Switching from {modelA} to {modelB} leaves existing vectors in an incompatible space. For clean operation, {reindexLabel} every space once after a model switch.",
-        "reindexLabel": "reindex"
-      }
-    },
     "team": {
       "title": "Team",
       "subtitle": "Members, roles, and settings for this team.",
@@ -1306,7 +1311,6 @@
       }
     }
   },
-
   "profile": {
     "layout": {
       "title": "Profile",
@@ -1503,7 +1507,6 @@
       }
     }
   },
-
   "billing": {
     "layout": {
       "title": "Billing",
@@ -1606,7 +1609,6 @@
       "opening": "Opening PayPal…"
     }
   },
-
   "marketing": {
     "layout": {
       "login": "Sign in",
@@ -1621,7 +1623,6 @@
       "loginCta": "Sign in"
     }
   },
-
   "accountSwitcher": {
     "trigger": "Switch account",
     "activeBadge": "active",
@@ -1644,7 +1645,6 @@
       }
     }
   },
-
   "invites": {
     "accept": {
       "title": "Invitation to {teamName}",
@@ -1664,7 +1664,6 @@
       }
     }
   },
-
   "legal": {
     "impressum": {
       "headingNote": "For legal reasons the Imprint is only available in German."

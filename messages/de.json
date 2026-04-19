@@ -32,7 +32,6 @@
       "description": "Wie lokri.io mit deinen Daten umgeht."
     }
   },
-
   "common": {
     "buttons": {
       "save": "Speichern",
@@ -102,7 +101,6 @@
       "loadingMore": "Lädt…"
     }
   },
-
   "confirmDialogs": {
     "delete": {
       "title": "Löschen bestätigen",
@@ -139,7 +137,6 @@
       "cancel": "Abbrechen"
     }
   },
-
   "toasts": {
     "success": {
       "saved": "Gespeichert.",
@@ -163,7 +160,6 @@
       "loading": "Laden…"
     }
   },
-
   "enums": {
     "role": {
       "owner": "Owner",
@@ -205,7 +201,6 @@
       "yearly": "jährlich"
     }
   },
-
   "errors": {
     "common": {
       "unknown": "Ein Fehler ist aufgetreten.",
@@ -312,7 +307,6 @@
       }
     }
   },
-
   "email": {
     "shared": {
       "greeting": "Hallo {name}",
@@ -386,7 +380,6 @@
       "ignoreHint": "Falls du mit diesem Account nichts zu tun hast, ignoriere diese E-Mail einfach."
     }
   },
-
   "auth": {
     "login": {
       "title": "Anmelden",
@@ -464,7 +457,6 @@
       }
     }
   },
-
   "dashboard": {
     "nav": {
       "dashboard": "Dashboard",
@@ -561,7 +553,6 @@
       }
     }
   },
-
   "search": {
     "triggerLabel": "Suchen & Springen…",
     "placeholder": "Suchen, springen, oder Kommando ausführen…",
@@ -626,7 +617,6 @@
       }
     }
   },
-
   "spaces": {
     "title": "Spaces",
     "subtitle": "Thematische Gruppen für Notes und Files.",
@@ -781,7 +771,6 @@
       }
     }
   },
-
   "notes": {
     "title": "Notes",
     "subtitle": "Markdown-Notizen mit semantischer Suche.",
@@ -844,7 +833,6 @@
       "deleteConfirm": "Note \"{title}\" wirklich löschen?"
     }
   },
-
   "files": {
     "title": "Files",
     "subtitle": "Dateien — lokal oder von verbundenen Storage-Providern.",
@@ -900,7 +888,6 @@
       "deleted": "File gelöscht."
     }
   },
-
   "settings": {
     "title": "Einstellungen",
     "subtitle": "Kontowide Einstellungen, Storage-Anbieter.",
@@ -908,8 +895,8 @@
       "general": "Allgemein",
       "mcp": "MCP",
       "storage": "Storage",
-      "embeddingKey": "Embedding-Key",
-      "team": "Team"
+      "team": "Team",
+      "billing": "Billing"
     },
     "scopeHint": {
       "personal": "Diese Einstellung gilt für deinen persönlichen Account.",
@@ -932,7 +919,76 @@
       },
       "languageTitle": "Sprache",
       "languageDescription": "Sprache der Weboberfläche. Wird in einem Cookie und an deinem Profil gespeichert.",
-      "dangerZone": "Gefahrenzone"
+      "dangerZone": "Gefahrenzone",
+      "embeddingKey": {
+        "heading": "Eigener Embedding-API-Key (BYOK)",
+        "description": "Statt über die Vercel AI Gateway läuft jede Embedding-Anfrage direkt gegen deinen OpenAI-Account. Keine zusätzlichen Gebühren bei uns, vollständige Audit-Spur bei dir.",
+        "intro": {
+          "title": "Bring your own key",
+          "description": "Solange kein Key hinterlegt ist, nutzt lokri die Gateway-Default-Route. Mit eigenem Key laufen neue Embeddings direkt über deinen OpenAI-Account."
+        },
+        "currentKey": {
+          "title": "Aktueller Key",
+          "activeBadge": "aktiv",
+          "inactiveBadge": "nicht konfiguriert",
+          "activeDescription": "Neue Embedding-Anfragen werden direkt gegen deinen Provider ausgeführt.",
+          "inactiveDescription": "Aktuell ist kein eigener Key hinterlegt. lokri nutzt den Gateway-Fallback.",
+          "masked": "Maskierter Key: {value}",
+          "createdAt": "Hinterlegt am {datetime}",
+          "lastVerifiedAt": "Zuletzt genutzt {datetime}",
+          "neverVerified": "Noch nicht genutzt"
+        },
+        "form": {
+          "providerLabel": "Provider",
+          "providerNote": "nur OpenAI für v1",
+          "modelLabel": "Modell",
+          "modelHint": "Beide Modelle emittieren 1536-dim Vektoren und passen zu unserer pgvector-Spalte.",
+          "apiKeyLabel": "OpenAI API-Key",
+          "apiKeyPlaceholder": "sk-...",
+          "apiKeyHint": "Der Key wird AES-256-GCM-verschlüsselt in der DB abgelegt und niemals wieder im Klartext zurückgegeben."
+        },
+        "actions": {
+          "save": "Testen & Speichern",
+          "saving": "Teste Verbindung…",
+          "rotate": "Key ersetzen",
+          "delete": "Key entfernen",
+          "showKey": "Key anzeigen",
+          "hideKey": "Key ausblenden"
+        },
+        "toasts": {
+          "saved": "Key gespeichert — ab jetzt laufen Embeddings über deinen Account.",
+          "saveFailed": "Konnte Key nicht speichern.",
+          "deleteFailed": "Konnte Key nicht entfernen."
+        },
+        "dialogs": {
+          "deleteDescription": "Ohne eigenen Key können keine neuen Embeddings direkt über deinen Provider erstellt werden. lokri fällt dann auf die Gateway-Route zurück.",
+          "rotateWarningTitle": "Achtung bei Modellwechsel",
+          "rotateWarningBody": "Ein Wechsel von {modelA} zu {modelB} lässt bestehende Vektoren im Raum inkompatibel. Für sauberen Betrieb: nach einem Modellwechsel alle Spaces einmal {reindexLabel} lassen.",
+          "reindexLabel": "Neu indizieren"
+        }
+      },
+      "widgets": {
+        "account": {
+          "label": "Account",
+          "hint": "Typ und Anzeigename des aktiven Accounts.",
+          "editAction": "Namen bearbeiten"
+        },
+        "plan": {
+          "label": "Plan",
+          "hintRenewal": "Verlängert am {date}",
+          "hintNoRenewal": "Kein Ablaufdatum",
+          "openBilling": "Abrechnung öffnen →"
+        },
+        "storage": {
+          "label": "Speicher",
+          "hintAvailable": "Bis zu {max} verfügbar",
+          "hintUsed": "{used} von {max} belegt"
+        },
+        "embeddingKey": {
+          "sectionTitle": "Embedding-Key",
+          "sectionDescription": "Eigenen OpenAI-Key hinterlegen und die lokri-Gateway für Embedding-Requests umgehen."
+        }
+      }
     },
     "mcp": {
       "title": "MCP",
@@ -1153,57 +1209,6 @@
         }
       }
     },
-    "embeddingKey": {
-      "pageHeader": {
-        "title": "Embedding-Key",
-        "description": "Eigenen OpenAI-Key hinterlegen und die lokri-Gateway für Embedding-Requests umgehen."
-      },
-      "heading": "Eigener Embedding-API-Key (BYOK)",
-      "description": "Statt über die Vercel AI Gateway läuft jede Embedding-Anfrage direkt gegen deinen OpenAI-Account. Keine zusätzlichen Gebühren bei uns, vollständige Audit-Spur bei dir.",
-      "intro": {
-        "title": "Bring your own key",
-        "description": "Solange kein Key hinterlegt ist, nutzt lokri die Gateway-Default-Route. Mit eigenem Key laufen neue Embeddings direkt über deinen OpenAI-Account."
-      },
-      "currentKey": {
-        "title": "Aktueller Key",
-        "activeBadge": "aktiv",
-        "inactiveBadge": "nicht konfiguriert",
-        "activeDescription": "Neue Embedding-Anfragen werden direkt gegen deinen Provider ausgeführt.",
-        "inactiveDescription": "Aktuell ist kein eigener Key hinterlegt. lokri nutzt den Gateway-Fallback.",
-        "masked": "Maskierter Key: {value}",
-        "createdAt": "Hinterlegt am {datetime}",
-        "lastVerifiedAt": "Zuletzt genutzt {datetime}",
-        "neverVerified": "Noch nicht genutzt"
-      },
-      "form": {
-        "providerLabel": "Provider",
-        "providerNote": "nur OpenAI für v1",
-        "modelLabel": "Modell",
-        "modelHint": "Beide Modelle emittieren 1536-dim Vektoren und passen zu unserer pgvector-Spalte.",
-        "apiKeyLabel": "OpenAI API-Key",
-        "apiKeyPlaceholder": "sk-...",
-        "apiKeyHint": "Der Key wird AES-256-GCM-verschlüsselt in der DB abgelegt und niemals wieder im Klartext zurückgegeben."
-      },
-      "actions": {
-        "save": "Testen & Speichern",
-        "saving": "Teste Verbindung…",
-        "rotate": "Key ersetzen",
-        "delete": "Key entfernen",
-        "showKey": "Key anzeigen",
-        "hideKey": "Key ausblenden"
-      },
-      "toasts": {
-        "saved": "Key gespeichert — ab jetzt laufen Embeddings über deinen Account.",
-        "saveFailed": "Konnte Key nicht speichern.",
-        "deleteFailed": "Konnte Key nicht entfernen."
-      },
-      "dialogs": {
-        "deleteDescription": "Ohne eigenen Key können keine neuen Embeddings direkt über deinen Provider erstellt werden. lokri fällt dann auf die Gateway-Route zurück.",
-        "rotateWarningTitle": "Achtung bei Modellwechsel",
-        "rotateWarningBody": "Ein Wechsel von {modelA} zu {modelB} lässt bestehende Vektoren im Raum inkompatibel. Für sauberen Betrieb: nach einem Modellwechsel alle Spaces einmal {reindexLabel} lassen.",
-        "reindexLabel": "Neu indizieren"
-      }
-    },
     "team": {
       "title": "Team",
       "subtitle": "Mitglieder, Rollen, Einstellungen dieses Teams.",
@@ -1306,7 +1311,6 @@
       }
     }
   },
-
   "profile": {
     "layout": {
       "title": "Profil",
@@ -1503,7 +1507,6 @@
       }
     }
   },
-
   "billing": {
     "layout": {
       "title": "Billing",
@@ -1606,7 +1609,6 @@
       "opening": "Öffne PayPal…"
     }
   },
-
   "marketing": {
     "layout": {
       "login": "Login",
@@ -1621,7 +1623,6 @@
       "loginCta": "Anmelden"
     }
   },
-
   "accountSwitcher": {
     "trigger": "Account wechseln",
     "activeBadge": "aktiv",
@@ -1644,7 +1645,6 @@
       }
     }
   },
-
   "invites": {
     "accept": {
       "title": "Einladung zu {teamName}",
@@ -1664,7 +1664,6 @@
       }
     }
   },
-
   "legal": {
     "impressum": {
       "headingNote": "Aus rechtlichen Gründen liegt das Impressum nur auf Deutsch vor."

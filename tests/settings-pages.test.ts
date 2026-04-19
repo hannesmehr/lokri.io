@@ -33,10 +33,12 @@ const de = JSON.parse(
 ) as Record<string, unknown>;
 
 const subPages = [
+  // `/settings/embedding-key` wurde in Block 1 des Settings-Redesigns
+  // entfernt — Inhalt lebt jetzt als Section in `/settings/general`
+  // (siehe `_embedding-key-manager.tsx` unter settings/general).
   "app/(dashboard)/settings/general/page.tsx",
   "app/(dashboard)/settings/mcp/page.tsx",
   "app/(dashboard)/settings/storage/page.tsx",
-  "app/(dashboard)/settings/embedding-key/page.tsx",
 ] as const;
 
 function getNested(
@@ -104,29 +106,60 @@ test("Settings-Layout rendert keinen eigenen H1 oder SectionNav mehr", () => {
 
 // ── SettingsTabs-Shape ─────────────────────────────────────────────────
 
-test("SettingsTabs enthält genau die vier sub-routes und NICHT /settings/team", () => {
+test("SettingsTabs enthält Allgemein/MCP/Storage/Billing und NICHT team oder embedding-key", () => {
   const src = readFileSync(
     resolve(root, "app/(dashboard)/settings/_tabs.tsx"),
     "utf-8",
   );
-  // Core-Routes
+  // Core-Routes (Block-1 Stand: Billing-Tab zielt noch auf Legacy
+  // `/billing`; Block 2 flippt auf `/settings/billing`).
   for (const href of [
     "/settings/general",
     "/settings/mcp",
     "/settings/storage",
-    "/settings/embedding-key",
   ]) {
     assert.ok(
       src.includes(href),
       `SettingsTabs muss ${href} verlinken`,
     );
   }
-  // Team-Tab ist entfernt (i18n-Key settings.navigation.team bleibt
-  // vorhanden, wird aber nicht mehr referenziert).
+  // Billing-Tab existiert — Ziel kann `/billing` oder
+  // `/settings/billing` sein.
+  assert.ok(
+    src.includes("/billing"),
+    "SettingsTabs muss einen Billing-Tab haben",
+  );
+  // Entfernte Tabs dürfen nicht mehr referenziert werden.
   assert.ok(
     !src.includes("/settings/team"),
-    "SettingsTabs darf /settings/team nicht mehr verlinken (Umzug nach /team in Block 3)",
+    "SettingsTabs darf /settings/team nicht mehr verlinken",
   );
+  assert.ok(
+    !src.includes("/settings/embedding-key"),
+    "SettingsTabs darf /settings/embedding-key nicht mehr verlinken (Content lebt jetzt in /settings/general)",
+  );
+});
+
+test("/settings/embedding-key Legacy-Route existiert nicht mehr", () => {
+  const path = resolve(
+    root,
+    "app/(dashboard)/settings/embedding-key/page.tsx",
+  );
+  assert.ok(
+    !existsSync(path),
+    "Die alte Embedding-Key-Sub-Route wurde in Block 1 ersatzlos entfernt — Inhalt lebt als Section auf /settings/general",
+  );
+});
+
+test("EmbeddingKeyManager wohnt jetzt unter /settings/general", () => {
+  const path = resolve(
+    root,
+    "app/(dashboard)/settings/general/_embedding-key-manager.tsx",
+  );
+  assert.ok(existsSync(path), "Manager muss in /settings/general/ leben");
+  const src = readFileSync(path, "utf-8");
+  // Namespace-Update: useTranslations zeigt auf den neuen Ort.
+  assert.match(src, /useTranslations\(["']settings\.general\.embeddingKey["']\)/);
 });
 
 // ── next.config Redirect ──────────────────────────────────────────────
@@ -145,7 +178,8 @@ for (const ns of [
   "settings.general.pageHeader",
   "settings.mcp.pageHeader",
   "settings.storage.pageHeader",
-  "settings.embeddingKey.pageHeader",
+  // settings.embeddingKey.pageHeader entfernt in Block 1 — Route gibt's
+  // nicht mehr, stattdessen lebt die Section auf /settings/general.
 ]) {
   test(`i18n: ${ns} existiert in beiden Locales mit identischer Shape`, () => {
     const enObj = getNested(en, ns);
@@ -205,4 +239,50 @@ test("i18n: settings.navigation.team bleibt im Katalog (Block-3-Umzug)", () => {
   assert.ok(enNav && deNav);
   assert.equal(typeof enNav!.team, "string");
   assert.equal(typeof deNav!.team, "string");
+});
+
+test("i18n: settings.navigation hat Billing, KEIN embeddingKey mehr", () => {
+  const enNav = getNested(en, "settings.navigation");
+  const deNav = getNested(de, "settings.navigation");
+  assert.ok(enNav && deNav);
+  assert.equal(typeof enNav!.billing, "string", "EN settings.navigation.billing fehlt");
+  assert.equal(typeof deNav!.billing, "string", "DE settings.navigation.billing fehlt");
+  assert.equal(enNav!.embeddingKey, undefined, "EN settings.navigation.embeddingKey sollte weg sein");
+  assert.equal(deNav!.embeddingKey, undefined, "DE settings.navigation.embeddingKey sollte weg sein");
+});
+
+test("i18n: settings.embeddingKey entfernt, settings.general.embeddingKey vorhanden", () => {
+  assert.equal(
+    getNested(en, "settings.embeddingKey"),
+    undefined,
+    "EN settings.embeddingKey Top-Level sollte weg sein",
+  );
+  assert.equal(
+    getNested(de, "settings.embeddingKey"),
+    undefined,
+    "DE settings.embeddingKey Top-Level sollte weg sein",
+  );
+  const enEek = getNested(en, "settings.general.embeddingKey");
+  const deEek = getNested(de, "settings.general.embeddingKey");
+  assert.ok(enEek && deEek);
+  // Shape-Check: heading + description + sub-objects sind migrated.
+  for (const key of ["heading", "description", "intro", "currentKey", "form", "actions", "toasts", "dialogs"]) {
+    assert.ok(enEek![key] !== undefined, `EN settings.general.embeddingKey.${key} fehlt`);
+    assert.ok(deEek![key] !== undefined, `DE settings.general.embeddingKey.${key} fehlt`);
+  }
+});
+
+test("i18n: settings.general.widgets komplett mit account/plan/storage/embeddingKey", () => {
+  const enW = getNested(en, "settings.general.widgets");
+  const deW = getNested(de, "settings.general.widgets");
+  assert.ok(enW && deW);
+  for (const key of ["account", "plan", "storage", "embeddingKey"]) {
+    assert.ok(enW![key] !== undefined, `EN widget ${key} fehlt`);
+    assert.ok(deW![key] !== undefined, `DE widget ${key} fehlt`);
+  }
+  // plan hat Interpolations-Key für Renewal
+  const enPlan = enW!.plan as Record<string, string>;
+  const dePlan = deW!.plan as Record<string, string>;
+  assert.match(enPlan.hintRenewal, /\{date\}/);
+  assert.match(dePlan.hintRenewal, /\{date\}/);
 });

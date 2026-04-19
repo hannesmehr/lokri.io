@@ -16,13 +16,16 @@ import { SectionNav } from "../profile/_section-nav";
  */
 export async function SettingsTabs() {
   const t = await getTranslations("settings.navigation");
+  // Billing zeigt während Block 1 noch auf `/billing` — Block 2 flippt
+  // atomar auf `/settings/billing`, wenn die Route umzieht. Zwischen-
+  // state: Link zielt auf die existierende Legacy-Route, kein 404.
   return (
     <SectionNav
       items={[
         { href: "/settings/general", label: t("general") },
         { href: "/settings/mcp", label: t("mcp") },
         { href: "/settings/storage", label: t("storage") },
-        { href: "/settings/embedding-key", label: t("embeddingKey") },
+        { href: "/billing", label: t("billing") },
       ]}
     />
   );
