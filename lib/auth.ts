@@ -75,10 +75,67 @@ function resolveTrustedOrigins(): string[] {
   return [...origins];
 }
 
+/**
+ * Microsoft Entra ID (OIDC) — Team-SSO via Better-Auth's built-in
+ * `microsoft` social provider. Opt-in per Env: fehlen beide Secrets,
+ * wird der Provider nicht registriert und der App-Boot läuft
+ * unverändert (lokale Dev ohne Entra-Setup ist so möglich).
+ *
+ * Entra-Multi-Tenant-Modus (`tenantId: "common"`): eine App in
+ * lokri's Tenant, jeder Kunde hängt sein eigenes Tenant über die
+ * `team_sso_configs.tenant_id`-Validierung im Callback an (Block 3).
+ * Block 2 wired hier nur den Provider selbst — die Team-Account-
+ * Verhandlung und JIT-Linking folgen separat.
+ *
+ * Scopes minimal: `openid`, `profile`, `email`. Keine Directory-
+ * Scopes — wir wollen nur Authentifizierung, kein Graph-Access.
+ */
+function resolveMicrosoftSocialProvider() {
+  const clientId = process.env.ENTRA_CLIENT_ID;
+  const clientSecret = process.env.ENTRA_CLIENT_SECRET;
+  if (!clientId || !clientSecret) {
+    if (process.env.NODE_ENV === "production") {
+      // In Prod loggen, aber nicht werfen — SSO ist ein optionales
+      // Feature; Teams ohne SSO-Config sollen weiter funktionieren.
+      console.warn(
+        "[auth] ENTRA_CLIENT_ID / ENTRA_CLIENT_SECRET nicht gesetzt — SSO-Provider nicht registriert.",
+      );
+    }
+    return undefined;
+  }
+  return {
+    clientId,
+    clientSecret,
+    /**
+     * `common` ⇒ Multi-Tenant-Endpoint. Der `tid`-Claim im ID-Token
+     * wird in Block 3 gegen `team_sso_configs.tenant_id` validiert
+     * — der Multi-Tenant-Wert hier sagt nur „akzeptiere Tokens aus
+     * jedem Tenant"; die Zugriffskontrolle läuft über unsere
+     * Team-Config.
+     */
+    tenantId: "common",
+    scope: ["openid", "profile", "email"] as string[],
+  };
+}
+
+const microsoftProvider = resolveMicrosoftSocialProvider();
+
 export const auth = betterAuth({
   secret: process.env.BETTER_AUTH_SECRET,
   baseURL: resolveBaseUrl(),
   trustedOrigins: resolveTrustedOrigins(),
+
+  /**
+   * Social-Provider-Block. Nur `microsoft` registriert, und auch nur,
+   * wenn Env-Variablen gesetzt sind — via optional-Chain an der
+   * `microsoft`-Key. `socialProviders` selbst bleibt immer im Config,
+   * damit TypeScript die Plugin-Type-Inference für `auth.api` nicht
+   * zerlegt (ein Conditional-Spread würde `auth.api.getSession` etc.
+   * verlieren — Better-Auth Type-Chain ist zickig).
+   */
+  socialProviders: {
+    microsoft: microsoftProvider,
+  },
 
   database: drizzleAdapter(db, {
     provider: "pg",
