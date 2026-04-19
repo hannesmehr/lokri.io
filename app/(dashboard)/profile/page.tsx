@@ -1,19 +1,33 @@
 import { getTranslations } from "next-intl/server";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
 import { requireSessionWithAccount } from "@/lib/api/session";
 import { LocaleSwitcher } from "./_locale-switcher";
 import { ProfileOverviewForm } from "./_overview-form";
+import { ProfileTabs } from "./_tabs";
 
 export default async function ProfilePage() {
   const { session } = await requireSessionWithAccount();
-  const tOverview = await getTranslations("profile.overview");
+  const tHeader = await getTranslations("profile.overview.pageHeader");
+  const tProfileCard = await getTranslations("profile.overview.profileCard");
   const tLocale = await getTranslations("profile.locale");
   return (
     <div className="space-y-6">
+      <PageHeader
+        title={tHeader("title")}
+        description={tHeader("description")}
+      />
+      <ProfileTabs />
       <Card>
         <CardHeader>
-          <CardTitle>{tOverview("title")}</CardTitle>
-          <CardDescription>{tOverview("subtitle")}</CardDescription>
+          <CardTitle>{tProfileCard("title")}</CardTitle>
+          <CardDescription>{tProfileCard("description")}</CardDescription>
         </CardHeader>
         <CardContent>
           <ProfileOverviewForm

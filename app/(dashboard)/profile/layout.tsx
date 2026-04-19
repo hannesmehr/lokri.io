@@ -1,27 +1,16 @@
-import { getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
-import { SectionNav } from "./_section-nav";
 
-export default async function ProfileLayout({
-  children,
-}: {
-  children: ReactNode;
-}) {
-  const t = await getTranslations("profile.layout");
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-4xl font-semibold tracking-tight leading-tight">{t("title")}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">{t("subtitle")}</p>
-      </div>
-      <SectionNav
-        items={[
-          { href: "/profile", label: t("navigation.overview") },
-          { href: "/profile/security", label: t("navigation.security") },
-          { href: "/profile/data", label: t("navigation.data") },
-        ]}
-      />
-      {children}
-    </div>
-  );
+/**
+ * Profile-Layout — nach dem Block-1-Refactor.
+ *
+ * Der Layout-H1 + die SectionNav wurden entfernt; jede Sub-Page rendert
+ * ihren eigenen `<PageHeader>` und lokal `<ProfileTabs />`. Damit ist
+ * die Reihenfolge pro Seite konsistent: PageHeader oben, Tabs direkt
+ * darunter, danach die Cards.
+ *
+ * Der Layout-Container existiert nur noch, damit die Route-Group ihn
+ * im Next-Baum stabil findet; er fügt kein eigenes Markup hinzu.
+ */
+export default function ProfileLayout({ children }: { children: ReactNode }) {
+  return children;
 }

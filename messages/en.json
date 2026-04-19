@@ -1288,6 +1288,10 @@
       }
     },
     "overview": {
+      "pageHeader": {
+        "title": "Profile",
+        "description": "Your personal account — name, email, language."
+      },
       "title": "Profile overview",
       "subtitle": "Name, profile image, email, and language for your account.",
       "profileCard": {
@@ -1341,6 +1345,10 @@
       }
     },
     "security": {
+      "pageHeader": {
+        "title": "Profile security",
+        "description": "Password, two-factor authentication, active sessions."
+      },
       "title": "Security",
       "password": {
         "title": "Password",
@@ -1413,6 +1421,10 @@
       }
     },
     "data": {
+      "pageHeader": {
+        "title": "Profile data",
+        "description": "Export your data or close your account."
+      },
       "title": "Data portability",
       "subtitle": "Export your data or import existing lokri archives.",
       "export": {
