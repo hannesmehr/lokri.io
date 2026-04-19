@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import useSWR from "swr";
+import { AdminStatusBadge } from "@/components/admin/admin-status-badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -154,15 +155,11 @@ function HeaderCard({
         <div className="space-y-1">
           <CardTitle className="flex items-center gap-2">
             {account.name}
-            <span
-              className={
-                account.type === "team"
-                  ? "rounded border border-sky-500/30 bg-sky-500/10 px-1.5 py-0.5 text-[10px] font-medium text-sky-700 dark:text-sky-300"
-                  : "rounded border bg-muted/40 px-1.5 py-0.5 text-[10px] text-muted-foreground"
-              }
+            <AdminStatusBadge
+              variant={account.type === "team" ? "info" : "neutral"}
             >
               {account.type === "team" ? "Team" : "Personal"}
-            </span>
+            </AdminStatusBadge>
           </CardTitle>
           <CardDescription>
             ID{" "}
@@ -353,9 +350,9 @@ function QuotaCard({
                   </span>
                 </div>
                 {effectiveQuota.planId !== account.planId ? (
-                  <div className="mt-1 text-[10px] text-amber-700 dark:text-amber-300">
+                  <AdminStatusBadge variant="warning" className="mt-1">
                     Plan abgelaufen — Free-Fallback aktiv.
-                  </div>
+                  </AdminStatusBadge>
                 ) : null}
               </>
             ) : (
@@ -388,8 +385,8 @@ function QuotaCard({
           </div>
         </div>
 
-        <div className="space-y-3 rounded-md border border-amber-500/30 bg-amber-500/5 p-3">
-          <div className="text-xs font-medium uppercase tracking-wide text-amber-800 dark:text-amber-200">
+        <div className="space-y-3 rounded-md border border-amber-500/40 bg-amber-500/5 p-3">
+          <div className="text-xs font-medium uppercase tracking-wide text-amber-700 dark:text-amber-300">
             Admin-Override
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
@@ -679,23 +676,19 @@ function TokensCard({ tokens }: { tokens: AccountDetail["tokens"] }) {
                     {t.tokenPrefix}
                   </div>
                 </div>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <span className="rounded border bg-muted/40 px-1.5 py-0.5">
+                <div className="flex items-center gap-2 text-xs">
+                  <AdminStatusBadge variant="neutral">
                     {t.scopeType}
-                  </span>
+                  </AdminStatusBadge>
                   {t.readOnly ? (
-                    <span className="rounded border bg-muted/40 px-1.5 py-0.5">
+                    <AdminStatusBadge variant="neutral">
                       read-only
-                    </span>
+                    </AdminStatusBadge>
                   ) : null}
                   {t.revokedAt ? (
-                    <span className="rounded border border-red-500/30 bg-red-500/10 px-1.5 py-0.5 text-red-700 dark:text-red-300">
-                      revoked
-                    </span>
+                    <AdminStatusBadge variant="danger">revoked</AdminStatusBadge>
                   ) : (
-                    <span className="rounded border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 text-emerald-700 dark:text-emerald-300">
-                      aktiv
-                    </span>
+                    <AdminStatusBadge variant="success">aktiv</AdminStatusBadge>
                   )}
                 </div>
               </li>

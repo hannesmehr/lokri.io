@@ -1,4 +1,4 @@
-import { Breadcrumbs } from "../../_breadcrumbs";
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { UsersExplorer } from "./_explorer";
 
 /**
@@ -9,14 +9,11 @@ import { UsersExplorer } from "./_explorer";
 export default function AdminUsersPage() {
   return (
     <div className="space-y-6">
-      <Breadcrumbs items={[{ label: "User" }]} />
-      <div>
-        <h1 className="font-display text-3xl leading-tight">User-Verwaltung</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Alle User im System. Suche über Email + Name, Filter für Admin-
-          Status, Team-Ersteller und Verifizierung.
-        </p>
-      </div>
+      <AdminPageHeader
+        breadcrumbs={[{ label: "User" }]}
+        title="User-Verwaltung"
+        description="Alle User im System. Suche über Email + Name, Filter für Admin-Status, Team-Ersteller und Verifizierung."
+      />
       <UsersExplorer />
     </div>
   );

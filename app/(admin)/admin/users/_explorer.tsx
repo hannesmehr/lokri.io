@@ -5,6 +5,16 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import useSWR from "swr";
+import { AdminStatusBadge } from "@/components/admin/admin-status-badge";
+import {
+  AdminTable,
+  AdminTableBody,
+  AdminTableEmpty,
+  AdminTableHead,
+  AdminTableLoading,
+  AdminTd,
+  AdminTh,
+} from "@/components/admin/admin-table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -167,106 +177,100 @@ export function UsersExplorer() {
         </div>
       ) : null}
 
-      <div className="overflow-x-auto rounded-lg border">
-        <table className="w-full text-sm">
-          <thead className="bg-muted/40 text-xs text-muted-foreground">
-            <tr>
-              <th className="px-3 py-2 text-left">Email / Name</th>
-              <th className="px-3 py-2 text-left">Flags</th>
-              <th className="px-3 py-2 text-left">Locale</th>
-              <th className="px-3 py-2 text-left">Erstellt</th>
-              <th className="px-3 py-2 text-left">Letzter Login</th>
-              <th className="px-3 py-2 text-left">Accounts</th>
-              <th className="px-3 py-2 text-left">Team-Erst.</th>
-              <th className="px-3 py-2 text-left">Aktionen</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y">
-            {data?.users.map((u) => (
-              <tr key={u.id} className={u.disabledAt ? "opacity-50" : ""}>
-                <td className="px-3 py-2">
-                  <div className="font-medium">{u.email}</div>
-                  {u.name ? (
-                    <div className="text-xs text-muted-foreground">{u.name}</div>
+      <AdminTable>
+        <AdminTableHead>
+          <tr>
+            <AdminTh>Email / Name</AdminTh>
+            <AdminTh>Flags</AdminTh>
+            <AdminTh>Locale</AdminTh>
+            <AdminTh>Erstellt</AdminTh>
+            <AdminTh>Letzter Login</AdminTh>
+            <AdminTh>Accounts</AdminTh>
+            <AdminTh>Team-Erst.</AdminTh>
+            <AdminTh>Aktionen</AdminTh>
+          </tr>
+        </AdminTableHead>
+        <AdminTableBody>
+          {data?.users.map((u) => (
+            <tr key={u.id} className={u.disabledAt ? "opacity-50" : ""}>
+              <AdminTd>
+                <div className="font-medium">{u.email}</div>
+                {u.name ? (
+                  <div className="text-xs text-muted-foreground">{u.name}</div>
+                ) : null}
+              </AdminTd>
+              <AdminTd>
+                <div className="flex flex-wrap gap-1">
+                  {u.isAdmin ? (
+                    <AdminStatusBadge
+                      variant="warning"
+                      icon={<ShieldCheck className="h-2.5 w-2.5" />}
+                    >
+                      Admin
+                    </AdminStatusBadge>
                   ) : null}
-                </td>
-                <td className="px-3 py-2">
-                  <div className="flex flex-wrap gap-1">
-                    {u.isAdmin ? (
-                      <span className="inline-flex items-center gap-0.5 rounded border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-300">
-                        <ShieldCheck className="h-2.5 w-2.5" />
-                        Admin
-                      </span>
-                    ) : null}
-                    {u.emailVerified ? (
-                      <span className="inline-flex items-center gap-0.5 rounded border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-300">
-                        <CheckCircle2 className="h-2.5 w-2.5" />
-                        verifiziert
-                      </span>
-                    ) : (
-                      <span className="rounded border bg-muted/40 px-1.5 py-0.5 text-[10px] text-muted-foreground">
-                        unverifiziert
-                      </span>
-                    )}
-                    {u.disabledAt ? (
-                      <span className="rounded border border-red-500/30 bg-red-500/10 px-1.5 py-0.5 text-[10px] font-medium text-red-700 dark:text-red-300">
-                        gesperrt
-                      </span>
-                    ) : null}
-                  </div>
-                </td>
-                <td className="px-3 py-2 text-xs">
-                  {u.preferredLocale ? u.preferredLocale.toUpperCase() : "—"}
-                </td>
-                <td className="px-3 py-2 text-xs text-muted-foreground">
-                  {new Date(u.createdAt).toLocaleDateString("de-DE")}
-                </td>
-                <td className="px-3 py-2 text-xs text-muted-foreground">
-                  {u.lastLogin
-                    ? new Date(u.lastLogin).toLocaleDateString("de-DE")
-                    : "—"}
-                </td>
-                <td className="px-3 py-2 tabular-nums">{u.accountCount}</td>
-                <td className="px-3 py-2">
-                  <input
-                    type="checkbox"
-                    checked={u.canCreateTeams}
-                    onChange={(e) =>
-                      void toggleFlag(u.id, "canCreateTeams", e.target.checked)
-                    }
-                    className="h-4 w-4"
-                    aria-label="Team-Erstellung erlauben"
-                  />
-                </td>
-                <td className="px-3 py-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    nativeButton={false}
-                    render={<Link href={`/admin/users/${u.id}`} />}
-                  >
-                    Öffnen
-                  </Button>
-                </td>
-              </tr>
-            ))}
-            {!data && !error && isLoading ? (
-              <tr>
-                <td colSpan={8} className="px-3 py-8 text-center text-sm text-muted-foreground">
-                  <Loader2 className="mx-auto h-4 w-4 animate-spin" />
-                </td>
-              </tr>
-            ) : null}
-            {data && data.users.length === 0 ? (
-              <tr>
-                <td colSpan={8} className="px-3 py-8 text-center text-sm text-muted-foreground">
-                  Keine User gefunden.
-                </td>
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
-      </div>
+                  {u.emailVerified ? (
+                    <AdminStatusBadge
+                      variant="success"
+                      icon={<CheckCircle2 className="h-2.5 w-2.5" />}
+                    >
+                      verifiziert
+                    </AdminStatusBadge>
+                  ) : (
+                    <AdminStatusBadge variant="neutral">
+                      unverifiziert
+                    </AdminStatusBadge>
+                  )}
+                  {u.disabledAt ? (
+                    <AdminStatusBadge variant="danger">
+                      gesperrt
+                    </AdminStatusBadge>
+                  ) : null}
+                </div>
+              </AdminTd>
+              <AdminTd className="text-xs">
+                {u.preferredLocale ? u.preferredLocale.toUpperCase() : "—"}
+              </AdminTd>
+              <AdminTd className="text-xs text-muted-foreground">
+                {new Date(u.createdAt).toLocaleDateString("de-DE")}
+              </AdminTd>
+              <AdminTd className="text-xs text-muted-foreground">
+                {u.lastLogin
+                  ? new Date(u.lastLogin).toLocaleDateString("de-DE")
+                  : "—"}
+              </AdminTd>
+              <AdminTd className="tabular-nums">{u.accountCount}</AdminTd>
+              <AdminTd>
+                <input
+                  type="checkbox"
+                  checked={u.canCreateTeams}
+                  onChange={(e) =>
+                    void toggleFlag(u.id, "canCreateTeams", e.target.checked)
+                  }
+                  className="h-4 w-4"
+                  aria-label="Team-Erstellung erlauben"
+                />
+              </AdminTd>
+              <AdminTd>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  nativeButton={false}
+                  render={<Link href={`/admin/users/${u.id}`} />}
+                >
+                  Öffnen
+                </Button>
+              </AdminTd>
+            </tr>
+          ))}
+          {!data && !error && isLoading ? (
+            <AdminTableLoading colSpan={8} />
+          ) : null}
+          {data && data.users.length === 0 ? (
+            <AdminTableEmpty colSpan={8}>Keine User gefunden.</AdminTableEmpty>
+          ) : null}
+        </AdminTableBody>
+      </AdminTable>
 
       {data && pageCount > 1 ? (
         <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -308,7 +312,7 @@ function FilterChip({
     <label
       className={
         checked
-          ? "inline-flex items-center gap-1.5 rounded-full border border-amber-500/40 bg-amber-500/10 px-2.5 py-1 text-amber-800 dark:text-amber-200"
+          ? "inline-flex items-center gap-1.5 rounded-full border border-foreground/30 bg-foreground/5 px-2.5 py-1 text-foreground"
           : "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-muted-foreground transition-colors hover:text-foreground"
       }
     >

@@ -4,6 +4,16 @@ import { Download, Loader2, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import useSWR from "swr";
+import { AdminStatusBadge } from "@/components/admin/admin-status-badge";
+import {
+  AdminTable,
+  AdminTableBody,
+  AdminTableEmpty,
+  AdminTableHead,
+  AdminTableLoading,
+  AdminTd,
+  AdminTh,
+} from "@/components/admin/admin-table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -159,103 +169,101 @@ export function InvoicesExplorer() {
         </div>
       ) : null}
 
-      <div className="overflow-x-auto rounded-lg border">
-        <table className="w-full text-sm">
-          <thead className="bg-muted/40 text-xs text-muted-foreground">
-            <tr>
-              <th className="px-3 py-2 text-left">Nr.</th>
-              <th className="px-3 py-2 text-left">Account</th>
-              <th className="px-3 py-2 text-left">Kunde</th>
-              <th className="px-3 py-2 text-left">Beschreibung</th>
-              <th className="px-3 py-2 text-right">Brutto</th>
-              <th className="px-3 py-2 text-left">Status</th>
-              <th className="px-3 py-2 text-left">Methode</th>
-              <th className="px-3 py-2 text-left">Ausgestellt</th>
-              <th className="px-3 py-2 text-left">Aktionen</th>
+      <AdminTable>
+        <AdminTableHead>
+          <tr>
+            <AdminTh>Nr.</AdminTh>
+            <AdminTh>Account</AdminTh>
+            <AdminTh>Kunde</AdminTh>
+            <AdminTh>Beschreibung</AdminTh>
+            <AdminTh align="right">Brutto</AdminTh>
+            <AdminTh>Status</AdminTh>
+            <AdminTh>Methode</AdminTh>
+            <AdminTh>Ausgestellt</AdminTh>
+            <AdminTh>Aktionen</AdminTh>
+          </tr>
+        </AdminTableHead>
+        <AdminTableBody>
+          {data?.invoices.map((i) => (
+            <tr key={i.id}>
+              <AdminTd className="font-mono text-xs">{i.invoiceNumber}</AdminTd>
+              <AdminTd>
+                <Link
+                  href={`/admin/accounts/${i.ownerAccountId}`}
+                  className="hover:underline"
+                >
+                  {i.ownerAccountName}
+                </Link>
+              </AdminTd>
+              <AdminTd className="text-xs">
+                <div className="font-medium">{i.customerName}</div>
+                <div className="text-muted-foreground">{i.customerEmail}</div>
+              </AdminTd>
+              <AdminTd className="text-xs">{i.description}</AdminTd>
+              <AdminTd align="right" className="tabular-nums text-xs">
+                {(i.grossCents / 100).toLocaleString("de-DE", {
+                  style: "currency",
+                  currency: "EUR",
+                })}
+              </AdminTd>
+              <AdminTd>
+                <AdminStatusBadge
+                  variant={
+                    i.status === "paid"
+                      ? "success"
+                      : i.status === "refunded"
+                        ? "warning"
+                        : i.status === "failed"
+                          ? "danger"
+                          : "neutral"
+                  }
+                >
+                  {i.status}
+                </AdminStatusBadge>
+              </AdminTd>
+              <AdminTd>
+                <AdminStatusBadge
+                  variant={i.paymentMethod === "manual" ? "warning" : "neutral"}
+                >
+                  {i.paymentMethod}
+                </AdminStatusBadge>
+              </AdminTd>
+              <AdminTd className="text-xs text-muted-foreground">
+                {new Date(i.issuedAt).toLocaleDateString("de-DE")}
+              </AdminTd>
+              <AdminTd>
+                <div className="flex items-center gap-1">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    nativeButton={false}
+                    render={<Link href={`/admin/invoices/${i.id}`} />}
+                  >
+                    Öffnen
+                  </Button>
+                  <a
+                    href={`/api/admin/invoices/${i.id}/pdf`}
+                    target="_blank"
+                    rel="noopener"
+                    className="inline-flex h-8 items-center gap-1 rounded-md px-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    PDF
+                  </a>
+                </div>
+              </AdminTd>
             </tr>
-          </thead>
-          <tbody className="divide-y">
-            {data?.invoices.map((i) => (
-              <tr key={i.id}>
-                <td className="px-3 py-2 font-mono text-xs">{i.invoiceNumber}</td>
-                <td className="px-3 py-2">
-                  <Link
-                    href={`/admin/accounts/${i.ownerAccountId}`}
-                    className="hover:underline"
-                  >
-                    {i.ownerAccountName}
-                  </Link>
-                </td>
-                <td className="px-3 py-2 text-xs">
-                  <div className="font-medium">{i.customerName}</div>
-                  <div className="text-muted-foreground">{i.customerEmail}</div>
-                </td>
-                <td className="px-3 py-2 text-xs">{i.description}</td>
-                <td className="px-3 py-2 text-right tabular-nums text-xs">
-                  {(i.grossCents / 100).toLocaleString("de-DE", {
-                    style: "currency",
-                    currency: "EUR",
-                  })}
-                </td>
-                <td className="px-3 py-2 text-xs">
-                  <span className="rounded border bg-muted/40 px-1.5 py-0.5">
-                    {i.status}
-                  </span>
-                </td>
-                <td className="px-3 py-2 text-xs">
-                  <span
-                    className={
-                      i.paymentMethod === "manual"
-                        ? "rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-amber-800 dark:text-amber-200"
-                        : "rounded border bg-muted/40 px-1.5 py-0.5 text-muted-foreground"
-                    }
-                  >
-                    {i.paymentMethod}
-                  </span>
-                </td>
-                <td className="px-3 py-2 text-xs text-muted-foreground">
-                  {new Date(i.issuedAt).toLocaleDateString("de-DE")}
-                </td>
-                <td className="px-3 py-2">
-                  <div className="flex items-center gap-1">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      nativeButton={false}
-                      render={<Link href={`/admin/invoices/${i.id}`} />}
-                    >
-                      Öffnen
-                    </Button>
-                    <a
-                      href={`/api/admin/invoices/${i.id}/pdf`}
-                      target="_blank"
-                      rel="noopener"
-                      className="inline-flex h-8 items-center gap-1 rounded-md px-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                    >
-                      <Download className="h-3.5 w-3.5" />
-                      PDF
-                    </a>
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {!data && !error && isLoading ? (
-              <tr>
-                <td colSpan={9} className="px-3 py-8 text-center text-sm text-muted-foreground">
-                  <Loader2 className="mx-auto h-4 w-4 animate-spin" />
-                </td>
-              </tr>
-            ) : null}
-            {data && data.invoices.length === 0 ? (
-              <tr>
-                <td colSpan={9} className="px-3 py-8 text-center text-sm text-muted-foreground">
-                  Keine Rechnungen gefunden.
-                </td>
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
-      </div>
+          ))}
+          {!data && !error && isLoading ? (
+            <AdminTableLoading colSpan={9} />
+          ) : null}
+          {data && data.invoices.length === 0 ? (
+            <AdminTableEmpty colSpan={9}>
+              Keine Rechnungen gefunden.
+            </AdminTableEmpty>
+          ) : null}
+        </AdminTableBody>
+      </AdminTable>
 
       {data && pageCount > 1 ? (
         <div className="flex items-center justify-between text-xs text-muted-foreground">

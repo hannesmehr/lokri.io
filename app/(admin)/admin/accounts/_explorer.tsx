@@ -4,6 +4,16 @@ import { Loader2, RefreshCw, Users as UsersIcon } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import useSWR from "swr";
+import { AdminStatusBadge } from "@/components/admin/admin-status-badge";
+import {
+  AdminTable,
+  AdminTableBody,
+  AdminTableEmpty,
+  AdminTableHead,
+  AdminTableLoading,
+  AdminTd,
+  AdminTh,
+} from "@/components/admin/admin-table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -135,98 +145,88 @@ export function AccountsExplorer() {
         </div>
       ) : null}
 
-      <div className="overflow-x-auto rounded-lg border">
-        <table className="w-full text-sm">
-          <thead className="bg-muted/40 text-xs text-muted-foreground">
-            <tr>
-              <th className="px-3 py-2 text-left">Name</th>
-              <th className="px-3 py-2 text-left">Typ</th>
-              <th className="px-3 py-2 text-left">Plan</th>
-              <th className="px-3 py-2 text-left">Ablauf</th>
-              <th className="px-3 py-2 text-left">Member</th>
-              <th className="px-3 py-2 text-right">Storage</th>
-              <th className="px-3 py-2 text-left">Override</th>
-              <th className="px-3 py-2 text-left">Erstellt</th>
-              <th className="px-3 py-2 text-left">Aktionen</th>
+      <AdminTable>
+        <AdminTableHead>
+          <tr>
+            <AdminTh>Name</AdminTh>
+            <AdminTh>Typ</AdminTh>
+            <AdminTh>Plan</AdminTh>
+            <AdminTh>Ablauf</AdminTh>
+            <AdminTh>Member</AdminTh>
+            <AdminTh align="right">Storage</AdminTh>
+            <AdminTh>Override</AdminTh>
+            <AdminTh>Erstellt</AdminTh>
+            <AdminTh>Aktionen</AdminTh>
+          </tr>
+        </AdminTableHead>
+        <AdminTableBody>
+          {data?.accounts.map((a) => (
+            <tr key={a.id}>
+              <AdminTd>
+                <div className="font-medium">{a.name}</div>
+                <div className="text-[10px] text-muted-foreground">{a.id}</div>
+              </AdminTd>
+              <AdminTd>
+                <AdminStatusBadge
+                  variant={a.type === "team" ? "info" : "neutral"}
+                >
+                  {a.type === "team" ? "Team" : "Personal"}
+                </AdminStatusBadge>
+              </AdminTd>
+              <AdminTd>
+                <div className="text-xs">{a.planName}</div>
+                <div className="text-[10px] text-muted-foreground">
+                  {a.planId}
+                </div>
+              </AdminTd>
+              <AdminTd className="text-xs text-muted-foreground">
+                {a.planExpiresAt
+                  ? new Date(a.planExpiresAt).toLocaleDateString("de-DE")
+                  : "—"}
+              </AdminTd>
+              <AdminTd>
+                <div className="inline-flex items-center gap-1 tabular-nums text-xs">
+                  <UsersIcon className="h-3 w-3 text-muted-foreground" />
+                  {a.memberCount}
+                </div>
+              </AdminTd>
+              <AdminTd align="right" className="tabular-nums text-xs">
+                {formatBytes(a.usedBytes)}
+              </AdminTd>
+              <AdminTd>
+                {a.quotaOverride ? (
+                  <AdminStatusBadge variant="warning">
+                    Override
+                  </AdminStatusBadge>
+                ) : (
+                  <span className="text-[10px] text-muted-foreground">—</span>
+                )}
+              </AdminTd>
+              <AdminTd className="text-xs text-muted-foreground">
+                {new Date(a.createdAt).toLocaleDateString("de-DE")}
+              </AdminTd>
+              <AdminTd>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  nativeButton={false}
+                  render={<Link href={`/admin/accounts/${a.id}`} />}
+                >
+                  Öffnen
+                </Button>
+              </AdminTd>
             </tr>
-          </thead>
-          <tbody className="divide-y">
-            {data?.accounts.map((a) => (
-              <tr key={a.id}>
-                <td className="px-3 py-2">
-                  <div className="font-medium">{a.name}</div>
-                  <div className="text-[10px] text-muted-foreground">{a.id}</div>
-                </td>
-                <td className="px-3 py-2">
-                  <span
-                    className={
-                      a.type === "team"
-                        ? "rounded border border-sky-500/30 bg-sky-500/10 px-1.5 py-0.5 text-[10px] font-medium text-sky-700 dark:text-sky-300"
-                        : "rounded border bg-muted/40 px-1.5 py-0.5 text-[10px] text-muted-foreground"
-                    }
-                  >
-                    {a.type === "team" ? "Team" : "Personal"}
-                  </span>
-                </td>
-                <td className="px-3 py-2">
-                  <div className="text-xs">{a.planName}</div>
-                  <div className="text-[10px] text-muted-foreground">{a.planId}</div>
-                </td>
-                <td className="px-3 py-2 text-xs text-muted-foreground">
-                  {a.planExpiresAt
-                    ? new Date(a.planExpiresAt).toLocaleDateString("de-DE")
-                    : "—"}
-                </td>
-                <td className="px-3 py-2">
-                  <div className="inline-flex items-center gap-1 tabular-nums text-xs">
-                    <UsersIcon className="h-3 w-3 text-muted-foreground" />
-                    {a.memberCount}
-                  </div>
-                </td>
-                <td className="px-3 py-2 text-right tabular-nums text-xs">
-                  {formatBytes(a.usedBytes)}
-                </td>
-                <td className="px-3 py-2">
-                  {a.quotaOverride ? (
-                    <span className="rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-800 dark:text-amber-200">
-                      Override
-                    </span>
-                  ) : (
-                    <span className="text-[10px] text-muted-foreground">—</span>
-                  )}
-                </td>
-                <td className="px-3 py-2 text-xs text-muted-foreground">
-                  {new Date(a.createdAt).toLocaleDateString("de-DE")}
-                </td>
-                <td className="px-3 py-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    nativeButton={false}
-                    render={<Link href={`/admin/accounts/${a.id}`} />}
-                  >
-                    Öffnen
-                  </Button>
-                </td>
-              </tr>
-            ))}
-            {!data && !error && isLoading ? (
-              <tr>
-                <td colSpan={9} className="px-3 py-8 text-center text-sm text-muted-foreground">
-                  <Loader2 className="mx-auto h-4 w-4 animate-spin" />
-                </td>
-              </tr>
-            ) : null}
-            {data && data.accounts.length === 0 ? (
-              <tr>
-                <td colSpan={9} className="px-3 py-8 text-center text-sm text-muted-foreground">
-                  Keine Accounts gefunden.
-                </td>
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
-      </div>
+          ))}
+          {!data && !error && isLoading ? (
+            <AdminTableLoading colSpan={9} />
+          ) : null}
+          {data && data.accounts.length === 0 ? (
+            <AdminTableEmpty colSpan={9}>
+              Keine Accounts gefunden.
+            </AdminTableEmpty>
+          ) : null}
+        </AdminTableBody>
+      </AdminTable>
 
       {data && pageCount > 1 ? (
         <div className="flex items-center justify-between text-xs text-muted-foreground">

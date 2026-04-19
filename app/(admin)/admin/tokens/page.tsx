@@ -1,4 +1,4 @@
-import { Breadcrumbs } from "../../_breadcrumbs";
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { TokensExplorer } from "./_explorer";
 
 /**
@@ -8,15 +8,11 @@ import { TokensExplorer } from "./_explorer";
 export default function AdminTokensPage() {
   return (
     <div className="space-y-6">
-      <Breadcrumbs items={[{ label: "Tokens" }]} />
-      <div>
-        <h1 className="font-display text-3xl leading-tight">Token-Übersicht</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Alle API-Tokens systemweit. Filter nach Status, Scope, Inaktivität.
-          Einzel-Revoke pro Zeile, Bulk-Revoke für inaktive Tokens über den
-          Wizard rechts.
-        </p>
-      </div>
+      <AdminPageHeader
+        breadcrumbs={[{ label: "Tokens" }]}
+        title="Token-Übersicht"
+        description="Alle API-Tokens systemweit. Filter nach Status, Scope, Inaktivität. Einzel-Revoke pro Zeile, Bulk-Revoke für inaktive Tokens über den Wizard rechts."
+      />
       <TokensExplorer />
     </div>
   );

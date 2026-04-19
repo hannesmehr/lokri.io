@@ -5,6 +5,16 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import useSWR from "swr";
+import { AdminStatusBadge } from "@/components/admin/admin-status-badge";
+import {
+  AdminTable,
+  AdminTableBody,
+  AdminTableEmpty,
+  AdminTableHead,
+  AdminTableLoading,
+  AdminTd,
+  AdminTh,
+} from "@/components/admin/admin-table";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -162,11 +172,7 @@ export function TokensExplorer() {
           )}
           Aktualisieren
         </Button>
-        <Button
-          size="sm"
-          className="bg-amber-600 text-white hover:bg-amber-700"
-          onClick={() => setBulkOpen(true)}
-        >
+        <Button size="sm" onClick={() => setBulkOpen(true)}>
           <Zap className="h-3.5 w-3.5" />
           Bulk-Revoke inaktive
         </Button>
@@ -181,135 +187,123 @@ export function TokensExplorer() {
         </div>
       ) : null}
 
-      <div className="overflow-x-auto rounded-lg border">
-        <table className="w-full text-sm">
-          <thead className="bg-muted/40 text-xs text-muted-foreground">
-            <tr>
-              <th className="px-3 py-2 text-left">Name / Prefix</th>
-              <th className="px-3 py-2 text-left">Account</th>
-              <th className="px-3 py-2 text-left">Ersteller</th>
-              <th className="px-3 py-2 text-left">Scope</th>
-              <th className="px-3 py-2 text-left">Erstellt</th>
-              <th className="px-3 py-2 text-left">Zuletzt benutzt</th>
-              <th className="px-3 py-2 text-left">Status</th>
-              <th className="px-3 py-2 text-left">Aktionen</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y">
-            {data?.tokens.map((t) => {
-              const inactive =
-                !t.revokedAt &&
-                ((t.lastUsedAt &&
-                  Date.now() - new Date(t.lastUsedAt).getTime() >
-                    180 * 24 * 60 * 60 * 1000) ||
-                  (!t.lastUsedAt &&
-                    Date.now() - new Date(t.createdAt).getTime() >
-                      90 * 24 * 60 * 60 * 1000));
-              return (
-                <tr key={t.id} className={t.revokedAt ? "opacity-50" : ""}>
-                  <td className="px-3 py-2">
-                    <div className="font-medium">{t.name}</div>
-                    <div className="font-mono text-[10px] text-muted-foreground">
-                      {t.tokenPrefix}
-                    </div>
-                  </td>
-                  <td className="px-3 py-2">
+      <AdminTable>
+        <AdminTableHead>
+          <tr>
+            <AdminTh>Name / Prefix</AdminTh>
+            <AdminTh>Account</AdminTh>
+            <AdminTh>Ersteller</AdminTh>
+            <AdminTh>Scope</AdminTh>
+            <AdminTh>Erstellt</AdminTh>
+            <AdminTh>Zuletzt benutzt</AdminTh>
+            <AdminTh>Status</AdminTh>
+            <AdminTh>Aktionen</AdminTh>
+          </tr>
+        </AdminTableHead>
+        <AdminTableBody>
+          {data?.tokens.map((t) => {
+            const inactive =
+              !t.revokedAt &&
+              ((t.lastUsedAt &&
+                Date.now() - new Date(t.lastUsedAt).getTime() >
+                  180 * 24 * 60 * 60 * 1000) ||
+                (!t.lastUsedAt &&
+                  Date.now() - new Date(t.createdAt).getTime() >
+                    90 * 24 * 60 * 60 * 1000));
+            return (
+              <tr key={t.id} className={t.revokedAt ? "opacity-50" : ""}>
+                <AdminTd>
+                  <div className="font-medium">{t.name}</div>
+                  <div className="font-mono text-[10px] text-muted-foreground">
+                    {t.tokenPrefix}
+                  </div>
+                </AdminTd>
+                <AdminTd>
+                  <Link
+                    href={`/admin/accounts/${t.ownerAccountId}`}
+                    className="text-xs hover:underline"
+                  >
+                    {t.ownerAccountName}
+                  </Link>
+                </AdminTd>
+                <AdminTd className="text-xs">
+                  {t.creatorEmail ? (
                     <Link
-                      href={`/admin/accounts/${t.ownerAccountId}`}
-                      className="text-xs hover:underline"
+                      href={`/admin/users/${t.createdByUserId}`}
+                      className="hover:underline"
                     >
-                      {t.ownerAccountName}
+                      {t.creatorEmail}
                     </Link>
-                  </td>
-                  <td className="px-3 py-2 text-xs">
-                    {t.creatorEmail ? (
-                      <Link
-                        href={`/admin/users/${t.createdByUserId}`}
-                        className="hover:underline"
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
+                </AdminTd>
+                <AdminTd>
+                  <div className="flex flex-wrap gap-1">
+                    <AdminStatusBadge variant="neutral">
+                      {t.scopeType}
+                    </AdminStatusBadge>
+                    {t.readOnly ? (
+                      <AdminStatusBadge variant="neutral">
+                        read-only
+                      </AdminStatusBadge>
+                    ) : null}
+                    {t.spaceScope && t.spaceScope.length > 0 ? (
+                      <span
+                        title={t.spaceScope.join("\n")}
+                        className="inline-block"
                       >
-                        {t.creatorEmail}
-                      </Link>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </td>
-                  <td className="px-3 py-2">
-                    <div className="flex flex-wrap gap-1">
-                      <span className="rounded border bg-muted/40 px-1.5 py-0.5 text-[10px]">
-                        {t.scopeType}
-                      </span>
-                      {t.readOnly ? (
-                        <span className="rounded border bg-muted/40 px-1.5 py-0.5 text-[10px]">
-                          read-only
-                        </span>
-                      ) : null}
-                      {t.spaceScope && t.spaceScope.length > 0 ? (
-                        <span
-                          className="rounded border bg-muted/40 px-1.5 py-0.5 text-[10px]"
-                          title={t.spaceScope.join("\n")}
-                        >
+                        <AdminStatusBadge variant="neutral">
                           {t.spaceScope.length} Spaces
-                        </span>
-                      ) : null}
-                    </div>
-                  </td>
-                  <td className="px-3 py-2 text-xs text-muted-foreground">
-                    {new Date(t.createdAt).toLocaleDateString("de-DE")}
-                  </td>
-                  <td className="px-3 py-2 text-xs text-muted-foreground">
-                    {t.lastUsedAt
-                      ? new Date(t.lastUsedAt).toLocaleDateString("de-DE")
-                      : "nie"}
-                  </td>
-                  <td className="px-3 py-2">
-                    {t.revokedAt ? (
-                      <span className="rounded border border-red-500/30 bg-red-500/10 px-1.5 py-0.5 text-[10px] font-medium text-red-700 dark:text-red-300">
-                        revoked
+                        </AdminStatusBadge>
                       </span>
-                    ) : inactive ? (
-                      <span className="rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-800 dark:text-amber-200">
-                        inaktiv
-                      </span>
-                    ) : (
-                      <span className="rounded border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-300">
-                        aktiv
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-3 py-2">
-                    {!t.revokedAt ? (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => void revokeOne(t.id, t.name)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                        Revoke
-                      </Button>
-                    ) : (
-                      <span className="text-[10px] text-muted-foreground">—</span>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-            {!data && !error && isLoading ? (
-              <tr>
-                <td colSpan={8} className="px-3 py-8 text-center text-sm text-muted-foreground">
-                  <Loader2 className="mx-auto h-4 w-4 animate-spin" />
-                </td>
+                    ) : null}
+                  </div>
+                </AdminTd>
+                <AdminTd className="text-xs text-muted-foreground">
+                  {new Date(t.createdAt).toLocaleDateString("de-DE")}
+                </AdminTd>
+                <AdminTd className="text-xs text-muted-foreground">
+                  {t.lastUsedAt
+                    ? new Date(t.lastUsedAt).toLocaleDateString("de-DE")
+                    : "nie"}
+                </AdminTd>
+                <AdminTd>
+                  {t.revokedAt ? (
+                    <AdminStatusBadge variant="danger">revoked</AdminStatusBadge>
+                  ) : inactive ? (
+                    <AdminStatusBadge variant="warning">inaktiv</AdminStatusBadge>
+                  ) : (
+                    <AdminStatusBadge variant="success">aktiv</AdminStatusBadge>
+                  )}
+                </AdminTd>
+                <AdminTd>
+                  {!t.revokedAt ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => void revokeOne(t.id, t.name)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Revoke
+                    </Button>
+                  ) : (
+                    <span className="text-[10px] text-muted-foreground">—</span>
+                  )}
+                </AdminTd>
               </tr>
-            ) : null}
-            {data && data.tokens.length === 0 ? (
-              <tr>
-                <td colSpan={8} className="px-3 py-8 text-center text-sm text-muted-foreground">
-                  Keine Tokens gefunden.
-                </td>
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
-      </div>
+            );
+          })}
+          {!data && !error && isLoading ? (
+            <AdminTableLoading colSpan={8} />
+          ) : null}
+          {data && data.tokens.length === 0 ? (
+            <AdminTableEmpty colSpan={8}>
+              Keine Tokens gefunden.
+            </AdminTableEmpty>
+          ) : null}
+        </AdminTableBody>
+      </AdminTable>
 
       {data && pageCount > 1 ? (
         <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -436,7 +430,7 @@ function BulkRevokeDialog({
             </div>
           </div>
           {dryResult !== null ? (
-            <div className="rounded-md border border-amber-500/40 bg-amber-500/5 p-3 text-sm">
+            <div className="rounded-md border bg-muted/40 p-3 text-sm">
               Dry-Run: <strong>{dryResult}</strong> Tokens würden revoked werden.
             </div>
           ) : null}
@@ -450,7 +444,7 @@ function BulkRevokeDialog({
             Dry-Run
           </Button>
           <Button
-            className="bg-amber-600 text-white hover:bg-amber-700"
+            variant="destructive"
             onClick={() => void run("apply")}
             disabled={loading || dryResult === null}
           >

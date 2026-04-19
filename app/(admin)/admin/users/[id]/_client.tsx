@@ -14,6 +14,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
+import { AdminStatusBadge } from "@/components/admin/admin-status-badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -200,7 +201,7 @@ export function UserDetailClient({
       {/* Head */}
       <Card>
         <CardContent className="flex flex-wrap items-start gap-4 pt-6">
-          <div className="grid h-12 w-12 place-items-center rounded-full bg-gradient-to-br from-indigo-500 to-fuchsia-500 text-lg font-bold text-white">
+          <div className="grid h-12 w-12 place-items-center rounded-full bg-foreground text-lg font-bold text-background">
             {user.name?.[0]?.toUpperCase() ?? user.email[0].toUpperCase()}
           </div>
           <div className="min-w-0 flex-1 space-y-0.5">
@@ -227,9 +228,9 @@ export function UserDetailClient({
             </div>
           </div>
           {isSelf ? (
-            <span className="rounded border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-800 dark:text-amber-200">
+            <AdminStatusBadge variant="warning" size="md">
               Du selbst
-            </span>
+            </AdminStatusBadge>
           ) : null}
         </CardContent>
       </Card>
@@ -292,13 +293,13 @@ export function UserDetailClient({
               </div>
             </div>
             {user.emailVerified ? (
-              <span className="rounded border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-300">
+              <AdminStatusBadge variant="success" size="md">
                 ✓ verifiziert
-              </span>
+              </AdminStatusBadge>
             ) : (
-              <span className="rounded border bg-muted/40 px-2 py-0.5 text-[10px] text-muted-foreground">
+              <AdminStatusBadge variant="neutral" size="md">
                 unverifiziert
-              </span>
+              </AdminStatusBadge>
             )}
           </div>
           <ToggleRow
@@ -395,19 +396,13 @@ export function UserDetailClient({
                         {t.tokenPrefix}…
                       </code>
                       {t.scopeType === "team" ? (
-                        <span className="rounded border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] text-emerald-700 dark:text-emerald-300">
-                          team-wide
-                        </span>
+                        <AdminStatusBadge variant="success">team-wide</AdminStatusBadge>
                       ) : null}
                       {t.readOnly ? (
-                        <span className="rounded border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-700 dark:text-amber-300">
-                          read-only
-                        </span>
+                        <AdminStatusBadge variant="warning">read-only</AdminStatusBadge>
                       ) : null}
                       {t.revokedAt ? (
-                        <span className="rounded border border-red-500/30 bg-red-500/10 px-1.5 py-0.5 text-[10px] text-red-700 dark:text-red-300">
-                          revoked
-                        </span>
+                        <AdminStatusBadge variant="danger">revoked</AdminStatusBadge>
                       ) : null}
                     </div>
                     <div className="text-xs text-muted-foreground">
