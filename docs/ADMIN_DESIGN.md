@@ -1,6 +1,6 @@
-# Admin-Design (Draft)
+# Admin-Design
 
-**Stand:** Draft nach Schritt-1-Audit, vor Freigabe.
+**Stand:** Admin-Redesign abgeschlossen — Layout + Sidebar + alle Pages auf dem neuen Design-System, `.font-display` final entfernt.
 **Scope:** `app/(admin)/*` — alle Pages, Layout, Sidebar, Charts.
 **Basis:** `docs/DESIGN_SYSTEM.md` — gleiche Tokens, gleiche Fonts, gleiche Radius-Stufen. Dieses Dokument beschreibt, **was im Admin anders ist** und warum.
 
@@ -23,7 +23,7 @@ Alles aus `docs/DESIGN_SYSTEM.md` → Anti-Patterns gilt 1:1 auch im Admin:
 
 - Keine Serif, keine Italic-Akzente
 - Keine Pastell-Gradient-Flächen
-- Keine `font-display`-Klasse (wird am Ende dieser Session final entfernt)
+- Keine `font-display`-Klasse (nach dem Redesign vollständig entfernt)
 - Keine literarischen Page-Headings
 
 Admin-Page-H1s sind kleiner als User-Page-H1s (`text-lg sm:text-xl`, nicht `text-2xl sm:text-3xl lg:text-4xl`), weil im Admin die Navigation/Breadcrumbs oben einen Teil des Visual-Hierarchy-Gewichts tragen und der Content unten wichtiger ist als die Überschrift.
@@ -257,32 +257,22 @@ Neutrale Border, `--brand`-Tint nur im Icon. Der Admin-Disclaimer-Text rechts (�
 
 ---
 
-## Migrations-Reihenfolge (Ausblick auf Schritt 2 + 3)
+## Migrations-Historie
 
-**Schritt 2 (nach Freigabe):**
-1. `components/admin/*` anlegen: AdminPageHeader, AdminStatusBadge, AdminActionBadge, AdminTable + Subs, AdminKpiTile, AdminHealthTile
-2. Admin-Layout + Sidebar refactor
-3. Admin-Home umbauen
-4. Screenshots in beiden Themes liefern für visuelles Feedback
+Das Redesign ist in drei Schritten durchgelaufen:
 
-**Schritt 3 (durchlaufend):**
-1. Users-Page, Users-Detail
-2. Accounts-Page, Accounts-Detail
-3. Invoices-Page, Invoices-Detail
-4. Tokens-Page
-5. Audit-Viewer, Audit-Detail
-6. System-Health
-7. Stats-Sub-Pages (users/accounts/revenue/storage) — Charts bleiben visuell unangefasst, aber Page-Headers und KPI-Tiles oben drauf werden auf neue Komponenten umgestellt
-8. Team-Invoice-Wizard (bleibt 5-Step, visuell aufräumen)
-9. **`font-display` final entfernen** — alle 12 Admin-Call-Sites sind zu dem Zeitpunkt schon über `<AdminPageHeader>` gelaufen. Plus ein bekannter Call-Site in `app/(legal)/layout.tsx` (User-Scope, Prose-Wrapper) — der muss beim Class-Remove mitgezogen werden, sonst breakt das Legal-Layout.
-10. Audit-Run + Typecheck + Lint + visuelle 4-State-Stichprobe
-11. Commits + Push
+1. **Schritt 1** — Audit + Draft dieses Doku-Artefakts + Komponenten-Liste (keine Code-Changes).
+2. **Schritt 2** — Komponenten-Shells (AdminPageHeader, AdminStatusBadge, AdminActionBadge, AdminTable + Subs, AdminKpiTile, AdminHealthTile), Admin-Layout + Sidebar-Refactor, Admin-Home als Referenz-Page. Freigabe-Screenshots in beiden Themes.
+3. **Schritt 3** — Durchlauf: alle restlichen Admin-Pages auf die neuen Komponenten migriert (Users/Accounts/Invoices/Tokens/Audit/System + Stats × 4 + Billing-Wizard). `font-display` final aus `globals.css` entfernt (inklusive User-Scope-Rider in `app/(legal)/layout.tsx`). Doku-Pass.
 
----
+## Entscheidungen, die Schritt 2 geprägt haben
 
-## Offene Punkte zur Klärung (vor Freigabe Schritt 2)
+- **Brand-Accent-Linie an der Sidebar** bleibt (2 px `bg-brand/40` am linken Rand). Das ist das einzige Farb-Signal, das die Backoffice-Oberfläche visuell von den User-Scope-Routes abhebt.
+- **Nav-Active-State** nutzt `bg-foreground/10 text-foreground font-medium`. `bg-muted` war gegen den ohnehin leicht getönten Sidebar-Hintergrund (`bg-muted/30`) zu wenig kontrastreich.
+- **`<AdminTable>` als Shell** — kein Generic-DataTable mit Column-Definitions. Rows bleiben pro Explorer inline, weil komplexe JSX (verschachtelte Badges, Inline-Toggles, Action-Buttons) in einem Column-API entweder zu flexibel oder zu restriktiv würde. Falls eines Tages eine TanStack-Table-Variante gebraucht wird, ist das ein eigener Epic.
+- **Kein forced Dark-Default im Admin** — OS-Präferenz wird respektiert. Der `ThemeToggle` bleibt auch im Admin-Sidebar-Footer erreichbar.
+- **Amber als Status-Variante behalten** (`<AdminStatusBadge variant="warning">`), aber **komplett raus als Layout-Farbe** (Sidebar, Active-States, Borders). Amber ist jetzt ausschließlich semantisches Warn-Signal.
 
-1. **Brand-Accent-Linie an der Sidebar**: zustimmen oder verwerfen? Alternative: ganz neutrale Sidebar ohne Accent-Linie, nur über die Admin-Badge oben im Layout-Header signalisiert.
-2. **`<AdminTable>` als Shell vs. volles Generic-DataTable**: ich plane nur die Shell (siehe oben). Wenn du später einen Column-Definition-DataTable willst (à la TanStack Table), ist das ein eigener Epic.
-3. **Amber-Status-Farbe bei Warning**: bleibt als eine der Status-Varianten (funktional). Nur das Layout-Amber wird vollständig entfernt.
-4. **Legal-Layout-Rider**: der `.font-display`-Call-Site in `app/(legal)/layout.tsx` wird beim Class-Remove mitgezogen (1 Call-Site, minimal invasiv). Okay?
+## Chart-Palette
+
+Die `--chart-1` bis `--chart-5`-Tokens bleiben bunt (Indigo/Fuchsia/Amber/Emerald/Cyan) und werden ausschließlich in BI-Charts benutzt. Die Chart-Wrapper-Komponenten in `app/(admin)/_charts/` sind visuell unangefasst geblieben — funktional genug, keine Rechtfertigung für einen Umstyling-Aufwand.

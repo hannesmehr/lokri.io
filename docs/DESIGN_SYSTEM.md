@@ -58,9 +58,9 @@ Tailwind-Nutzung:
 
 ### Legacy: `.font-display`
 
-Im User-Scope wird `.font-display` nicht mehr verwendet. Die Klasse bleibt aktuell nur noch als Back-compat-Layer für den Admin-Scope in `app/globals.css`, bis das Admin-Redesign separat durchgezogen wird.
+Die Klasse wurde nach dem Admin-Redesign vollständig entfernt (keine Call-Sites mehr im Repo, keine Definition mehr in `app/globals.css`). Alle Page-Headings laufen jetzt über `font-semibold tracking-tight` bzw. im Admin über `<AdminPageHeader>`. Historischer Kontext:
 
-**Neuen Code:** Nicht mehr auf `.font-display` verlassen — stattdessen `font-semibold tracking-tight` nutzen.
+> Phase 0 hatte Instrument Serif als `.font-display`-Font gesetzt (editorial headings). Phase 1 hat die Klasse intern auf Sans + tight tracking umgebogen, damit die ~37 Call-Sites über die Übergangszeit nicht einzeln angefasst werden mussten. Nach dem Admin-Redesign sind alle Call-Sites auf direkte Tailwind-Klassen bzw. `<AdminPageHeader>` migriert; die Klasse braucht nicht mehr zu existieren.
 
 ---
 
