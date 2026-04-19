@@ -271,7 +271,7 @@ Gruppierung pro Route-Familie. Zahlen sind echte Grep-Treffer, nicht geschätzt.
 | `billing.plans.features.*` | Plan-Namen + Preise | Feature-Listen je Tier (~20 Keys) — alternativ aus `plans`-DB |
 | `billing.invoices.*` | — | Empty-State, Status-Badges, Download-Label (~4 Keys) |
 | `errors.api.session.*` | ✅ angelegt | `accountDisabled`, `sessionExpired`, `invalidCredentials` |
-| `errors.api.team.*` | Teilweise | `createDisabled` wird als Fallback bereits genutzt; Legacy-Code-Harmonisierung folgt im UI-Rollout |
+| `errors.api.team.*` | ✅ angelegt | `createDisabled` + alle Team-Codes; Legacy-`CREATE_DISABLED`-String repoweit entfernt, Route + AccountSwitcher nutzen den dotted Code `team.createDisabled` |
 | `errors.api.storageProvider.*` | ✅ angelegt | `notFound`, `invalidType`, `missingCredentials`, `connectionFailed`, `inUse`, `github.*` |
 | `errors.github.*` | — | Provider-spezifische Error-Messages aus `lib/storage/github.ts` (~4 Keys) |
 | `profile.*` | Komplett | Mini-Gap: Locale-Switcher-Optionen („Deutsch" / „English") hart kodiert statt aus `enums.locale.*` |
