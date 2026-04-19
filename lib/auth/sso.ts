@@ -101,18 +101,28 @@ export async function isUserTeamMember(
 }
 
 /**
- * Fallback-Admin-Check: Hat das Team mindestens einen Owner oder
- * Admin, der nicht auf SSO angewiesen ist (also einen Credential-
- * Account in Better-Auth mit Passwort)?
+ * Fallback-Admin-Status: wie viele Owner/Admin-Member hat das Team,
+ * und wie viele davon haben einen Credential-Login (Email/Passwort),
+ * also können auch ohne SSO rein?
  *
- * Phase 1 nutzt die Funktion nur für Tests + Logs + CLI-Guards. In
- * Phase 2 wird sie vom Admin-UI aufgerufen, bevor `enabled=true`
- * gesetzt werden darf.
+ * Die drei Werte:
+ *   - `adminCount`: alle Owner + Admins des Teams
+ *   - `nonSsoAdminCount`: Teilmenge davon mit Credential-Account
+ *   - `hasAnyNonSsoAdmin`: boolean, `nonSsoAdminCount > 0`
+ *
+ * UI (Phase 2) zeigt Warnungen:
+ *   - `hasAnyNonSsoAdmin === false` + User will Enable → harter Block
+ *     (`sso.noFallbackAdmin` 409)
+ *   - `nonSsoAdminCount === 1` → nicht-blockierender Hinweis
+ *     („letzter Fallback, Vorsicht bei Sperrung")
  */
-export async function hasFallbackAdmin(
+export async function getFallbackAdminStatus(
   ownerAccountId: string,
-): Promise<boolean> {
-  const memberRoles = ["owner", "admin"] as const;
+): Promise<{
+  hasAnyNonSsoAdmin: boolean;
+  adminCount: number;
+  nonSsoAdminCount: number;
+}> {
   const members = await db
     .select({ userId: ownerAccountMembers.userId })
     .from(ownerAccountMembers)
@@ -120,15 +130,18 @@ export async function hasFallbackAdmin(
       and(
         eq(ownerAccountMembers.ownerAccountId, ownerAccountId),
         or(
-          eq(ownerAccountMembers.role, memberRoles[0]),
-          eq(ownerAccountMembers.role, memberRoles[1]),
+          eq(ownerAccountMembers.role, "owner"),
+          eq(ownerAccountMembers.role, "admin"),
         ),
       ),
     );
-  if (members.length === 0) return false;
+  const adminCount = members.length;
+  if (adminCount === 0) {
+    return { hasAnyNonSsoAdmin: false, adminCount: 0, nonSsoAdminCount: 0 };
+  }
   const userIds = members.map((m) => m.userId);
-  const candidates = await db
-    .select({ userId: authAccounts.userId })
+  const credentialed = await db
+    .selectDistinct({ userId: authAccounts.userId })
     .from(authAccounts)
     .where(
       and(
@@ -136,7 +149,23 @@ export async function hasFallbackAdmin(
         eq(authAccounts.providerId, "credential"),
       ),
     );
-  return candidates.length > 0;
+  const nonSsoAdminCount = credentialed.length;
+  return {
+    hasAnyNonSsoAdmin: nonSsoAdminCount > 0,
+    adminCount,
+    nonSsoAdminCount,
+  };
+}
+
+/**
+ * Dünner Wrapper um `getFallbackAdminStatus` für Call-Sites, die
+ * nur das Boolean brauchen (CLI-Guard, simple Checks).
+ */
+export async function hasFallbackAdmin(
+  ownerAccountId: string,
+): Promise<boolean> {
+  const status = await getFallbackAdminStatus(ownerAccountId);
+  return status.hasAnyNonSsoAdmin;
 }
 
 // ---------------------------------------------------------------------------
