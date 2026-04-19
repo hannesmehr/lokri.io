@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SsoSection } from "./_sso-section";
 
 interface PlanOption {
   id: string;
@@ -134,6 +135,9 @@ export function AccountDetailClient({
         onMutated={() => void mutate()}
       />
       <MembersCard members={data.members} accountType={data.account.type} />
+      {data.account.type === "team" ? (
+        <SsoSection accountId={accountId} />
+      ) : null}
       <TokensCard tokens={data.tokens} />
       <InvoicesCard invoices={data.invoices} />
     </div>
