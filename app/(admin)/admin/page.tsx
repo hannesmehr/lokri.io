@@ -1,16 +1,10 @@
-import { Breadcrumbs } from "../_breadcrumbs";
 import { AdminDashboardHome } from "./_home";
 
 /**
- * Admin-Dashboard-Home (Part 2). KPIs + Charts werden client-seitig
- * über die Stats-APIs geladen — der Server liefert nur den Breadcrumb-
- * Rahmen.
+ * Admin-Dashboard-Home. KPIs + Charts werden client-seitig über die
+ * Stats-APIs geladen; der Server rendert nur den Einstieg. Breadcrumbs
+ * + Page-Header liegen im Client-Island (`<AdminPageHeader>`).
  */
 export default function AdminHomePage() {
-  return (
-    <div className="space-y-6">
-      <Breadcrumbs items={[{ label: "Dashboard" }]} />
-      <AdminDashboardHome />
-    </div>
-  );
+  return <AdminDashboardHome />;
 }

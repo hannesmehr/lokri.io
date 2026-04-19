@@ -8,6 +8,7 @@ import {
   Menu,
   Receipt,
   ScrollText,
+  ShieldCheck,
   Users,
   Wallet,
 } from "lucide-react";
@@ -25,16 +26,22 @@ import {
 import { cn } from "@/lib/utils";
 
 /**
- * Admin-Sidebar. Sitzt auf Desktop (lg+) links, 220px breit, eigene
- * Farbwelt (Amber-Tint auf dem aktiven Eintrag) — damit beim Tab-
- * Switch sofort klar ist, dass man im Backoffice ist.
+ * Admin-Sidebar — post-Redesign.
  *
- * Auf < lg wird die Sidebar zum Sheet-Drawer. Der Hamburger-Trigger
- * sitzt im Admin-Layout-Header und ist als separater Export
- * `AdminMobileNavTrigger` nutzbar.
+ * Auf Desktop (lg+) sitzt sie sticky links, 224 px breit. Auf < lg wird
+ * sie zum Sheet-Drawer via `<AdminMobileNavTrigger>`. Der
+ * Backoffice-Charakter wird durch:
  *
- * Reihenfolge der Items: Dashboard → Users → Accounts → Rechnungen →
- * Tokens → Audit → System.
+ *   1. eine 2-px breite Brand-Accent-Linie am linken Sidebar-Rand
+ *      (`bg-brand/40`) signalisiert — dezent, aber peripher sichtbar
+ *   2. einen `<ShieldCheck>`-Icon mit `text-brand` im Sidebar-Header
+ *
+ * kommuniziert. Die frühere Amber-Tint-Fläche ist komplett entfernt;
+ * Active-/Hover-States folgen den neutralen Admin-Tokens (`bg-muted`
+ * auf active, `bg-muted/60` auf hover). Siehe `docs/ADMIN_DESIGN.md`.
+ *
+ * Reihenfolge: Dashboard → Users → Accounts → Rechnungen → Tokens →
+ * Audit → System.
  */
 
 const ITEMS: Array<{
@@ -54,7 +61,8 @@ const ITEMS: Array<{
 /** Desktop-Sidebar. Nur auf lg+ sichtbar. */
 export function AdminSidebar() {
   return (
-    <aside className="sticky top-0 hidden h-screen w-56 shrink-0 flex-col border-r border-amber-500/20 bg-amber-50/40 lg:flex dark:bg-amber-950/10">
+    <aside className="sticky top-0 hidden h-screen w-56 shrink-0 flex-col border-r bg-muted/30 lg:flex relative">
+      <BrandAccentLine />
       <AdminNavHeader />
       <AdminNavList />
       <AdminNavFooter />
@@ -80,11 +88,12 @@ export function AdminMobileNavTrigger() {
       />
       <SheetContent
         side="left"
-        className="flex w-[260px] flex-col border-r-amber-500/20 bg-amber-50/90 p-0 backdrop-blur-md dark:bg-amber-950/40 sm:max-w-xs"
+        className="flex w-[260px] flex-col bg-muted/40 p-0 sm:max-w-xs"
       >
-        <SheetHeader className="border-b border-amber-500/20 p-4">
+        <BrandAccentLine />
+        <SheetHeader className="border-b p-4">
           <SheetTitle className="flex items-center gap-2 text-sm font-semibold">
-            <FileText className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            <ShieldCheck className="h-4 w-4 text-brand" />
             Backoffice
           </SheetTitle>
         </SheetHeader>
@@ -97,10 +106,24 @@ export function AdminMobileNavTrigger() {
 
 /* ── Shared Sub-Komponenten ────────────────────────────────────────── */
 
+/**
+ * 2-px Brand-Accent-Linie am linken Sidebar-Rand. Läuft über die
+ * gesamte Sidebar-Höhe, `pointer-events-none`, aria-hidden. Der
+ * einzige verbleibende „du bist im Backoffice"-Farb-Indikator.
+ */
+function BrandAccentLine() {
+  return (
+    <span
+      aria-hidden
+      className="pointer-events-none absolute inset-y-0 left-0 w-[2px] bg-brand/40"
+    />
+  );
+}
+
 function AdminNavHeader() {
   return (
-    <div className="flex items-center gap-2 border-b border-amber-500/20 px-4 py-4">
-      <FileText className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+    <div className="flex items-center gap-2 border-b px-4 py-4">
+      <ShieldCheck className="h-4 w-4 text-brand" />
       <div className="text-sm font-semibold tracking-tight">Backoffice</div>
     </div>
   );
@@ -123,8 +146,8 @@ function AdminNavList({ onNavigate }: { onNavigate?: () => void }) {
             className={cn(
               "flex min-h-10 items-center gap-2 rounded-md px-3 text-sm transition-colors",
               active
-                ? "bg-amber-500/15 text-amber-900 dark:text-amber-100"
-                : "text-muted-foreground hover:bg-amber-500/10 hover:text-foreground",
+                ? "bg-foreground/10 font-medium text-foreground"
+                : "text-muted-foreground hover:bg-foreground/5 hover:text-foreground",
             )}
           >
             {item.icon}
@@ -139,10 +162,10 @@ function AdminNavList({ onNavigate }: { onNavigate?: () => void }) {
 function AdminNavFooter() {
   return (
     <>
-      <div className="border-t border-amber-500/20 px-2 py-2">
+      <div className="border-t px-2 py-2">
         <ThemeToggle variant="full" />
       </div>
-      <div className="border-t border-amber-500/20 px-4 py-3 text-[11px] text-muted-foreground">
+      <div className="border-t px-4 py-3 text-[11px] text-muted-foreground">
         Nur für lokri-Admins. Aktionen werden im Audit-Log erfasst.
       </div>
     </>

@@ -4,12 +4,10 @@ import {
   Database,
   Loader2,
   RefreshCw,
-  TrendingDown,
   TrendingUp,
   Users,
   Wallet,
 } from "lucide-react";
-import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 import useSWR from "swr";
@@ -27,6 +25,8 @@ import {
   formatShortDay,
   formatShortMonth,
 } from "../_charts/formatters";
+import { AdminKpiTile } from "@/components/admin/admin-kpi-tile";
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -106,38 +106,33 @@ export function AdminDashboardHome() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="font-display text-4xl leading-tight">
-            Admin-Dashboard
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            KPIs + Charts auf Basis der aktuellen Datenbank. Zahlen werden
-            60 Sekunden pro Prozess gecatcht — manueller Refresh invalidated
-            den Cache.
-          </p>
-        </div>
-        <div className="flex flex-col items-end gap-1 text-right">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => void fullRefresh()}
-            disabled={refreshing || isLoading}
-          >
-            {refreshing ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <RefreshCw className="h-3.5 w-3.5" />
-            )}
-            Aktualisieren
-          </Button>
-          {data ? (
-            <div className="text-[10px] text-muted-foreground">
-              Stand: {formatRelative(data.fetchedAt)}
-            </div>
-          ) : null}
-        </div>
-      </div>
+      <AdminPageHeader
+        breadcrumbs={[{ label: "Dashboard" }]}
+        title="Admin-Dashboard"
+        description="KPIs + Charts auf Basis der aktuellen Datenbank. Zahlen werden 60 Sekunden pro Prozess gecatcht — manueller Refresh invalidated den Cache."
+        actions={
+          <div className="flex flex-col items-end gap-1 text-right">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => void fullRefresh()}
+              disabled={refreshing || isLoading}
+            >
+              {refreshing ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3.5 w-3.5" />
+              )}
+              Aktualisieren
+            </Button>
+            {data ? (
+              <div className="text-[10px] text-muted-foreground">
+                Stand: {formatRelative(data.fetchedAt)}
+              </div>
+            ) : null}
+          </div>
+        }
+      />
 
       {error ? (
         <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
@@ -176,7 +171,7 @@ function KpiGrid({
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <KpiTile
+      <AdminKpiTile
         href="/admin/stats/users"
         icon={<Users className="h-4 w-4" />}
         label="User gesamt"
@@ -187,7 +182,7 @@ function KpiGrid({
         }
         loading={loading}
       />
-      <KpiTile
+      <AdminKpiTile
         href="/admin/stats/accounts"
         icon={<Wallet className="h-4 w-4" />}
         label="Team-Accounts"
@@ -199,7 +194,7 @@ function KpiGrid({
         }
         loading={loading}
       />
-      <KpiTile
+      <AdminKpiTile
         href="/admin/stats/revenue"
         icon={<TrendingUp className="h-4 w-4" />}
         label="MRR"
@@ -214,7 +209,7 @@ function KpiGrid({
         }
         loading={loading}
       />
-      <KpiTile
+      <AdminKpiTile
         href="/admin/stats/storage"
         icon={<Database className="h-4 w-4" />}
         label="Storage belegt"
@@ -227,62 +222,6 @@ function KpiGrid({
         loading={loading}
       />
     </div>
-  );
-}
-
-function KpiTile({
-  href,
-  icon,
-  label,
-  value,
-  delta,
-  deltaDirection,
-  loading,
-}: {
-  href: string;
-  icon: React.ReactNode;
-  label: string;
-  value: string | null;
-  delta?: string;
-  deltaDirection?: "up" | "down" | "flat";
-  loading: boolean;
-}) {
-  const deltaColor =
-    deltaDirection === "up"
-      ? "text-emerald-600 dark:text-emerald-400"
-      : deltaDirection === "down"
-        ? "text-red-600 dark:text-red-400"
-        : "text-muted-foreground";
-
-  return (
-    <Link
-      href={href}
-      className="group block rounded-lg border bg-card p-4 transition-colors hover:border-amber-500/40 hover:bg-amber-500/5"
-    >
-      <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        {icon}
-        {label}
-      </div>
-      <div className="mt-2 text-3xl font-semibold tabular-nums">
-        {loading ? (
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        ) : value == null ? (
-          "—"
-        ) : (
-          value
-        )}
-      </div>
-      {delta ? (
-        <div className={`mt-1 inline-flex items-center gap-1 text-xs ${deltaColor}`}>
-          {deltaDirection === "up" ? (
-            <TrendingUp className="h-3 w-3" />
-          ) : deltaDirection === "down" ? (
-            <TrendingDown className="h-3 w-3" />
-          ) : null}
-          {delta}
-        </div>
-      ) : null}
-    </Link>
   );
 }
 

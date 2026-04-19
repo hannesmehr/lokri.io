@@ -33,15 +33,15 @@ export default async function AdminLayout({
   }
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-background via-background to-amber-50/30 dark:to-amber-950/10">
+    <div className="flex min-h-screen bg-background">
       <AdminSidebar />
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-20 border-b border-amber-500/20 bg-background/90 backdrop-blur-md">
+        <header className="sticky top-0 z-20 border-b bg-background/90 backdrop-blur-md">
           <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-3 sm:gap-4 sm:px-6">
             <div className="flex min-w-0 items-center gap-2 text-xs">
               <AdminMobileNavTrigger />
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 font-medium text-amber-800 dark:text-amber-200">
-                <ShieldCheck className="h-3 w-3" />
+              <span className="inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 font-medium text-foreground">
+                <ShieldCheck className="h-3 w-3 text-brand" />
                 Admin-Modus
               </span>
               <span className="hidden text-muted-foreground sm:inline">
