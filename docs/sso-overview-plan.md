@@ -72,24 +72,33 @@ Entsprechende Check-Logik in UI + Backend.
 
 ## Phasierung
 
-### Phase 1: Fundament (Backend + Datenmodell + Auth-Flow)
+### Phase 1 ✅: Fundament (Backend + Datenmodell + Auth-Flow)
 
 **Ziel:** SSO funktioniert technisch für einen Test-Team, per CLI oder
 direktem DB-Eintrag konfiguriert. Keine UI.
 
-- **Block 1:** DB-Schema (`team_sso_configs`, `user_sso_identities`) +
-  Migration — ✅ erledigt, Commit `ecd20b2`
-- **Block 2:** Better-Auth-Integration mit Entra ID als Social Provider
-  — ✅ erledigt, Commit folgt
-- **Block 3:** SSO-Discovery-Endpoint, Callback-Wrapper mit Team-
-  Account-Verhandlung, JIT-Linking, Fallback-Admin-Check, Dev-CLI
-- **Block 4:** Doku + Cleanup + Push
+- **Block 1 ✅:** DB-Schema (`team_sso_configs`, `user_sso_identities`) +
+  Migration `0018_sleepy_karnak.sql`
+- **Block 2 ✅:** Better-Auth-Integration mit Entra ID als Social Provider
+- **Block 3 ✅:** SSO-Discovery-Endpoint, Callback-Wrapper mit Team-
+  Account-Verhandlung, JIT-Linking, Fallback-Admin-Check, Dev-CLI,
+  24 Contract-Tests
+- **Block 4 ✅:** Doku + Cleanup + Push
 
-### Phase 2: Admin-UI zur Team-SSO-Konfiguration
+### Phase 2 🔄: Admin-UI zur Team-SSO-Konfiguration
 
-Im Super-Admin-Bereich (`/admin/accounts/[id]`): Section „SSO-
-Konfiguration". Entra-Tenant-ID Input, Allowed-Domains-Input,
-Enable/Disable-Toggle, Verbindungs-Test-Button, Status-Anzeige.
+**In Arbeit.** Im Super-Admin-Bereich (`/admin/accounts/[id]`) bekommt
+jeder Team-Account eine Section „Team-SSO". Erfasst:
+
+- `GET /api/admin/accounts/[id]/sso` — Config + Fallback-Admin-Status
+- `PUT /api/admin/accounts/[id]/sso` — Upsert mit Fallback-Admin-Guard
+- `POST /api/admin/accounts/[id]/sso/verify` — Entra-Discovery-Test
+- `DELETE /api/admin/accounts/[id]/sso` — Config entfernen
+- UI-Formular mit Tenant-ID, Allowed-Domains (Multi-Tag-Input),
+  Enable-Toggle, Verbindungs-Test-Button, Status-Footer
+
+Der Dev-CLI-Shortcut `scripts/enable-sso-for-team.ts` bleibt für
+Scripted-Tests und Recovery-Szenarien im Repo.
 
 ### Phase 3: Team-Owner-Self-Service + UX-Polish
 

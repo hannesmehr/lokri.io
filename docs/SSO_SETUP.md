@@ -1,28 +1,74 @@
 # SSO-Setup — Microsoft Entra ID
 
-**Stand:** Phase 1, Block 2 (Better-Auth-Integration) — Fundament ist
-gelegt, die Team-Account-Verhandlung und JIT-Linking folgen in Block 3.
-Diese Doku wird pro Phase erweitert.
+**Stand:** Phase 1 abgeschlossen (Blocks 1–4). Phase 2 (Admin-UI zur
+Team-SSO-Konfiguration) ist in Arbeit — siehe „Was Phase 2 ergänzt"
+unten.
 
 ## Überblick
 
 lokri.io unterstützt SSO für **Team-Accounts** über Microsoft Entra ID
-(OIDC). Der Flow:
+(OIDC). Personal-Accounts bleiben auf Email/Passwort. SSO ist strikt
+Team-Eigenschaft, kein User-Flag — ein User kann simultan per Passwort
+in seinen Personal-Account und per Entra in Team X eingeloggt sein.
+
+### Login-Round-Trip (ASCII)
 
 ```
-User tippt Email auf /login
-  └─ Discovery (Block 3): "Gehört die Domain zu einem SSO-Team?"
-       └─ Ja → Redirect zu Entra-Login
-             └─ Callback mit ID-Token
-                   └─ Tenant-ID validieren (tid-Claim gegen team_sso_configs)
-                   └─ User-Lookup per Email
-                   └─ JIT-Link oder last_login aktualisieren
-                   └─ Better-Auth-Session setzen
-       └─ Nein → normaler Email/Passwort-Flow
+╔══════════════╗                                         ╔══════════════╗
+║   Browser    ║                                         ║   lokri.io   ║
+╚══════╤═══════╝                                         ╚══════╤═══════╝
+       │                                                        │
+       │  1. GET /api/auth/sso-discovery?email=u@firma.de        │
+       ├───────────────────────────────────────────────────────▶│
+       │                                                        │
+       │  2. { ssoEnabled: true, signInUrl: ".../sso/sign-in" }  │
+       │◀───────────────────────────────────────────────────────┤
+       │                                                        │
+       │  3. Browser navigiert zur signInUrl                     │
+       ├───────────────────────────────────────────────────────▶│
+       │                                                        │
+       │                 ┌──────────────────────────────────────┤
+       │                 │ 3a. Load team_sso_configs            │
+       │                 │ 3b. Generate state + codeVerifier +  │
+       │                 │     nonce; persist in verifications  │
+       │                 │ 3c. Build Entra authorization URL    │
+       │                 └──────────────────────────────────────┤
+       │                                                        │
+       │   4. 302 Redirect to login.microsoftonline.com/common  │
+       │◀───────────────────────────────────────────────────────┤
+       │                                                        │
+       │                   ╔═══════════════════╗                │
+       │  5. Entra login   ║  Microsoft Entra  ║                │
+       ├──────────────────▶║                   ║                │
+       │  6. Entra Callback║                   ║                │
+       │◀──────────────────╚═══════════════════╝                │
+       │                                                        │
+       │  7. GET /api/auth/sso/callback?state=...&code=...       │
+       ├───────────────────────────────────────────────────────▶│
+       │                                                        │
+       │                 ┌──────────────────────────────────────┤
+       │                 │ 7a. Consume state → payload          │
+       │                 │ 7b. Token-Exchange (code → tokens)    │
+       │                 │ 7c. verifyIdToken(signature)          │
+       │                 │ 7d. Extract claims (tid, oid, email) │
+       │                 │ 7e. validate tenant + domain +       │
+       │                 │     enabled → reject on mismatch     │
+       │                 │ 7f. Lookup user by email             │
+       │                 │     → reject if not invited          │
+       │                 │ 7g. Team-membership check            │
+       │                 │     → reject if not member           │
+       │                 │ 7h. Upsert user_sso_identities        │
+       │                 │ 7i. auth.api.signInSocial with       │
+       │                 │     pre-validated idToken            │
+       │                 │     → session cookie is set          │
+       │                 │ 7j. Audit log login.sso.entra         │
+       │                 └──────────────────────────────────────┤
+       │                                                        │
+       │  8. 302 Redirect to /  (Set-Cookie: session_token)      │
+       │◀───────────────────────────────────────────────────────┤
+       │                                                        │
+       ▼                                                        ▼
 ```
-
-Personal-Accounts bleiben auf Email/Passwort. SSO ist strikt
-Team-Eigenschaft, kein User-Flag.
 
 ## Entra-App-Registrierung (einmalig, pro Umgebung)
 
@@ -34,7 +80,7 @@ damit Kunden aus beliebigen Entra-Tenants zugreifen können.
    **New registration**
 2. **Name:** `lokri.io (Dev)` für die lokale Umgebung, `lokri.io` für
    Prod
-3. **Supported account types:** "Accounts in any organizational
+3. **Supported account types:** „Accounts in any organizational
    directory (Any Microsoft Entra ID tenant - Multitenant)"
 4. **Redirect URI** (Platform: **Web**):
    - Dev: `http://localhost:3000/api/auth/callback/microsoft`
@@ -44,7 +90,7 @@ damit Kunden aus beliebigen Entra-Tenants zugreifen können.
    `ENTRA_CLIENT_ID`
 7. **Certificates & secrets** → **Client secrets** → **New client
    secret**:
-   - Description: "lokri.io auth" (o.ä.)
+   - Description: „lokri.io auth" (o.ä.)
    - Expires: 24 Monate (Standard)
    - **Nach dem Anlegen:** Den **Value** (nicht die Secret ID!)
      kopieren → `ENTRA_CLIENT_SECRET`
@@ -66,8 +112,7 @@ ENTRA_CLIENT_SECRET="abcDEF..."
 **Wenn beide leer sind:** Der Provider wird zur Laufzeit nicht
 registriert, der App-Boot läuft unverändert und Teams ohne SSO-Config
 loggen sich via Email/Passwort ein. In Production wird eine Warning
-geloggt, damit man nicht versehentlich ohne SSO deployed. Dev-Bootstraps
-ohne Entra sind stumm.
+geloggt. Dev-Bootstraps ohne Entra sind stumm.
 
 ## Architektur-Notes
 
@@ -75,11 +120,19 @@ ohne Entra sind stumm.
   (nicht `entra`), daher auch die Redirect-URI
   `/api/auth/callback/microsoft`. Die SSO-Config-Tabelle heisst aus
   Produkt-Gründen `team_sso_configs` mit `provider = "entra"` — das
-  ist das User-Facing-Naming. Das Mapping ist 1:1 in Block 3 verdrahtet.
+  ist das User-Facing-Naming. Das Mapping ist 1:1 in der Callback-
+  Route verdrahtet.
 - **Tenant-Mode `common`:** lokri's Entra-App akzeptiert Tokens aus
-  allen Tenants. Die Zugriffskontrolle passiert dann in unserem
-  Callback-Wrapper durch Validierung des `tid`-Claims gegen
-  `team_sso_configs.tenant_id` — siehe Block 3.
+  allen Tenants. Die Zugriffskontrolle passiert im Callback-Wrapper
+  durch Validierung des `tid`-Claims gegen
+  `team_sso_configs.tenant_id`.
+- **Eigener Callback-Pfad:** Wir nutzen `/api/auth/sso/callback`, nicht
+  Better-Auth's Standard `/api/auth/callback/microsoft`. Grund: wir
+  brauchen den Team-Kontext (`ownerAccountId`) zur Tenant-Validation,
+  für den Better-Auth's Standard-Flow keinen Slot vorsieht. Unser
+  Callback ruft Better-Auth's Provider-Methoden (`validateAuthorizationCode`,
+  `verifyIdToken`) direkt auf und fütterte den vor-validierten
+  ID-Token in `auth.api.signInSocial({ idToken })`.
 - **Scopes:** `openid`, `profile`, `email`. Keine Directory-Scopes
   (`User.Read.All` etc.) — lokri braucht nur Authentifizierung, keinen
   Graph-Zugriff.
@@ -87,51 +140,123 @@ ohne Entra sind stumm.
   Claim-Extraktion verworfen. Nur `user_sso_identities.subject`
   (Object-ID) wird persistiert.
 
-## Was in Phase 1 Block 2 drin ist
+## Was Phase 1 abgedeckt hat
 
-- [x] DB-Schema (`team_sso_configs`, `user_sso_identities`) — Block 1
-- [x] Entra-Provider in Better-Auth-Config — opt-in per Env
-- [x] `.env.example`-Dokumentation
-- [ ] Discovery-Endpoint `GET /api/auth/sso-discovery` — Block 3
-- [ ] Callback-Wrapper mit Team-Context + Tenant-Validation — Block 3
-- [ ] JIT-Account-Linking — Block 3
-- [ ] Fallback-Admin-Check-Helper — Block 3
-- [ ] CLI-Script zum Aktivieren eines Test-Teams — Block 3
-- [ ] End-to-End-Test mit echtem Entra-Tenant — Block 3
+- [x] **Block 1 — DB-Schema:** `team_sso_configs`, `user_sso_identities`,
+      Migration `0018_sleepy_karnak.sql`
+- [x] **Block 2 — Better-Auth-Integration:** Microsoft Social-Provider
+      via `@better-auth/core/social-providers`, opt-in per
+      `ENTRA_CLIENT_ID` + `ENTRA_CLIENT_SECRET`
+- [x] **Block 3 — Validation + Callback + JIT:**
+   - `GET /api/auth/sso-discovery?email=…` — email-domain-basiertes
+     Matching gegen aktive Team-Configs
+   - `GET /api/auth/sso/sign-in` — PKCE-State-Generation + Entra-
+     Redirect, State liegt in der `verifications`-Tabelle (10 min TTL)
+   - `GET /api/auth/sso/callback` — Token-Exchange, Claim-Validation,
+     JIT-Linking, Session-Erstellung via `auth.api.signInSocial`
+   - `lib/auth/sso-validation.ts` — DB-freie Validierungs-Funktionen
+     (testbar via `tests/sso-validation.test.ts`, 24 Contract-Tests)
+   - `lib/auth/sso.ts` — DB-Helpers (findSsoTeamForEmail,
+     isUserTeamMember, hasFallbackAdmin, upsertSsoIdentity)
+   - i18n-Error-Codes `errors.api.sso.*` (DE + EN)
+- [x] **Block 4 — CLI + Doku:** `scripts/enable-sso-for-team.ts` als
+      Dev-Shortcut, Phase-1-Doku abgeschlossen
 
-## Test-Checkliste (Block 2)
+## Was Phase 2 ergänzt
+
+Phase 2 baut das **Admin-UI** zur SSO-Konfiguration, damit
+Super-Admins Teams ohne CLI-Script auf SSO flippen können. Erfasst:
+
+- `GET /api/admin/accounts/[id]/sso` — Config + Fallback-Admin-Status
+- `PUT /api/admin/accounts/[id]/sso` — Upsert mit Fallback-Admin-Guard
+- `POST /api/admin/accounts/[id]/sso/verify` — Entra-Discovery-Check
+- `DELETE /api/admin/accounts/[id]/sso` — Config entfernen
+- UI-Section auf `/admin/accounts/[id]` (nur für Team-Accounts)
+- Erweiterte i18n-Codes für Config-Level-Errors
+
+Der CLI-Shortcut `scripts/enable-sso-for-team.ts` bleibt nach Phase 2
+im Repo — Dev-Only, für Scripted-Tests und Recovery-Szenarien.
+
+## Test-Checkliste (Phase 1)
 
 Nach `pnpm install` + Env-Setup:
 
 - [ ] `pnpm dev` startet ohne Fehler
 - [ ] `curl http://localhost:3000/api/auth/get-session` → `200 OK` mit
       `null`-Body (keine Session)
-- [ ] Ohne `ENTRA_CLIENT_ID` im Env startet die App trotzdem und der
-      Microsoft-Provider ist nicht im `auth.api`-Pfad
-- [ ] Mit gesetzten Env-Vars existiert `/api/auth/sign-in/social`
-      (Better-Auth-Standard-Route) und akzeptiert `provider:
-      "microsoft"` — aber Block-3-Team-Discovery ist nötig, bevor ein
-      User-Flow durchläuft
+- [ ] Ohne `ENTRA_CLIENT_ID` im Env startet die App trotzdem
+- [ ] Test-Team mit Fallback-Admin angelegt
+- [ ] `pnpm tsx --env-file=.env.local scripts/enable-sso-for-team.ts \
+      <team-uuid> <tenant-uuid> <domain>` setzt Config
+- [ ] `GET /api/auth/sso-discovery?email=user@<domain>` → `ssoEnabled: true`
+- [ ] Browser-Flow gegen signInUrl redirectet zu Entra, Callback loggt
+      User ein, Row in `user_sso_identities`, Audit-Event
+      `login.sso.entra` mit `success: true`
 
 ## Troubleshooting
 
-**`AADSTS50011: The redirect URI specified in the request does not
-match…`** — Die Redirect-URI in der Entra-App-Registrierung stimmt
-nicht exakt mit `<BASE_URL>/api/auth/callback/microsoft` überein.
-Scheme + Port beachten.
+### `AADSTS50011: redirect URI mismatch`
 
-**Invalid Client Secret** — Secret-Wert vs. Secret-ID verwechselt,
-oder das Secret ist abgelaufen. Azure-Portal → Certificates & Secrets
-prüfen, ggf. neu anlegen.
+Die Redirect-URI in der Entra-App stimmt nicht mit
+`<BASE_URL>/api/auth/callback/microsoft` überein. Scheme + Port
+beachten — Dev läuft auf `http://localhost:3000`, Prod auf
+`https://lokri.io`.
 
-**Tokens akzeptiert aber User nicht eingeloggt** — in Phase 1 Block 2
-normal: Team-Discovery + JIT-Linking fehlen noch. Wird in Block 3
-verdrahtet.
+### `sso.userNotInvited`
+
+Die Email aus dem Entra-Token hat keinen passenden `users`-Row. lokri
+provisioniert keine User automatisch — der Admin muss sie vorab via
+`/admin/users` anlegen oder das Team muss ein Invite verschicken.
+
+### `sso.notTeamMember`
+
+User existiert, ist aber kein Mitglied des Teams, für das SSO
+konfiguriert ist. In `owner_account_members` fehlt die Row für
+(`user_id`, `owner_account_id`).
+
+### `sso.tenantMismatch`
+
+Der `tid`-Claim im ID-Token passt nicht zur `team_sso_configs.tenant_id`.
+Typisch: User loggt sich mit einem persönlichen Microsoft-Account ein
+statt mit dem Firmen-Account. Oder die Tenant-ID in der Team-Config ist
+falsch. Der Fehler schützt gegen den Fall „gleiche Email-Domain in zwei
+Tenants".
+
+### `sso.domainNotAllowed`
+
+Die Email-Domain aus dem ID-Token ist nicht in
+`team_sso_configs.allowed_domains`. Admin-Check: Domain-Liste
+vollständig? Subdomains werden bewusst nicht auto-gematcht.
+
+### `sso.stateInvalid`
+
+Der State-Parameter im Callback ist unbekannt oder abgelaufen
+(10-Minuten-TTL). Typisch: User klickt den Setup-Link, wartet 15
+Minuten, klickt dann den „Weiter"-Button — der State ist dann weg.
+Einfach neu starten vom Login.
+
+### `sso.providerUnreachable`
+
+Entra hat den Token-Exchange abgelehnt oder die HTTP-Verbindung kam
+nicht zustande. Prüfen: `ENTRA_CLIENT_SECRET` noch gültig?
+Client-Secret im Azure-Portal ausgelaufen? Logs auf Server-Seite für
+die spezifische Entra-Antwort.
+
+### `Invalid Client Secret`
+
+Secret-Wert vs. Secret-ID verwechselt, oder das Secret ist abgelaufen.
+Azure-Portal → Certificates & Secrets prüfen, ggf. neu anlegen.
 
 ## Weiterführend
 
-- `docs/sso-overview-plan.md` — strategischer Plan, Phasierung
-- `lib/auth.ts` — `resolveMicrosoftSocialProvider()`
-- `lib/db/schema.ts` — `teamSsoConfigs`, `userSsoIdentities`
+- `docs/sso-overview-plan.md` — strategischer Plan, Phasierung,
+  Security-Constraints
+- `lib/auth.ts` — `resolveMicrosoftSocialProvider()`,
+  `microsoftSsoProvider` Export
+- `lib/auth/sso.ts` + `lib/auth/sso-validation.ts` — Helpers
+- `lib/db/schema.ts` — `teamSsoConfigs`, `userSsoIdentities`,
+  `ssoProviderEnum`
+- `app/api/auth/sso/callback/route.ts` — der Wrapper, der die
+  Validation-Kette orchestriert
 - [Better-Auth Social Providers](https://www.better-auth.com/docs/concepts/oauth#social-providers)
-- [Microsoft Identity Platform - OIDC](https://learn.microsoft.com/en-us/entra/identity-platform/v2-protocols-oidc)
+- [Microsoft Identity Platform — OIDC](https://learn.microsoft.com/en-us/entra/identity-platform/v2-protocols-oidc)
