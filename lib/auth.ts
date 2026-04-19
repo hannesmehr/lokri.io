@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { mcp, twoFactor } from "better-auth/plugins";
+import { microsoft } from "better-auth/social-providers";
 import { and, eq } from "drizzle-orm";
 import { db } from "./db";
 import {
@@ -119,6 +120,19 @@ function resolveMicrosoftSocialProvider() {
 }
 
 const microsoftProvider = resolveMicrosoftSocialProvider();
+
+/**
+ * Öffentliche Provider-Instanz für den SSO-Callback-Wrapper
+ * (`app/api/auth/sso/*`). Mit denselben Options, die Better-Auth in
+ * `socialProviders.microsoft` registriert — so arbeiten beide Wege
+ * (Standard-Sign-In-Social + unser Wrapper) gegen dieselbe Config.
+ *
+ * `null`, wenn Env-Vars fehlen — die Routes müssen das prüfen und
+ * mit `sso.providerUnreachable` reagieren.
+ */
+export const microsoftSsoProvider = microsoftProvider
+  ? microsoft(microsoftProvider)
+  : null;
 
 export const auth = betterAuth({
   secret: process.env.BETTER_AUTH_SECRET,
