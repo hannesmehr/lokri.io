@@ -230,15 +230,16 @@ test("i18n: settings.scopeHint.{personal, team} in beiden Locales", () => {
   );
 });
 
-test("i18n: settings.navigation.team bleibt im Katalog (Block-3-Umzug)", () => {
-  // Block-3 zieht den Key zusammen mit settings.team.* nach team.*.
-  // Bis dahin: Key muss weiterhin existieren, auch wenn er nicht mehr
-  // von SettingsTabs referenziert wird.
+test("i18n: settings.navigation.team ist nach Block-3-Umzug entfernt", () => {
+  // Block 3 des Settings-Redesigns zieht den Team-Bereich auf
+  // `/team/*` um. Der Tab gibt's nicht mehr im Settings-Nav, der Key
+  // ist samt settings.team.* komplett verschwunden (Label lebt jetzt
+  // als `team.layout.title` + `accountSwitcher.teamManage`).
   const enNav = getNested(en, "settings.navigation");
   const deNav = getNested(de, "settings.navigation");
   assert.ok(enNav && deNav);
-  assert.equal(typeof enNav!.team, "string");
-  assert.equal(typeof deNav!.team, "string");
+  assert.equal(enNav!.team, undefined, "EN settings.navigation.team sollte weg sein");
+  assert.equal(deNav!.team, undefined, "DE settings.navigation.team sollte weg sein");
 });
 
 test("i18n: settings.navigation hat Billing, KEIN embeddingKey mehr", () => {

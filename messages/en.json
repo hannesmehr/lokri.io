@@ -895,7 +895,6 @@
       "general": "General",
       "mcp": "MCP",
       "storage": "Storage",
-      "team": "Team",
       "billing": "Billing"
     },
     "scopeHint": {
@@ -1206,107 +1205,6 @@
         "created": "Provider \"{name}\" created.",
         "errors": {
           "generic": "Saving failed."
-        }
-      }
-    },
-    "team": {
-      "title": "Team",
-      "subtitle": "Members, roles, and settings for this team.",
-      "nav": {
-        "overview": "Overview",
-        "members": "Members"
-      },
-      "overview": {
-        "eyebrow": "Team overview",
-        "title": "Manage team",
-        "subtitle": "Name, plan, and member status for this team.",
-        "nameLabel": "Team name",
-        "nameDescription": "Change the visible name for your team.",
-        "nameInputLabel": "Edit team name",
-        "nameSave": "Save",
-        "nameSaved": "Team name updated.",
-        "memberCount": "{count, plural, one {# member} other {# members}}",
-        "seatCount": "{count, plural, one {# seat used} other {# seats used}}",
-        "roleLabel": "Your role: {role}"
-      },
-      "delete": {
-        "eyebrow": "Danger zone",
-        "dangerDescription": "The team and all related data will be permanently deleted.",
-        "button": "Delete team",
-        "intro": "This removes all members, spaces, notes, files, and tokens of this team. The action cannot be undone.",
-        "storageHint": "Linked storage objects are cleaned up on a best-effort basis before deletion.",
-        "confirmDescription": "You are deleting {name} permanently. All members lose access immediately.",
-        "warning": "After deletion, team data, invitations, and personal team tokens cannot be restored.",
-        "confirmPrompt": "Type {name} to confirm.",
-        "confirmPlaceholder": "Team name",
-        "submit": "Delete permanently",
-        "submitting": "Deleting…",
-        "success": "Team deleted.",
-        "mismatch": "The entered name does not match."
-      },
-      "members": {
-        "eyebrow": "Members",
-        "title": "Members",
-        "subtitle": "Manage roles, access, and the daily team setup.",
-        "inviteButton": "Invite member",
-        "table": {
-          "member": "Member",
-          "role": "Role",
-          "joined": "Joined",
-          "actions": "Actions"
-        },
-        "joinedAt": "Joined {date}",
-        "remove": "Remove",
-        "removeConfirm": "Remove {name} from the team? Personal tokens for this member will be revoked.",
-        "removed": "Member removed.",
-        "roleChanged": "Role updated.",
-        "selfBadge": "You",
-        "ownerLabel": "Owner",
-        "errors": {
-          "roleChangeFailed": "Role could not be changed.",
-          "removeFailed": "Member could not be removed."
-        }
-      },
-      "ownership": {
-        "menuItem": "Transfer owner role",
-        "title": "Transfer owner role",
-        "confirm": "You are transferring the owner role to {userName}. Afterwards you will be an admin and lose billing and delete permissions.",
-        "warning": "The new owner gets full control over billing, member management, and team deletion.",
-        "submit": "Transfer",
-        "submitting": "Transferring…",
-        "cancel": "Cancel",
-        "success": "Owner role transferred to {userName}.",
-        "errors": {
-          "generic": "Transfer failed."
-        }
-      },
-      "invites": {
-        "eyebrow": "Pending invites",
-        "pendingTitle": "Pending invitations",
-        "pendingDescription": "Open invitations remain valid until they expire or get revoked.",
-        "empty": "No pending invitations.",
-        "invitedBy": "invited by {name}",
-        "expiresAt": "valid until {date}",
-        "revoke": "Revoke",
-        "revokeConfirm": "Revoke the invitation to {email}?",
-        "revoked": "Invitation revoked.",
-        "revokeFailed": "Invitation could not be revoked."
-      },
-      "invite": {
-        "title": "Invite member",
-        "description": "Send an email invitation. The recipient accepts via a magic link (valid for 7 days).",
-        "email": "Email address",
-        "emailPlaceholder": "name@company.com",
-        "role": "Role",
-        "cancel": "Cancel",
-        "submit": "Send invitation",
-        "submitting": "Sending…",
-        "success": "Invitation sent to {email}.",
-        "errors": {
-          "alreadyMember": "This email is already a member of the team.",
-          "alreadyInvited": "There is already an open invitation for this email.",
-          "invalidRole": "Invalid role.",
-          "generic": "Invitation could not be sent."
         }
       }
     },
@@ -1625,6 +1523,7 @@
     "personalBadge": "Personal",
     "createTeam": "Create team",
     "teamSettings": "Team settings",
+    "teamManage": "Manage team",
     "switching": "Switching…",
     "switchError": "Could not switch account.",
     "createDialog": {
@@ -1665,6 +1564,149 @@
     },
     "datenschutz": {
       "headingNote": "For legal reasons the Privacy Policy is only available in German."
+    }
+  },
+  "team": {
+    "layout": {
+      "title": "Team",
+      "subtitle": "Members, roles, and team-wide settings.",
+      "navigation": {
+        "overview": "Overview",
+        "members": "Members",
+        "security": "Security"
+      }
+    },
+    "redirects": {
+      "teamRequired": "This area is only available for team accounts."
+    },
+    "pageHeader": {
+      "overview": {
+        "title": "Team",
+        "description": "Name, plan, and member status for this team."
+      },
+      "members": {
+        "title": "Members",
+        "description": "Invite members, change roles, and see pending invites."
+      },
+      "security": {
+        "title": "Team security",
+        "description": "Single Sign-On and additional security policies for this team."
+      }
+    },
+    "widgets": {
+      "team": {
+        "label": "Team",
+        "hintMembers": "{count, plural, one {# member} other {# members}}"
+      },
+      "plan": {
+        "label": "Plan",
+        "hintRenewal": "Renews {date}",
+        "hintNoRenewal": "No expiry",
+        "openBilling": "Open billing →"
+      },
+      "role": {
+        "label": "Your role"
+      }
+    },
+    "security": {
+      "sso": {
+        "title": "Single Sign-On",
+        "description": "Configure Single Sign-On for your team. Available from Phase 3.",
+        "phasePlaceholder": "Coming in Phase 3 — contact support for early access."
+      }
+    },
+    "overview": {
+      "eyebrow": "Team overview",
+      "title": "Manage team",
+      "subtitle": "Name, plan, and member status for this team.",
+      "nameLabel": "Team name",
+      "nameDescription": "Change the visible name for your team.",
+      "nameInputLabel": "Edit team name",
+      "nameSave": "Save",
+      "nameSaved": "Team name updated.",
+      "memberCount": "{count, plural, one {# member} other {# members}}",
+      "seatCount": "{count, plural, one {# seat used} other {# seats used}}",
+      "roleLabel": "Your role: {role}"
+    },
+    "members": {
+      "eyebrow": "Members",
+      "title": "Members",
+      "subtitle": "Manage roles, access, and the daily team setup.",
+      "inviteButton": "Invite member",
+      "table": {
+        "member": "Member",
+        "role": "Role",
+        "joined": "Joined",
+        "actions": "Actions"
+      },
+      "joinedAt": "Joined {date}",
+      "remove": "Remove",
+      "removeConfirm": "Remove {name} from the team? Personal tokens for this member will be revoked.",
+      "removed": "Member removed.",
+      "roleChanged": "Role updated.",
+      "selfBadge": "You",
+      "ownerLabel": "Owner",
+      "errors": {
+        "roleChangeFailed": "Role could not be changed.",
+        "removeFailed": "Member could not be removed."
+      }
+    },
+    "invites": {
+      "eyebrow": "Pending invites",
+      "pendingTitle": "Pending invitations",
+      "pendingDescription": "Open invitations remain valid until they expire or get revoked.",
+      "empty": "No pending invitations.",
+      "invitedBy": "invited by {name}",
+      "expiresAt": "valid until {date}",
+      "revoke": "Revoke",
+      "revokeConfirm": "Revoke the invitation to {email}?",
+      "revoked": "Invitation revoked.",
+      "revokeFailed": "Invitation could not be revoked."
+    },
+    "invite": {
+      "title": "Invite member",
+      "description": "Send an email invitation. The recipient accepts via a magic link (valid for 7 days).",
+      "email": "Email address",
+      "emailPlaceholder": "name@company.com",
+      "role": "Role",
+      "cancel": "Cancel",
+      "submit": "Send invitation",
+      "submitting": "Sending…",
+      "success": "Invitation sent to {email}.",
+      "errors": {
+        "alreadyMember": "This email is already a member of the team.",
+        "alreadyInvited": "There is already an open invitation for this email.",
+        "invalidRole": "Invalid role.",
+        "generic": "Invitation could not be sent."
+      }
+    },
+    "ownership": {
+      "menuItem": "Transfer owner role",
+      "title": "Transfer owner role",
+      "confirm": "You are transferring the owner role to {userName}. Afterwards you will be an admin and lose billing and delete permissions.",
+      "warning": "The new owner gets full control over billing, member management, and team deletion.",
+      "submit": "Transfer",
+      "submitting": "Transferring…",
+      "cancel": "Cancel",
+      "success": "Owner role transferred to {userName}.",
+      "errors": {
+        "generic": "Transfer failed."
+      }
+    },
+    "danger": {
+      "eyebrow": "Danger zone",
+      "dangerDescription": "The team and all related data will be permanently deleted.",
+      "button": "Delete team",
+      "intro": "This removes all members, spaces, notes, files, and tokens of this team. The action cannot be undone.",
+      "storageHint": "Linked storage objects are cleaned up on a best-effort basis before deletion.",
+      "confirmDescription": "You are deleting {name} permanently. All members lose access immediately.",
+      "warning": "After deletion, team data, invitations, and personal team tokens cannot be restored.",
+      "confirmPrompt": "Type {name} to confirm.",
+      "confirmPlaceholder": "Team name",
+      "submit": "Delete permanently",
+      "submitting": "Deleting…",
+      "success": "Team deleted.",
+      "mismatch": "The entered name does not match."
     }
   }
 }

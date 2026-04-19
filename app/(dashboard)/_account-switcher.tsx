@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -60,6 +60,7 @@ export function AccountSwitcher({
   canCreateTeams,
 }: Props) {
   const router = useRouter();
+  const pathname = usePathname();
   const t = useTranslations("accountSwitcher");
   const tRoles = useTranslations("enums.role");
   const [open, setOpen] = useState(false);
@@ -82,6 +83,11 @@ export function AccountSwitcher({
 
   async function switchTo(id: string) {
     if (id === activeAccountId) return;
+    // Ziel-Account-Type aus der bereits geladenen Liste ablesen — wir
+    // brauchen das für den Pfad-Redirect unten (Settings-Redesign
+    // Block 3: von Team auf Personal wechseln in /team/* heißt weg
+    // vom Team-Bereich).
+    const target = accounts?.find((a) => a.id === id) ?? null;
     setSwitching(id);
     const res = await fetch("/api/accounts/active", {
       method: "POST",
@@ -93,8 +99,21 @@ export function AccountSwitcher({
       toast.error(t("switchError"));
       return;
     }
-    // Invalidate the server-rendered chrome (nav, metadata, session ctx).
-    router.refresh();
+    // Team → Personal und aktueller Pfad ist im /team/*-Bereich? Dann
+    // redirect auf /dashboard — /team/* ist per `requireTeamAccount()`
+    // guarded und würde beim nächsten Request sowieso redirecten.
+    // Klient-seitig vorwegnehmen, damit der User nicht kurz den
+    // Toast „Team-Account erforderlich" sieht.
+    if (
+      target?.type === "personal" &&
+      activeAccountType === "team" &&
+      pathname.startsWith("/team")
+    ) {
+      router.push("/dashboard");
+    } else {
+      // Sonst: Chrome + Page neu rendern, aktive Session-Context holen.
+      router.refresh();
+    }
     setOpen(false);
     setTimeout(() => setSwitching(null), 300);
   }
@@ -169,9 +188,9 @@ export function AccountSwitcher({
             </DropdownMenuItem>
           ) : null}
           {activeAccountType === "team" ? (
-            <DropdownMenuItem render={<Link href="/settings/team" />}>
+            <DropdownMenuItem render={<Link href="/team" />}>
               <Settings className="h-3.5 w-3.5" />
-              {t("teamSettings")}
+              {t("teamManage")}
             </DropdownMenuItem>
           ) : null}
         </DropdownMenuContent>

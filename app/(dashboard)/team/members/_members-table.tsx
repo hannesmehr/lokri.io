@@ -69,8 +69,8 @@ export function MembersTable({
 }) {
   const router = useRouter();
   const locale = useLocale() as Locale;
-  const t = useTranslations("settings.team.members");
-  const tOwnership = useTranslations("settings.team.ownership");
+  const t = useTranslations("team.members");
+  const tOwnership = useTranslations("team.ownership");
   const tRoles = useTranslations("enums.role");
   const tErrors = useTranslations("errors.api.team");
   const [busy, setBusy] = useState<string | null>(null);
@@ -416,7 +416,7 @@ function InviteDialog({
   onOpenChange: (v: boolean) => void;
 }) {
   const router = useRouter();
-  const t = useTranslations("settings.team.invite");
+  const t = useTranslations("team.invite");
   const tRoles = useTranslations("enums.role");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("member");

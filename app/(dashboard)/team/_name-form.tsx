@@ -18,7 +18,7 @@ export function TeamNameForm({
   canEdit: boolean;
 }) {
   const router = useRouter();
-  const t = useTranslations("settings.team.overview");
+  const t = useTranslations("team.overview");
   const tTeamErrors = useTranslations("errors.api.team");
   const tErr = useTranslations("errors.common");
   const [name, setName] = useState(initialName);

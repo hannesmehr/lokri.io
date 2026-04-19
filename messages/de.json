@@ -895,7 +895,6 @@
       "general": "Allgemein",
       "mcp": "MCP",
       "storage": "Storage",
-      "team": "Team",
       "billing": "Billing"
     },
     "scopeHint": {
@@ -1206,107 +1205,6 @@
         "created": "Provider \"{name}\" angelegt.",
         "errors": {
           "generic": "Speichern fehlgeschlagen."
-        }
-      }
-    },
-    "team": {
-      "title": "Team",
-      "subtitle": "Mitglieder, Rollen, Einstellungen dieses Teams.",
-      "nav": {
-        "overview": "Übersicht",
-        "members": "Mitglieder"
-      },
-      "overview": {
-        "eyebrow": "Team-Übersicht",
-        "title": "Team verwalten",
-        "subtitle": "Name, Plan und Mitgliederstatus dieses Teams.",
-        "nameLabel": "Team-Name",
-        "nameDescription": "Ändere den sichtbaren Namen für dein Team.",
-        "nameInputLabel": "Team-Name bearbeiten",
-        "nameSave": "Speichern",
-        "nameSaved": "Team-Name geändert.",
-        "memberCount": "{count, plural, one {# Mitglied} other {# Mitglieder}}",
-        "seatCount": "{count, plural, one {# belegter Seat} other {# belegte Seats}}",
-        "roleLabel": "Deine Rolle: {role}"
-      },
-      "delete": {
-        "eyebrow": "Gefahrenzone",
-        "dangerDescription": "Das Team und alle zugehörigen Daten werden unwiderruflich gelöscht.",
-        "button": "Team löschen",
-        "intro": "Dies entfernt alle Mitglieder, Spaces, Notes, Files und Tokens dieses Teams. Die Aktion ist nicht rückgängig zu machen.",
-        "storageHint": "Verknüpfte Storage-Objekte werden vor dem Löschen bestmöglich bereinigt.",
-        "confirmDescription": "Du löschst {name} dauerhaft. Alle Mitglieder verlieren den Zugriff sofort.",
-        "warning": "Nach dem Löschen sind Teamdaten, Einladungen und persönliche Team-Tokens nicht wiederherstellbar.",
-        "confirmPrompt": "Tippe {name} zur Bestätigung ein.",
-        "confirmPlaceholder": "Team-Name",
-        "submit": "Endgültig löschen",
-        "submitting": "Lösche…",
-        "success": "Team gelöscht.",
-        "mismatch": "Der eingetippte Name stimmt nicht überein."
-      },
-      "members": {
-        "eyebrow": "Mitglieder",
-        "title": "Mitglieder",
-        "subtitle": "Verwalte Rollen, Zugriffe und das tägliche Team-Setup.",
-        "inviteButton": "Mitglied einladen",
-        "table": {
-          "member": "Mitglied",
-          "role": "Rolle",
-          "joined": "Beigetreten",
-          "actions": "Aktionen"
-        },
-        "joinedAt": "Beigetreten {date}",
-        "remove": "Entfernen",
-        "removeConfirm": "{name} aus dem Team entfernen? Persönliche Tokens dieses Mitglieds werden widerrufen.",
-        "removed": "Mitglied entfernt.",
-        "roleChanged": "Rolle aktualisiert.",
-        "selfBadge": "Du",
-        "ownerLabel": "Owner",
-        "errors": {
-          "roleChangeFailed": "Rolle konnte nicht geändert werden.",
-          "removeFailed": "Mitglied konnte nicht entfernt werden."
-        }
-      },
-      "ownership": {
-        "menuItem": "Owner übertragen",
-        "title": "Owner-Rolle übertragen",
-        "confirm": "Du überträgst die Owner-Rolle an {userName}. Danach bist du Admin und verlierst Billing- und Löschrechte.",
-        "warning": "Die neue Owner-Person erhält vollständige Kontrolle über Billing, Mitgliederverwaltung und Team-Löschung.",
-        "submit": "Übertragen",
-        "submitting": "Übertrage…",
-        "cancel": "Abbrechen",
-        "success": "Owner-Rolle an {userName} übertragen.",
-        "errors": {
-          "generic": "Übertragung fehlgeschlagen."
-        }
-      },
-      "invites": {
-        "eyebrow": "Ausstehende Einladungen",
-        "pendingTitle": "Ausstehende Einladungen",
-        "pendingDescription": "Offene Einladungen bleiben bis zum Ablaufdatum gültig oder bis sie zurückgezogen werden.",
-        "empty": "Keine ausstehenden Einladungen.",
-        "invitedBy": "eingeladen von {name}",
-        "expiresAt": "gültig bis {date}",
-        "revoke": "Zurückziehen",
-        "revokeConfirm": "Einladung an {email} zurückziehen?",
-        "revoked": "Einladung zurückgezogen.",
-        "revokeFailed": "Einladung konnte nicht zurückgezogen werden."
-      },
-      "invite": {
-        "title": "Mitglied einladen",
-        "description": "Schick eine Einladung per E-Mail. Der Empfänger akzeptiert über einen Magic-Link (7 Tage gültig).",
-        "email": "E-Mail-Adresse",
-        "emailPlaceholder": "name@firma.de",
-        "role": "Rolle",
-        "cancel": "Abbrechen",
-        "submit": "Einladung senden",
-        "submitting": "Sende…",
-        "success": "Einladung an {email} verschickt.",
-        "errors": {
-          "alreadyMember": "Diese E-Mail ist bereits Mitglied im Team.",
-          "alreadyInvited": "Für diese E-Mail läuft bereits eine offene Einladung.",
-          "invalidRole": "Ungültige Rolle.",
-          "generic": "Einladung konnte nicht verschickt werden."
         }
       }
     },
@@ -1625,6 +1523,7 @@
     "personalBadge": "Persönlich",
     "createTeam": "Team erstellen",
     "teamSettings": "Team-Einstellungen",
+    "teamManage": "Team verwalten",
     "switching": "Wechsle…",
     "switchError": "Wechsel fehlgeschlagen.",
     "createDialog": {
@@ -1665,6 +1564,149 @@
     },
     "datenschutz": {
       "headingNote": "Aus rechtlichen Gründen liegt die Datenschutzerklärung nur auf Deutsch vor."
+    }
+  },
+  "team": {
+    "layout": {
+      "title": "Team",
+      "subtitle": "Mitglieder, Rollen und team-weite Einstellungen.",
+      "navigation": {
+        "overview": "Übersicht",
+        "members": "Mitglieder",
+        "security": "Sicherheit"
+      }
+    },
+    "redirects": {
+      "teamRequired": "Dieser Bereich ist nur für Team-Accounts verfügbar."
+    },
+    "pageHeader": {
+      "overview": {
+        "title": "Team",
+        "description": "Name, Plan und Mitglieder-Status dieses Teams."
+      },
+      "members": {
+        "title": "Mitglieder",
+        "description": "Mitglieder einladen, Rollen ändern, offene Einladungen einsehen."
+      },
+      "security": {
+        "title": "Team-Sicherheit",
+        "description": "Single Sign-On und weitere Sicherheits-Einstellungen für dieses Team."
+      }
+    },
+    "widgets": {
+      "team": {
+        "label": "Team",
+        "hintMembers": "{count, plural, one {# Mitglied} other {# Mitglieder}}"
+      },
+      "plan": {
+        "label": "Plan",
+        "hintRenewal": "Verlängert am {date}",
+        "hintNoRenewal": "Kein Ablaufdatum",
+        "openBilling": "Abrechnung öffnen →"
+      },
+      "role": {
+        "label": "Deine Rolle"
+      }
+    },
+    "security": {
+      "sso": {
+        "title": "Single Sign-On",
+        "description": "Konfiguriere Single Sign-On für dein Team. Verfügbar ab Phase 3.",
+        "phasePlaceholder": "Kommt in Phase 3 — für Early-Access bitte Support kontaktieren."
+      }
+    },
+    "overview": {
+      "eyebrow": "Team-Übersicht",
+      "title": "Team verwalten",
+      "subtitle": "Name, Plan und Mitgliederstatus dieses Teams.",
+      "nameLabel": "Team-Name",
+      "nameDescription": "Ändere den sichtbaren Namen für dein Team.",
+      "nameInputLabel": "Team-Name bearbeiten",
+      "nameSave": "Speichern",
+      "nameSaved": "Team-Name geändert.",
+      "memberCount": "{count, plural, one {# Mitglied} other {# Mitglieder}}",
+      "seatCount": "{count, plural, one {# belegter Seat} other {# belegte Seats}}",
+      "roleLabel": "Deine Rolle: {role}"
+    },
+    "members": {
+      "eyebrow": "Mitglieder",
+      "title": "Mitglieder",
+      "subtitle": "Verwalte Rollen, Zugriffe und das tägliche Team-Setup.",
+      "inviteButton": "Mitglied einladen",
+      "table": {
+        "member": "Mitglied",
+        "role": "Rolle",
+        "joined": "Beigetreten",
+        "actions": "Aktionen"
+      },
+      "joinedAt": "Beigetreten {date}",
+      "remove": "Entfernen",
+      "removeConfirm": "{name} aus dem Team entfernen? Persönliche Tokens dieses Mitglieds werden widerrufen.",
+      "removed": "Mitglied entfernt.",
+      "roleChanged": "Rolle aktualisiert.",
+      "selfBadge": "Du",
+      "ownerLabel": "Owner",
+      "errors": {
+        "roleChangeFailed": "Rolle konnte nicht geändert werden.",
+        "removeFailed": "Mitglied konnte nicht entfernt werden."
+      }
+    },
+    "invites": {
+      "eyebrow": "Ausstehende Einladungen",
+      "pendingTitle": "Ausstehende Einladungen",
+      "pendingDescription": "Offene Einladungen bleiben bis zum Ablaufdatum gültig oder bis sie zurückgezogen werden.",
+      "empty": "Keine ausstehenden Einladungen.",
+      "invitedBy": "eingeladen von {name}",
+      "expiresAt": "gültig bis {date}",
+      "revoke": "Zurückziehen",
+      "revokeConfirm": "Einladung an {email} zurückziehen?",
+      "revoked": "Einladung zurückgezogen.",
+      "revokeFailed": "Einladung konnte nicht zurückgezogen werden."
+    },
+    "invite": {
+      "title": "Mitglied einladen",
+      "description": "Schick eine Einladung per E-Mail. Der Empfänger akzeptiert über einen Magic-Link (7 Tage gültig).",
+      "email": "E-Mail-Adresse",
+      "emailPlaceholder": "name@firma.de",
+      "role": "Rolle",
+      "cancel": "Abbrechen",
+      "submit": "Einladung senden",
+      "submitting": "Sende…",
+      "success": "Einladung an {email} verschickt.",
+      "errors": {
+        "alreadyMember": "Diese E-Mail ist bereits Mitglied im Team.",
+        "alreadyInvited": "Für diese E-Mail läuft bereits eine offene Einladung.",
+        "invalidRole": "Ungültige Rolle.",
+        "generic": "Einladung konnte nicht verschickt werden."
+      }
+    },
+    "ownership": {
+      "menuItem": "Owner übertragen",
+      "title": "Owner-Rolle übertragen",
+      "confirm": "Du überträgst die Owner-Rolle an {userName}. Danach bist du Admin und verlierst Billing- und Löschrechte.",
+      "warning": "Die neue Owner-Person erhält vollständige Kontrolle über Billing, Mitgliederverwaltung und Team-Löschung.",
+      "submit": "Übertragen",
+      "submitting": "Übertrage…",
+      "cancel": "Abbrechen",
+      "success": "Owner-Rolle an {userName} übertragen.",
+      "errors": {
+        "generic": "Übertragung fehlgeschlagen."
+      }
+    },
+    "danger": {
+      "eyebrow": "Gefahrenzone",
+      "dangerDescription": "Das Team und alle zugehörigen Daten werden unwiderruflich gelöscht.",
+      "button": "Team löschen",
+      "intro": "Dies entfernt alle Mitglieder, Spaces, Notes, Files und Tokens dieses Teams. Die Aktion ist nicht rückgängig zu machen.",
+      "storageHint": "Verknüpfte Storage-Objekte werden vor dem Löschen bestmöglich bereinigt.",
+      "confirmDescription": "Du löschst {name} dauerhaft. Alle Mitglieder verlieren den Zugriff sofort.",
+      "warning": "Nach dem Löschen sind Teamdaten, Einladungen und persönliche Team-Tokens nicht wiederherstellbar.",
+      "confirmPrompt": "Tippe {name} zur Bestätigung ein.",
+      "confirmPlaceholder": "Team-Name",
+      "submit": "Endgültig löschen",
+      "submitting": "Lösche…",
+      "success": "Team gelöscht.",
+      "mismatch": "Der eingetippte Name stimmt nicht überein."
     }
   }
 }

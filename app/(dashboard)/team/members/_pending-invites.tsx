@@ -27,7 +27,7 @@ export function PendingInvites({
 }) {
   const router = useRouter();
   const locale = useLocale() as Locale;
-  const t = useTranslations("settings.team.invites");
+  const t = useTranslations("team.invites");
   const tRoles = useTranslations("enums.role");
   const [busy, setBusy] = useState<string | null>(null);
 

@@ -32,7 +32,7 @@ export function TeamDeleteCard({
   teamName: string;
 }) {
   const router = useRouter();
-  const tDel = useTranslations("settings.team.delete");
+  const tDel = useTranslations("team.danger");
   const tConfirm = useTranslations("confirmDialogs.delete");
   const tTeamErrors = useTranslations("errors.api.team");
   const [open, setOpen] = useState(false);

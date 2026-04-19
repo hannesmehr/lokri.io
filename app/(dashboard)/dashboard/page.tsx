@@ -20,6 +20,7 @@ import {
 import { formatBytes, formatRelative } from "@/lib/format";
 import { getQuota } from "@/lib/quota";
 import { OnboardingCard } from "./_onboarding-card";
+import { TeamRequiredToast } from "./_team-required-toast";
 
 /**
  * Dashboard-Home — Phase-1-Showcase für das neue Design-System.
@@ -28,10 +29,21 @@ import { OnboardingCard } from "./_onboarding-card";
  * aktiv) → Quick-Actions-Grid → KPI-Tiles → Activity-Grid. Alle Styles
  * laufen ausschließlich über semantische Tokens (CSS-Vars); Light +
  * Dark testen sich automatisch mit.
+ *
+ * `searchParams.teamRequired` wird vom `requireTeamAccount()`-Guard
+ * gesetzt, wenn ein Personal-User auf einer `/team/*`-Route landet
+ * (Settings-Redesign Block 3). Das Dashboard rendert dann eine Client-
+ * Island, die den Toast feuert + den Query-Param via `router.replace`
+ * wegwischt.
  */
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ teamRequired?: string }>;
+}) {
   const t = await getTranslations("dashboard.home");
   const { session, ownerAccountId } = await requireSessionWithAccount();
+  const { teamRequired } = await searchParams;
   const [quota, recentNotes, recentFiles, spaceCount, tokenCount] =
     await Promise.all([
       getQuota(ownerAccountId),
@@ -71,6 +83,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6 sm:space-y-8">
+      {teamRequired ? <TeamRequiredToast /> : null}
       {/* Header */}
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">

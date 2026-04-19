@@ -135,7 +135,7 @@ async function sendTransferEmails(input: TransferOwnershipInput): Promise<void> 
   const previousOwnerDisplay =
     previousOwner.name?.trim() || previousOwner.email;
   const newOwnerDisplay = newOwner.name?.trim() || newOwner.email;
-  const teamSettingsUrl = `${resolveAppOrigin()}/settings/team`;
+  const teamSettingsUrl = `${resolveAppOrigin()}/team`;
 
   // Recipients read in their own preferred language. Serialise the two
   // lookups separately so a DB hiccup on one side can't take down both

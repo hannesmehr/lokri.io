@@ -1,5 +1,4 @@
 import { getTranslations } from "next-intl/server";
-import { redirect } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -7,19 +6,21 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { requireSessionWithAccount } from "@/lib/api/session";
+import { PageHeader } from "@/components/ui/page-header";
+import { requireTeamAccount } from "@/lib/api/session";
 import { listPendingInvites } from "@/lib/teams/invites";
 import { listMembers } from "@/lib/teams/members";
+import { TeamTabs } from "../_tabs";
 import { MembersTable } from "./_members-table";
 import { PendingInvites } from "./_pending-invites";
 
 export default async function TeamMembersPage() {
-  const { ownerAccountId, accountType, role, session } =
-    await requireSessionWithAccount();
-  if (accountType !== "team") redirect("/settings");
+  const { ownerAccountId, role, session } = await requireTeamAccount();
 
-  const tMembers = await getTranslations("settings.team.members");
-  const tInvites = await getTranslations("settings.team.invites");
+  const tHeader = await getTranslations("team.pageHeader.members");
+  const tLayout = await getTranslations("team.layout");
+  const tMembers = await getTranslations("team.members");
+  const tInvites = await getTranslations("team.invites");
 
   const [members, pending] = await Promise.all([
     listMembers(ownerAccountId),
@@ -32,9 +33,18 @@ export default async function TeamMembersPage() {
 
   return (
     <div className="space-y-6">
+      <PageHeader
+        breadcrumbs={[
+          { label: tLayout("title"), href: "/team" },
+          { label: tLayout("navigation.members") },
+        ]}
+        title={tHeader("title")}
+        description={tHeader("description")}
+      />
+      <TeamTabs />
+
       <Card>
         <CardHeader>
-          <CardDescription>{tMembers("eyebrow")}</CardDescription>
           <CardTitle className="text-2xl font-semibold tracking-tight">
             {tMembers("title")}
           </CardTitle>
@@ -57,7 +67,6 @@ export default async function TeamMembersPage() {
       {canManage ? (
         <Card>
           <CardHeader>
-            <CardDescription>{tInvites("eyebrow")}</CardDescription>
             <CardTitle>{tInvites("pendingTitle")}</CardTitle>
             <CardDescription>{tInvites("pendingDescription")}</CardDescription>
           </CardHeader>

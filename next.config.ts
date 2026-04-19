@@ -118,6 +118,21 @@ const nextConfig: NextConfig = {
         destination: "/settings/billing/:path*",
         permanent: true,
       },
+      // Settings-Redesign Block 3: Team-Routen ziehen auf Top-Level
+      // um. Alte Bookmarks / Email-Links auf /settings/team[/members]
+      // werden permanent umgeleitet. Die Ownership-Transfer-Email-URL
+      // wurde atomar mit dem Route-Umzug in lib/teams/ownership.ts
+      // aktualisiert; dieser Redirect fängt nur noch Bestands-Links ab.
+      {
+        source: "/settings/team",
+        destination: "/team",
+        permanent: true,
+      },
+      {
+        source: "/settings/team/:path*",
+        destination: "/team/:path*",
+        permanent: true,
+      },
     ];
   },
 };
