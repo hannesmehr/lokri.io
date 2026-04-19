@@ -1,7 +1,16 @@
 import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { ApiAuthError } from "@/lib/api/errors";
+import {
+  TEAM_REQUIRED_REDIRECT_URL,
+  teamAccountRedirectUrl,
+} from "@/lib/api/team-gate";
+
+// Re-Export — Call-Sites brauchen nur `@/lib/api/session`, auch wenn
+// die Helpers selbst aus der DB-freien Nachbar-Datei stammen.
+export { TEAM_REQUIRED_REDIRECT_URL, teamAccountRedirectUrl };
 import {
   hasRole,
   normalizeLegacyRole,
@@ -239,4 +248,26 @@ export async function requireSessionWithAccount(
     role: role!,
     accountType: accountType!,
   };
+}
+
+/**
+ * Guard für `/team/*`-Routen. Beruht auf `requireSessionWithAccount`
+ * (Nicht-eingeloggt → wirft `ApiAuthError`, wird vom Dashboard-Layout
+ * zu `/login` konvertiert), prüft zusätzlich `accountType === "team"`.
+ *
+ * Personal-Account → `redirect(TEAM_REQUIRED_REDIRECT_URL)`. Die
+ * Query-String-Flag `teamRequired=1` erlaubt dem Dashboard, einen Toast
+ * anzuzeigen (wird in Block 3 zusammen mit der Team-Route-Navigation
+ * verdrahtet).
+ *
+ * Die reine Entscheidungs-Logik liegt in `lib/api/team-gate.ts`
+ * (DB-frei, testbar) — siehe `tests/team-gate.test.ts`.
+ */
+export async function requireTeamAccount(
+  options: RequireSessionOptions = {},
+): Promise<SessionContext> {
+  const ctx = await requireSessionWithAccount(options);
+  const redirectUrl = teamAccountRedirectUrl(ctx);
+  if (redirectUrl) redirect(redirectUrl);
+  return ctx;
 }
