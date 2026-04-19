@@ -12,10 +12,19 @@ import { LocaleSwitcher } from "./_locale-switcher";
 import { ProfileOverviewForm } from "./_overview-form";
 import { ProfileTabs } from "./_tabs";
 
+/**
+ * Profile-Übersicht.
+ *
+ * Settings-Redesign Block 4: Card-in-Card-Doppelung aufgelöst —
+ * `ProfileOverviewForm` rendert intern zwei Cards (Öffentliches Profil
+ * + E-Mail ändern), die früher in einer äußeren „Öffentliches Profil"-
+ * Card verschachtelt waren (identischer Titel doppelt). Jetzt flach.
+ *
+ * Siehe `docs/USER_SETTINGS_DESIGN.md` Prinzip 3.
+ */
 export default async function ProfilePage() {
   const { session } = await requireSessionWithAccount();
   const tHeader = await getTranslations("profile.overview.pageHeader");
-  const tProfileCard = await getTranslations("profile.overview.profileCard");
   const tLocale = await getTranslations("profile.locale");
   return (
     <div className="space-y-6">
@@ -24,20 +33,12 @@ export default async function ProfilePage() {
         description={tHeader("description")}
       />
       <ProfileTabs />
-      <Card>
-        <CardHeader>
-          <CardTitle>{tProfileCard("title")}</CardTitle>
-          <CardDescription>{tProfileCard("description")}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ProfileOverviewForm
-            initialName={session.user.name}
-            initialImage={session.user.image ?? null}
-            email={session.user.email}
-            emailVerified={session.user.emailVerified}
-          />
-        </CardContent>
-      </Card>
+      <ProfileOverviewForm
+        initialName={session.user.name}
+        initialImage={session.user.image ?? null}
+        email={session.user.email}
+        emailVerified={session.user.emailVerified}
+      />
       <Card>
         <CardHeader>
           <CardTitle>{tLocale("title")}</CardTitle>
