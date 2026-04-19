@@ -80,6 +80,15 @@ test("/team/layout.tsx ruft requireTeamAccount() serverseitig auf", () => {
   assert.match(src, /export default async function/);
 });
 
+test("/team/security/page.tsx lädt Team-Kontext + rendert TeamSsoSection", () => {
+  const src = readFileSync(
+    resolve(root, "app/(dashboard)/team/security/page.tsx"),
+    "utf-8",
+  );
+  assert.match(src, /requireTeamAccount/);
+  assert.match(src, /<TeamSsoSection/);
+});
+
 // ── Pages rendern PageHeader + TeamTabs ────────────────────────────────
 
 for (const path of [
@@ -184,9 +193,11 @@ test("next.config redirected /settings/team[/*] auf /team[/*]", () => {
 
 // ── i18n-Shape ─────────────────────────────────────────────────────────
 
-test("i18n: settings.team entfernt, team.* Top-Level vollstaendig", () => {
-  assert.equal(getNested(en, "settings.team"), undefined);
-  assert.equal(getNested(de, "settings.team"), undefined);
+test("i18n: team.* Top-Level vollständig, settings.team ist entfernt", () => {
+  const enSettingsTeam = getNested(en, "settings.team");
+  const deSettingsTeam = getNested(de, "settings.team");
+  assert.equal(enSettingsTeam, undefined);
+  assert.equal(deSettingsTeam, undefined);
   const enT = getNested(en, "team");
   const deT = getNested(de, "team");
   assert.ok(enT && deT);
@@ -205,6 +216,27 @@ test("i18n: settings.team entfernt, team.* Top-Level vollstaendig", () => {
   ]) {
     assert.ok(enT![sub] !== undefined, `EN team.${sub} fehlt`);
     assert.ok(deT![sub] !== undefined, `DE team.${sub} fehlt`);
+  }
+});
+
+test("i18n: team.security ist in DE + EN vollständig vorhanden", () => {
+  const enSecurity = getNested(en, "team.security");
+  const deSecurity = getNested(de, "team.security");
+  assert.ok(enSecurity, "EN team.security fehlt");
+  assert.ok(deSecurity, "DE team.security fehlt");
+
+  for (const key of ["tabLabel", "pageHeading", "pageDescription"]) {
+    assert.ok(enSecurity![key] !== undefined, `EN team.security.${key} fehlt`);
+    assert.ok(deSecurity![key] !== undefined, `DE team.security.${key} fehlt`);
+  }
+
+  const enSso = enSecurity!.sso as Record<string, string> | undefined;
+  const deSso = deSecurity!.sso as Record<string, string> | undefined;
+  assert.ok(enSso, "EN team.security.sso fehlt");
+  assert.ok(deSso, "DE team.security.sso fehlt");
+  for (const key of ["sectionTitle", "placeholder"]) {
+    assert.ok(enSso![key] !== undefined, `EN team.security.sso.${key} fehlt`);
+    assert.ok(deSso![key] !== undefined, `DE team.security.sso.${key} fehlt`);
   }
 });
 

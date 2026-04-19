@@ -1,15 +1,9 @@
-import { ShieldCheck } from "lucide-react";
 import { getTranslations } from "next-intl/server";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireTeamAccount } from "@/lib/api/session";
+import { resolveAppOrigin } from "@/lib/origin";
 import { TeamTabs } from "../_tabs";
+import { TeamSsoSection } from "./_sso-section";
 
 /**
  * Team-Sicherheit — Phase-3-SSO-Shell (Settings-Redesign Block 3).
@@ -24,42 +18,29 @@ import { TeamTabs } from "../_tabs";
  * Variante folgt.
  */
 export default async function TeamSecurityPage() {
-  await requireTeamAccount();
+  const { ownerAccountId } = await requireTeamAccount();
 
-  const tHeader = await getTranslations("team.pageHeader.security");
+  const tSecurity = await getTranslations("team.security");
   const tLayout = await getTranslations("team.layout");
-  const tSso = await getTranslations("team.security.sso");
 
   return (
     <div className="space-y-6">
       <PageHeader
         breadcrumbs={[
           { label: tLayout("title"), href: "/team" },
-          { label: tLayout("navigation.security") },
+          { label: tSecurity("tabLabel") },
         ]}
-        title={tHeader("title")}
-        description={tHeader("description")}
+        title={tSecurity("pageHeading")}
+        description={tSecurity("pageDescription")}
       />
       <TeamTabs />
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg border bg-muted text-muted-foreground">
-              <ShieldCheck className="h-4 w-4" />
-            </div>
-            <div>
-              <CardTitle>{tSso("title")}</CardTitle>
-              <CardDescription>{tSso("description")}</CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <p className="rounded-md border border-dashed bg-muted/40 p-4 text-sm text-muted-foreground">
-            {tSso("phasePlaceholder")}
-          </p>
-        </CardContent>
-      </Card>
+      <TeamSsoSection
+        teamId={ownerAccountId}
+        appOrigin={resolveAppOrigin()}
+        publicAppUrl={process.env.NEXT_PUBLIC_APP_URL ?? resolveAppOrigin()}
+        entraClientId={process.env.ENTRA_CLIENT_ID ?? null}
+      />
     </div>
   );
 }

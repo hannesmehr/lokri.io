@@ -17,6 +17,7 @@ import {
   userSsoIdentities,
   verifications,
 } from "@/lib/db/schema";
+export { getEntraAdminConsentUrl } from "./sso-consent";
 
 // Re-Exports — Call-Sites sehen nur `@/lib/auth/sso`.
 export {

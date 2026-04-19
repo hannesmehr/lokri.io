@@ -91,9 +91,13 @@ const fetcher = (url: string) =>
 export function AccountDetailClient({
   accountId,
   plans,
+  publicAppUrl,
+  entraClientId,
 }: {
   accountId: string;
   plans: PlanOption[];
+  publicAppUrl: string;
+  entraClientId: string | null;
 }) {
   const { data, error, isLoading, mutate } = useSWR<AccountDetail>(
     `/api/admin/accounts/${accountId}`,
@@ -136,7 +140,11 @@ export function AccountDetailClient({
       />
       <MembersCard members={data.members} accountType={data.account.type} />
       {data.account.type === "team" ? (
-        <SsoSection accountId={accountId} />
+        <SsoSection
+          accountId={accountId}
+          publicAppUrl={publicAppUrl}
+          entraClientId={entraClientId}
+        />
       ) : null}
       <TokensCard tokens={data.tokens} />
       <InvoicesCard invoices={data.invoices} />

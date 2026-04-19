@@ -14,6 +14,7 @@ import { useId, useMemo, useState } from "react";
 import { toast } from "sonner";
 import useSWR from "swr";
 import { AdminStatusBadge } from "@/components/admin/admin-status-badge";
+import { EntraSetupCard } from "@/components/sso/entra-setup-card";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -67,7 +68,15 @@ const DOMAIN_REGEX = /^[a-z0-9-]+(\.[a-z0-9-]+)+$/i;
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export function SsoSection({ accountId }: { accountId: string }) {
+export function SsoSection({
+  accountId,
+  publicAppUrl,
+  entraClientId,
+}: {
+  accountId: string;
+  publicAppUrl: string;
+  entraClientId: string | null;
+}) {
   const { data, error, isLoading, mutate } = useSWR<SsoConfigResponse>(
     `/api/admin/accounts/${accountId}/sso`,
     fetcher,
@@ -108,6 +117,8 @@ export function SsoSection({ accountId }: { accountId: string }) {
       accountId={accountId}
       initialConfig={data.config}
       fallbackAdminStatus={data.fallbackAdminStatus}
+      publicAppUrl={publicAppUrl}
+      entraClientId={entraClientId}
       onMutated={() => void mutate()}
     />
   );
@@ -117,11 +128,15 @@ function SsoForm({
   accountId,
   initialConfig,
   fallbackAdminStatus,
+  publicAppUrl,
+  entraClientId,
   onMutated,
 }: {
   accountId: string;
   initialConfig: SsoConfigResponse["config"];
   fallbackAdminStatus: SsoConfigResponse["fallbackAdminStatus"];
+  publicAppUrl: string;
+  entraClientId: string | null;
   onMutated: () => void;
 }) {
   const tenantId_ = useId();
@@ -149,6 +164,7 @@ function SsoForm({
     if (!initialConfig) return "keine";
     return initialConfig.enabled ? "aktiv" : "konfiguriert";
   }, [initialConfig]);
+  const callbackUrl = `${publicAppUrl}/api/auth/sso/callback`;
 
   function addDomain() {
     const d = newDomain.trim().toLowerCase();
@@ -320,6 +336,19 @@ function SsoForm({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        <EntraSetupCard
+          title="Setup in Azure Portal"
+          description="Diese Werte trägt der Entra-Admin in der App-Registrierung ein. Der Block dient als Referenz, nicht als Pflicht-Checkliste."
+          callbackLabel="Redirect-URI / Callback-URL"
+          callbackUrl={callbackUrl}
+          supportedAccountTypesLabel="Supported account types"
+          supportedAccountTypesValue="Accounts in any organizational directory (Multitenant)"
+          clientIdLabel="Unsere App-ID / Client-ID"
+          clientId={entraClientId}
+          copyLabel="Callback-URL kopieren"
+          copiedLabel="Callback-URL kopiert."
+        />
+
         {/* Enable-Toggle + Fallback-Admin-Warnung */}
         <div className="space-y-2 rounded-md border p-3">
           <label className="flex items-start gap-2 text-sm">
@@ -524,4 +553,3 @@ function StatusFooter({
     </div>
   );
 }
-

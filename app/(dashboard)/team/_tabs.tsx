@@ -11,12 +11,13 @@ import { SectionNav } from "../profile/_section-nav";
  */
 export async function TeamTabs() {
   const t = await getTranslations("team.layout.navigation");
+  const tSecurity = await getTranslations("team.security");
   return (
     <SectionNav
       items={[
         { href: "/team", label: t("overview") },
         { href: "/team/members", label: t("members") },
-        { href: "/team/security", label: t("security") },
+        { href: "/team/security", label: tSecurity("tabLabel") },
       ]}
     />
   );

@@ -295,7 +295,9 @@
       "sso": {
         "userNotInvited": "Your organization has not yet invited you to this team.",
         "notTeamMember": "Your account is not a member of this team. Contact your team admin.",
+        "notOwner": "Only the team owner can change this setting.",
         "tenantMismatch": "Your Microsoft account belongs to a different organization.",
+        "tokenVerificationFailed": "The Microsoft token could not be verified. Please try again or contact your team admin.",
         "domainNotAllowed": "Your email domain is not enabled for this team's SSO.",
         "providerUnreachable": "Microsoft sign-in is currently unavailable.",
         "configurationError": "SSO configuration is invalid. Contact your team admin.",
@@ -384,11 +386,20 @@
     "login": {
       "title": "Sign in",
       "subtitle": "Welcome back to lokri.io.",
-      "email": "Email",
-      "password": "Password",
-      "forgotLink": "Forgot?",
-      "submit": "Sign in",
-      "submitting": "Signing in…",
+      "step1": {
+        "emailLabel": "Email",
+        "continueButton": "Continue",
+        "continuing": "Checking…",
+        "redirecting": "Continuing to Microsoft…",
+        "ssoRedirecting": "SSO was detected for your organization — you are being redirected to Microsoft."
+      },
+      "step2": {
+        "passwordLabel": "Password",
+        "submitButton": "Sign in",
+        "submitting": "Signing in…",
+        "editEmailLink": "Edit email",
+        "forgotPasswordLink": "Forgot password?"
+      },
       "inviteHint": "Registration is currently closed — <contact>contact us</contact> for an invite."
     },
     "register": {
@@ -463,6 +474,14 @@
       "spaces": "Spaces",
       "notes": "Notes",
       "files": "Files"
+    },
+    "banner": {
+      "ssoAvailable": {
+        "title": "Single Sign-On is now available for your team",
+        "description": "Your active team now supports Microsoft sign-in. You can use it directly the next time you log in.",
+        "learnMore": "Learn more",
+        "dismiss": "Dismiss notice"
+      }
     },
     "home": {
       "welcome": "Hi, {name}",
@@ -1609,10 +1628,86 @@
       }
     },
     "security": {
+      "tabLabel": "Security",
+      "pageHeading": "Team Security",
+      "pageDescription": "Single Sign-On and additional security settings for this team.",
       "sso": {
-        "title": "Single Sign-On",
-        "description": "Configure Single Sign-On for your team. Available from Phase 3.",
-        "phasePlaceholder": "Coming in Phase 3 — contact support for early access."
+        "setup": {
+          "title": "Setup in Azure Portal",
+          "description": "Your Entra admin enters these values in the app registration. This block is for reference only, not a required checklist.",
+          "callbackLabel": "Redirect URI / Callback URL",
+          "copyCallback": "Copy callback URL",
+          "callbackCopied": "Callback URL copied.",
+          "supportedAccountTypesLabel": "Supported account types",
+          "supportedAccountTypesValue": "Accounts in any organizational directory (Multitenant)",
+          "clientIdLabel": "Our app ID / client ID"
+        },
+        "sectionTitle": "Single Sign-On",
+        "placeholder": "Loading...",
+        "statusActive": "Active",
+        "statusDisabled": "Disabled",
+        "statusNotConfigured": "Not configured",
+        "ownerDescription": "Connect this team to Microsoft Entra ID. Only the team owner can change tenant and domains.",
+        "readonlyDescription": "Single Sign-On is a team-wide setting. Only the team owner can change this configuration.",
+        "notConfiguredTitle": "SSO is not set up yet",
+        "notConfiguredDescription": "As soon as the team owner configures Single Sign-On, the current status will appear here for every team member.",
+        "form": {
+          "enabledLabel": "Enable SSO",
+          "enabledHint": "Members with a matching email domain are redirected to Microsoft during login.",
+          "tenantIdLabel": "Entra tenant ID",
+          "tenantIdPlaceholder": "e.g. 3fa85f64-5717-4562-b3fc-2c963f66afa6",
+          "tenantIdHint": "Azure portal → Microsoft Entra ID → Overview → Tenant ID.",
+          "tenantIdInvalid": "Tenant ID must be a UUID.",
+          "allowedDomainsLabel": "Allowed email domains",
+          "allowedDomainsHint": "Only these domains trigger the SSO flow on the login page. Add subdomains explicitly.",
+          "domainPlaceholder": "e.g. company.com",
+          "domainsEmpty": "No domains yet",
+          "invalidDomain": "Enter a valid domain.",
+          "duplicateDomain": "This domain is already in the list.",
+          "tooManyDomains": "A maximum of 10 domains is allowed.",
+          "lastVerifiedAt": "Last verified",
+          "lastError": "Last error",
+          "neverVerified": "Not verified yet"
+        },
+        "adminConsent": {
+          "heading": "Before SSO works",
+          "description": "Your Entra admin must authorize lokri once for your organization. Forward this link to your IT admin.",
+          "emptyTenantHint": "Enter your Entra tenant ID first and we will generate the admin consent link.",
+          "copyLink": "Copy link",
+          "linkCopied": "Admin consent link copied.",
+          "completed": "Admin consent completed",
+          "verifyHint": "After authorization, click “Verify” to test the connection.",
+          "tenantMismatch": "The return URL does not match the stored tenant ID. Please review the configuration."
+        },
+        "fallbackAdmin": {
+          "blocking": "This team currently has no owner or admin with email/password login. SSO can only be enabled once a fallback admin exists.",
+          "warning": "Only one fallback admin remains. Ideally add a second credential-based admin before rolling out SSO."
+        },
+        "actions": {
+          "save": "Save",
+          "saving": "Saving…",
+          "verify": "Verify",
+          "verifying": "Verifying…",
+          "remove": "Remove",
+          "removing": "Removing…",
+          "addDomain": "Add domain"
+        },
+        "readonly": {
+          "ssoActive": "SSO is active for this team.",
+          "ssoDisabled": "SSO is configured but currently disabled.",
+          "cannotChange": "Only the team owner can change tenant ID, domains, and activation status."
+        },
+        "dialogs": {
+          "removeDescription": "Without an SSO configuration, members sign in with email and password again. Existing linked SSO identities stay in place."
+        },
+        "toasts": {
+          "saved": "SSO configuration saved.",
+          "removed": "SSO configuration removed.",
+          "verifySuccess": "The Entra tenant connection was verified successfully.",
+          "verifyFailed": "Verification failed.",
+          "consentSuccess": "Admin consent succeeded. The connection was verified immediately.",
+          "consentFailed": "Admin consent could not be confirmed."
+        }
       }
     },
     "overview": {

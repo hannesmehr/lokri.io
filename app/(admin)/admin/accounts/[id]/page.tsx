@@ -4,6 +4,7 @@ import { Breadcrumbs } from "../../../_breadcrumbs";
 import { requireAdminSession } from "@/lib/api/session";
 import { db } from "@/lib/db";
 import { ownerAccounts, plans } from "@/lib/db/schema";
+import { resolveAppOrigin } from "@/lib/origin";
 import { AccountDetailClient } from "./_client";
 
 type Params = { params: Promise<{ id: string }> };
@@ -45,7 +46,12 @@ export default async function AdminAccountDetailPage({ params }: Params) {
           { label: account.name },
         ]}
       />
-      <AccountDetailClient accountId={account.id} plans={planRows} />
+      <AccountDetailClient
+        accountId={account.id}
+        plans={planRows}
+        publicAppUrl={process.env.NEXT_PUBLIC_APP_URL ?? resolveAppOrigin()}
+        entraClientId={process.env.ENTRA_CLIENT_ID ?? null}
+      />
     </div>
   );
 }
