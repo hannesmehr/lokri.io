@@ -91,6 +91,66 @@ function resolveTrustedOrigins(): string[] {
  * Scopes minimal: `openid`, `profile`, `email`. Keine Directory-
  * Scopes — wir wollen nur Authentifizierung, kein Graph-Access.
  */
+/**
+ * Eigener `verifyIdToken` für Entra-Tokens — ersetzt Better-Auth's
+ * Built-in, weil der einen Bug hat:
+ *
+ * `getMicrosoftPublicKey` ruft `importJWK(jwk, jwk.alg)` auf. Entra's
+ * `/common/discovery/v2.0/keys`-Endpoint liefert JWKs aber **ohne**
+ * `alg`-Feld, `jwk.alg` ist undefined, `jose` wirft
+ * `TypeError: "alg" argument is required when "jwk.alg" is not
+ * present`. Better-Auth catched → `return false`, unser Callback
+ * redirectet generisch mit `sso.tenantMismatch`, der User klickt
+ * frustriert.
+ *
+ * Fix: wir nehmen das `alg`-Feld aus dem **Token-Header** als Fallback
+ * (ist OIDC-konform, Entra setzt dort `RS256`). Alles andere ist 1:1
+ * die Better-Auth-Logik — signature + audience + maxTokenAge + nonce.
+ *
+ * Upstream-Fix-Status: gemeldet werden, sobald wir Kapazität haben;
+ * bis dahin lebt die Workaround-Implementation hier.
+ */
+async function verifyEntraIdToken(
+  token: string,
+  nonce: string | undefined,
+  clientId: string,
+): Promise<boolean> {
+  try {
+    const { decodeProtectedHeader, importJWK, jwtVerify } = await import(
+      "jose"
+    );
+    const { kid, alg } = decodeProtectedHeader(token);
+    if (!kid || !alg) return false;
+
+    const keysRes = await fetch(
+      "https://login.microsoftonline.com/common/discovery/v2.0/keys",
+      { headers: { accept: "application/json" } },
+    );
+    if (!keysRes.ok) return false;
+    const keysJson = (await keysRes.json()) as {
+      keys?: Array<{ kid?: string; alg?: string } & Record<string, unknown>>;
+    };
+    const jwk = keysJson.keys?.find((k) => k.kid === kid);
+    if (!jwk) return false;
+
+    // Der Fix: `jwk.alg ?? alg` — fällt auf den Token-Header-alg zurück,
+    // wenn der JWK kein alg-Feld trägt. `jose` importJWK akzeptiert das.
+    const publicKey = await importJWK(jwk, jwk.alg ?? alg);
+
+    const { payload } = await jwtVerify(token, publicKey, {
+      algorithms: [alg],
+      audience: clientId,
+      maxTokenAge: "1h",
+    });
+
+    if (nonce && payload.nonce !== nonce) return false;
+    return true;
+  } catch (err) {
+    console.error("[auth.verifyEntraIdToken]", err);
+    return false;
+  }
+}
+
 function resolveMicrosoftSocialProvider() {
   const clientId = process.env.ENTRA_CLIENT_ID;
   const clientSecret = process.env.ENTRA_CLIENT_SECRET;
@@ -116,6 +176,10 @@ function resolveMicrosoftSocialProvider() {
      */
     tenantId: "common",
     scope: ["openid", "profile", "email"] as string[],
+    /** Eigener Verify wegen Better-Auth-Bug — siehe `verifyEntraIdToken`
+     *  oben für den Grund. */
+    verifyIdToken: async (token: string, nonce?: string) =>
+      verifyEntraIdToken(token, nonce, clientId),
   };
 }
 
