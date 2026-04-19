@@ -132,7 +132,14 @@ export async function GET(req: NextRequest) {
       idToken,
       statePayload.nonce,
     );
-    if (!ok) return redirectError(req, "sso.tenantMismatch");
+    if (!ok) {
+      await logFailedLogin({
+        ownerAccountId: config.ownerAccountId,
+        tenantId: config.tenantId,
+        reason: "sso.tokenVerificationFailed",
+      });
+      return redirectError(req, "sso.tokenVerificationFailed");
+    }
   } catch (err) {
     console.error("[sso.callback] verifyIdToken failed:", err);
     return redirectError(req, "sso.providerUnreachable");

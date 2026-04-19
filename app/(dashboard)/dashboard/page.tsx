@@ -9,13 +9,17 @@ import {
 } from "@/components/activity-list";
 import { KpiCard } from "@/components/kpi-card";
 import { QuickActionCard } from "@/components/quick-action-card";
+import { SsoAvailableBanner } from "@/components/dashboard/sso-available-banner";
 import { requireSessionWithAccount } from "@/lib/api/session";
+import { shouldShowSsoAvailableBanner } from "@/lib/auth/sso-banner";
 import { db } from "@/lib/db";
 import {
   apiTokens,
   files as filesTable,
   notes as notesTable,
   spaces as spacesTable,
+  teamSsoConfigs,
+  userSsoIdentities,
 } from "@/lib/db/schema";
 import { formatBytes, formatRelative } from "@/lib/format";
 import { getQuota } from "@/lib/quota";
@@ -42,9 +46,9 @@ export default async function DashboardPage({
   searchParams: Promise<{ teamRequired?: string }>;
 }) {
   const t = await getTranslations("dashboard.home");
-  const { session, ownerAccountId } = await requireSessionWithAccount();
+  const { session, ownerAccountId, accountType } = await requireSessionWithAccount();
   const { teamRequired } = await searchParams;
-  const [quota, recentNotes, recentFiles, spaceCount, tokenCount] =
+  const [quota, recentNotes, recentFiles, spaceCount, tokenCount, ssoConfig] =
     await Promise.all([
       getQuota(ownerAccountId),
       db
@@ -77,13 +81,50 @@ export default async function DashboardPage({
           isNull(apiTokens.revokedAt),
         ),
       ),
+      accountType === "team"
+        ? db
+            .select({
+              tenantId: teamSsoConfigs.tenantId,
+              enabled: teamSsoConfigs.enabled,
+            })
+            .from(teamSsoConfigs)
+            .where(eq(teamSsoConfigs.ownerAccountId, ownerAccountId))
+            .limit(1)
+            .then((rows) => rows[0] ?? null)
+        : Promise.resolve(null),
     ]);
+
+  const hasSsoIdentity =
+    accountType === "team" && ssoConfig?.enabled
+      ? (
+          await db
+            .select({ id: userSsoIdentities.id })
+            .from(userSsoIdentities)
+            .where(
+              and(
+                eq(userSsoIdentities.userId, session.user.id),
+                eq(userSsoIdentities.provider, "entra"),
+                eq(userSsoIdentities.tenantId, ssoConfig.tenantId),
+              ),
+            )
+            .limit(1)
+        ).length > 0
+      : false;
+
+  const showSsoAvailableBanner = shouldShowSsoAvailableBanner({
+    accountType,
+    ssoEnabled: ssoConfig?.enabled ?? false,
+    hasSsoIdentity,
+  });
 
   const firstName = session.user.name?.split(" ")[0] ?? null;
 
   return (
     <div className="space-y-6 sm:space-y-8">
       {teamRequired ? <TeamRequiredToast /> : null}
+      {showSsoAvailableBanner ? (
+        <SsoAvailableBanner ownerAccountId={ownerAccountId} />
+      ) : null}
       {/* Header */}
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">

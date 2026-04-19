@@ -22,7 +22,8 @@ export type SsoErrorCode =
   | "sso.providerUnreachable"
   | "sso.configurationError"
   | "sso.stateInvalid"
-  | "sso.fallbackAdminRequired";
+  | "sso.fallbackAdminRequired"
+  | "sso.tokenVerificationFailed";
 
 export type SsoProvider = "entra";
 
