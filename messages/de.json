@@ -305,7 +305,10 @@
         "providerUnreachable": "Microsoft-Login ist aktuell nicht erreichbar.",
         "configurationError": "SSO-Konfiguration ungültig. Wende dich an deinen Team-Admin.",
         "stateInvalid": "Der Anmelde-Link ist abgelaufen oder wurde bereits verwendet. Bitte erneut starten.",
-        "fallbackAdminRequired": "Dieses Team braucht mindestens einen Owner oder Admin mit Email/Passwort-Zugang, bevor SSO aktiviert werden kann."
+        "fallbackAdminRequired": "Dieses Team braucht mindestens einen Owner oder Admin mit Email/Passwort-Zugang, bevor SSO aktiviert werden kann.",
+        "noFallbackAdmin": "Dieses Team hat keinen Admin mit Email/Passwort-Login. SSO kann nicht aktiviert werden, bis mindestens ein solcher existiert.",
+        "tenantUnreachable": "Der angegebene Entra-Tenant ist nicht erreichbar oder existiert nicht.",
+        "invalidDomain": "Eine oder mehrere Domains haben ein ungültiges Format."
       }
     }
   },

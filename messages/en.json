@@ -305,7 +305,10 @@
         "providerUnreachable": "Microsoft sign-in is currently unavailable.",
         "configurationError": "SSO configuration is invalid. Contact your team admin.",
         "stateInvalid": "Sign-in link expired or was already used. Please try again.",
-        "fallbackAdminRequired": "This team requires at least one owner or admin with email/password access before SSO can be enabled."
+        "fallbackAdminRequired": "This team requires at least one owner or admin with email/password access before SSO can be enabled.",
+        "noFallbackAdmin": "This team has no admin with email/password login. SSO cannot be enabled until at least one such admin exists.",
+        "tenantUnreachable": "The given Entra tenant is unreachable or does not exist.",
+        "invalidDomain": "One or more domains have an invalid format."
       }
     }
   },
