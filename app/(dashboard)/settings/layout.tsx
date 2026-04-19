@@ -1,36 +1,19 @@
-import { getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
-import { requireSessionWithAccount } from "@/lib/api/session";
-import { SectionNav } from "../profile/_section-nav";
 
-export default async function SettingsLayout({
-  children,
-}: {
-  children: ReactNode;
-}) {
-  const t = await getTranslations("settings");
-  const { accountType } = await requireSessionWithAccount();
-
-  const items = [
-    { href: "/settings", label: t("navigation.general") },
-    { href: "/settings/mcp", label: t("navigation.mcp") },
-    { href: "/settings/storage", label: t("navigation.storage") },
-    { href: "/settings/embedding-key", label: t("navigation.embeddingKey") },
-  ];
-  if (accountType === "team") {
-    items.push({ href: "/settings/team", label: t("navigation.team") });
-  }
-
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-4xl font-semibold tracking-tight leading-tight">
-          {t("title")}
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">{t("subtitle")}</p>
-      </div>
-      <SectionNav items={items} />
-      {children}
-    </div>
-  );
+/**
+ * Settings-Layout — nach dem Block-2-Refactor.
+ *
+ * Der Layout-H1 + die SectionNav sind weg (analog zur Profile-
+ * Migration in Block 1). Jede Sub-Page rendert ihren eigenen
+ * `<PageHeader>` + `<SettingsTabs />` + `<SettingsScopeHint />`.
+ *
+ * Der conditional-Team-Tab aus der alten Layout-Logik (`if
+ * accountType === "team"`) ist ebenfalls entfallen — Team-Settings
+ * leben jetzt unter `/team/*` (Block 3).
+ *
+ * Pass-Through-Container, damit die Route-Group stabil im Next-Baum
+ * sitzt.
+ */
+export default function SettingsLayout({ children }: { children: ReactNode }) {
+  return children;
 }

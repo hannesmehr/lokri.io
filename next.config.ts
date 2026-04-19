@@ -83,6 +83,28 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  /**
+   * Legacy-URL-Umleitungen. Permanent (301) damit Browser-Cache und
+   * Suchmaschinen die neue URL übernehmen.
+   *
+   * `/settings` → `/settings/general` kam mit dem Block-2-Refactor des
+   * Settings-Bereichs (Block 2 des Settings-Struktur-Refactors). Die
+   * alte Root-Route hat zuletzt nur noch die DangerZone gezeigt und
+   * ist ersatzlos entfallen; Content liegt jetzt unter
+   * `/settings/general`.
+   *
+   * Block 3 ergänzt hier die `/settings/team/*` → `/team/*`-Redirects,
+   * wenn der neue Team-Bereich steht.
+   */
+  async redirects() {
+    return [
+      {
+        source: "/settings",
+        destination: "/settings/general",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default withNextIntl(nextConfig);

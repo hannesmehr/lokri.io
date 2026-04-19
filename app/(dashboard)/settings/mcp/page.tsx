@@ -8,18 +8,22 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
 import { requireSessionWithAccount } from "@/lib/api/session";
 import { db } from "@/lib/db";
-import { apiTokens, spaces } from "@/lib/db/schema";
+import { apiTokens, ownerAccounts, spaces } from "@/lib/db/schema";
 import { resolveAppOrigin } from "@/lib/origin";
+import { SettingsScopeHint } from "../_scope-hint";
+import { SettingsTabs } from "../_tabs";
 import { McpInstructions } from "./_mcp-instructions";
 import { TokenList } from "./_token-list";
 import { TokenCreateDialog } from "./_token-create-dialog";
 
 export default async function McpPage() {
-  const tPage = await getTranslations("settings.mcp.page");
+  const tHeader = await getTranslations("settings.mcp.pageHeader");
   const tLegacy = await getTranslations("settings.mcp.legacyTokens");
   const tInstructions = await getTranslations("settings.mcp.instructions");
+  const tLayout = await getTranslations("settings");
   const { ownerAccountId, accountType, role } =
     await requireSessionWithAccount();
   const origin = resolveAppOrigin();
@@ -51,16 +55,29 @@ export default async function McpPage() {
       .orderBy(desc(spaces.updatedAt)),
   ]);
 
+  const [account] = await db
+    .select({ name: ownerAccounts.name })
+    .from(ownerAccounts)
+    .where(eq(ownerAccounts.id, ownerAccountId))
+    .limit(1);
+
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-4xl font-semibold tracking-tight leading-tight">
-          {tPage("title")}
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {tPage("subtitle")}
-        </p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        breadcrumbs={[
+          { label: tLayout("title"), href: "/settings/general" },
+          { label: tLayout("navigation.mcp") },
+        ]}
+        title={tHeader("title")}
+        description={tHeader("description")}
+      />
+      <SettingsTabs />
+      <SettingsScopeHint
+        accountType={accountType}
+        accountName={account?.name ?? ""}
+      />
+      <div className="space-y-8">
+        {/* inner spacing group — Cards sind größer spaced als das Header-Triple */}
 
       <Card>
         <CardHeader>
@@ -102,6 +119,7 @@ export default async function McpPage() {
           <McpInstructions origin={origin} />
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }

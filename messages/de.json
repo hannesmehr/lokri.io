@@ -911,7 +911,25 @@
       "embeddingKey": "Embedding-Key",
       "team": "Team"
     },
+    "scopeHint": {
+      "personal": "Diese Einstellung gilt für deinen persönlichen Account.",
+      "team": "Diese Einstellung gilt für das Team {name}."
+    },
     "general": {
+      "pageHeader": {
+        "title": "Allgemein",
+        "description": "Name, Typ und Plan des aktiven Accounts."
+      },
+      "accountCard": {
+        "title": "Account",
+        "description": "Typ und Anzeigename des aktuell aktiven Accounts.",
+        "nameLabel": "Name"
+      },
+      "planCard": {
+        "title": "Plan",
+        "description": "Abrechnungs-Tier des aktiven Accounts.",
+        "manageLink": "Plan-Details ansehen →"
+      },
       "languageTitle": "Sprache",
       "languageDescription": "Sprache der Weboberfläche. Wird in einem Cookie und an deinem Profil gespeichert.",
       "dangerZone": "Gefahrenzone"
@@ -919,6 +937,10 @@
     "mcp": {
       "title": "MCP",
       "subtitle": "Verbinde Claude Desktop, ChatGPT, Cursor oder andere MCP-Clients mit deinem lokri-Account.",
+      "pageHeader": {
+        "title": "MCP",
+        "description": "Verbinde Claude Desktop, ChatGPT, Cursor oder andere MCP-Clients mit deinem lokri-Account."
+      },
       "page": {
         "title": "MCP",
         "subtitle": "Verbinde Claude Desktop, ChatGPT, Cursor oder andere MCP-Clients mit deinem lokri-Account."
@@ -1054,6 +1076,10 @@
     "storage": {
       "title": "Storage",
       "subtitle": "Eigene S3-Buckets oder GitHub-Repos anbinden.",
+      "pageHeader": {
+        "title": "Storage",
+        "description": "Eigene S3-Buckets oder GitHub-Repos anbinden, um Dateien außerhalb von lokri zu hosten."
+      },
       "pageTitle": "Storage-Provider",
       "pageDescription": "Der interne Vercel-Blob-Storage ist immer aktiv. Externe S3-Provider kannst du hinzufügen und anschließend einzelnen Spaces zuweisen — Daten in dem Space gehen dann in deinen eigenen Bucket.",
       "internal": {
@@ -1128,6 +1154,10 @@
       }
     },
     "embeddingKey": {
+      "pageHeader": {
+        "title": "Embedding-Key",
+        "description": "Eigenen OpenAI-Key hinterlegen und die lokri-Gateway für Embedding-Requests umgehen."
+      },
       "heading": "Eigener Embedding-API-Key (BYOK)",
       "description": "Statt über die Vercel AI Gateway läuft jede Embedding-Anfrage direkt gegen deinen OpenAI-Account. Keine zusätzlichen Gebühren bei uns, vollständige Audit-Spur bei dir.",
       "intro": {
