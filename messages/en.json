@@ -362,6 +362,15 @@
       "intro": "You have transferred the owner role of {teamName} to {newOwnerName}. You are now an admin and can continue contributing to the team, but no longer have access to billing or team deletion.",
       "reversalHint": "If this was a mistake, ask {newOwnerName} to transfer the role back — we cannot undo this automatically.",
       "button": "Open team settings"
+    },
+    "accountSetupInvitation": {
+      "subject": "Your lokri.io account has been created",
+      "heading": "Welcome to lokri.io",
+      "intro": "An admin has created a lokri.io account for you. Click the button to set a password and sign in.",
+      "button": "Set password & get started",
+      "expiry": "The setup link is valid until {expiresAt} (7 days).",
+      "fallback": "If the button does not work, open this link: {url}",
+      "ignoreHint": "If you have nothing to do with this account, simply ignore this email."
     }
   },
 

@@ -362,6 +362,15 @@
       "intro": "Du hast die Owner-Rolle von {teamName} an {newOwnerName} übertragen. Du bist jetzt Admin und kannst das Team weiter mitgestalten, hast aber keinen Zugriff mehr auf Billing oder Team-Löschung.",
       "reversalHint": "Falls das ein Versehen war, bitte {newOwnerName} um eine erneute Übertragung — wir können das nicht automatisch rückgängig machen.",
       "button": "Team-Einstellungen öffnen"
+    },
+    "accountSetupInvitation": {
+      "subject": "Dein lokri.io-Account wurde angelegt",
+      "heading": "Willkommen bei lokri.io",
+      "intro": "Ein Admin hat einen lokri.io-Account für dich angelegt. Klicke auf den Button, um ein Passwort zu setzen und dich anzumelden.",
+      "button": "Passwort setzen & loslegen",
+      "expiry": "Der Setup-Link ist bis {expiresAt} gültig (7 Tage).",
+      "fallback": "Falls der Button nicht funktioniert, öffne diesen Link: {url}",
+      "ignoreHint": "Falls du mit diesem Account nichts zu tun hast, ignoriere diese E-Mail einfach."
     }
   },
 

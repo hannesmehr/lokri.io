@@ -65,7 +65,8 @@ async function loadEmailStrings(
     | "twoFactorOtp"
     | "teamInvite"
     | "ownershipTransferredNotification"
-    | "ownershipTransferredConfirmation",
+    | "ownershipTransferredConfirmation"
+    | "accountSetupInvitation",
 ) {
   const t = await getTranslations({ locale, namespace: `email.${section}` });
   const shared = await getTranslations({ locale, namespace: "email.shared" });
@@ -280,6 +281,51 @@ export async function ownershipTransferredConfirmationTemplate({
        })}</p>
        ${button(teamSettingsUrl, t("button"))}
        <p style="color:#555;font-size:13px">${t("reversalHint", { newOwnerName })}</p>`,
+      locale,
+      footer,
+    ),
+  };
+}
+
+/**
+ * Admin-getriggertes Account-Setup. Ein Admin hat einen neuen User
+ * manuell angelegt; der User bekommt diese Mail mit dem Setup-Link,
+ * über den er sein initiales Passwort setzt und sich anmelden kann.
+ *
+ * Setup-Link ist technisch ein Password-Reset-Token, aber mit 7 Tagen
+ * Gültigkeit (statt der üblichen 1 Stunde für self-service Resets) —
+ * der User hat noch nie eingeloggt und braucht einen komfortablen
+ * Zeitrahmen für den First-Touch.
+ */
+export async function accountSetupInvitationTemplate({
+  name,
+  url,
+  expiresAt,
+  locale = defaultLocale,
+}: {
+  name: string | null;
+  url: string;
+  expiresAt: Date;
+  locale?: Locale;
+}) {
+  const { t, shared } = await loadEmailStrings(locale, "accountSetupInvitation");
+  const greet = greeting(name, shared);
+  const footer = shared("footer");
+  const expiryStr = new Intl.DateTimeFormat(
+    locale === "de" ? "de-DE" : "en-US",
+    { dateStyle: "medium", timeStyle: "short" },
+  ).format(expiresAt);
+
+  return {
+    subject: t("subject"),
+    text: `${greet}\n\n${t("intro")}\n\n${url}\n\n${t("expiry", { expiresAt: expiryStr })}\n\n${t("ignoreHint")}`,
+    html: wrap(
+      `<p>${greet}</p>
+       <p>${t("intro")}</p>
+       ${button(url, t("button"))}
+       <p style="color:#555;font-size:13px">${t("expiry", { expiresAt: expiryStr })}</p>
+       <p style="color:#555;font-size:13px">${t("fallback", { url: `<a href="${url}" style="color:#6366f1;word-break:break-all">${url}</a>` })}</p>
+       <p style="color:#555;font-size:13px">${t("ignoreHint")}</p>`,
       locale,
       footer,
     ),
