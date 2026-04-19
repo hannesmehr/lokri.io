@@ -84,23 +84,38 @@ const nextConfig: NextConfig = {
     ];
   },
   /**
-   * Legacy-URL-Umleitungen. Permanent (301) damit Browser-Cache und
-   * Suchmaschinen die neue URL übernehmen.
+   * Legacy-URL-Umleitungen. Permanent (Next rendert 308) damit Browser-
+   * Cache und Suchmaschinen die neue URL übernehmen.
    *
-   * `/settings` → `/settings/general` kam mit dem Block-2-Refactor des
-   * Settings-Bereichs (Block 2 des Settings-Struktur-Refactors). Die
-   * alte Root-Route hat zuletzt nur noch die DangerZone gezeigt und
-   * ist ersatzlos entfallen; Content liegt jetzt unter
-   * `/settings/general`.
+   * - `/settings` → `/settings/general`: nach dem Settings-Struktur-
+   *   Refactor gibt es keine Root-Settings-Route mehr.
+   * - `/billing/*` → `/settings/billing/*`: Settings-Redesign Block 2.
+   *   Billing ist jetzt ein Tab im Settings-Bereich, nicht ein
+   *   eigenständiger Top-Level-Bereich. PayPal-Return-URLs + interne
+   *   Nav-Links sind atomar mit dem Route-Umzug aktualisiert (einzige
+   *   Ausnahme sind gespeicherte Bookmarks — die fängt dieser
+   *   Redirect ab).
    *
-   * Block 3 ergänzt hier die `/settings/team/*` → `/team/*`-Redirects,
-   * wenn der neue Team-Bereich steht.
+   * Der Settings-Struktur-Refactor Block 3 wird hier `/settings/team/*`
+   * → `/team/*`-Redirects ergänzen, wenn der neue Team-Bereich steht.
    */
   async redirects() {
     return [
       {
         source: "/settings",
         destination: "/settings/general",
+        permanent: true,
+      },
+      {
+        source: "/billing",
+        destination: "/settings/billing",
+        permanent: true,
+      },
+      // Next.js matched `:path*` mit 0+ Segmenten, deckt also auch
+      // `/billing/plans`, `/billing/invoices`, `/billing/success` ab.
+      {
+        source: "/billing/:path*",
+        destination: "/settings/billing/:path*",
         permanent: true,
       },
     ];

@@ -134,7 +134,7 @@ export default async function SettingsGeneralPage() {
           hint={renewalHint}
           action={
             <Link
-              href="/billing"
+              href="/settings/billing"
               className="underline-offset-4 hover:underline"
             >
               {tWidgetPlan("openBilling")}

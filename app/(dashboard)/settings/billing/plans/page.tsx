@@ -9,6 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
 import { requireSessionWithAccount } from "@/lib/api/session";
 import { db } from "@/lib/db";
 import { ownerAccounts, plans } from "@/lib/db/schema";
@@ -16,10 +17,23 @@ import type { Locale } from "@/lib/i18n/config";
 import { formatBytes, formatCurrency } from "@/lib/i18n/formatters";
 import { UpgradeButton } from "../_upgrade-button";
 
+/**
+ * Plan-Wechsel-Flow (Settings-Redesign Block 2).
+ *
+ * Sub-Route von `/settings/billing` — **ohne** SettingsTabs, weil
+ * Prinzip 5 aus `docs/USER_SETTINGS_DESIGN.md` sagt: Conversion-Flows
+ * gehören in Sub-Routen, nicht als Tab-Ebene. Die Breadcrumbs im
+ * PageHeader (Einstellungen › Billing › Pläne) übernehmen die
+ * Hierarchie-Sichtbarkeit.
+ *
+ * Akquisitions-Tabelle mit allen kaufbaren Plans. Nach Kauf
+ * redirectet PayPal auf `/settings/billing/success`.
+ */
 export default async function BillingPlansPage() {
   const { ownerAccountId } = await requireSessionWithAccount();
   const locale = (await getLocale()) as Locale;
-  const t = await getTranslations("billing.plans");
+  const t = await getTranslations("settings.billing.plansPage");
+  const tLayout = await getTranslations("settings");
   const [account, allPlans] = await Promise.all([
     db
       .select()
@@ -38,10 +52,15 @@ export default async function BillingPlansPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold tracking-tight">{t("title")}</h2>
-        <p className="mt-1 text-sm text-muted-foreground">{t("subtitle")}</p>
-      </div>
+      <PageHeader
+        breadcrumbs={[
+          { label: tLayout("title"), href: "/settings/general" },
+          { label: tLayout("navigation.billing"), href: "/settings/billing" },
+          { label: t("title") },
+        ]}
+        title={t("title")}
+        description={t("subtitle")}
+      />
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
       {purchasable.map((plan) => {
         const isCurrent = plan.id === currentPlanId;

@@ -82,7 +82,7 @@ export default async function DashboardPage() {
           </p>
         </div>
         <Link
-          href="/billing"
+          href="/settings/billing"
           className="inline-flex min-h-9 items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs transition-colors hover:border-foreground/20"
           aria-label={t("planAriaLabel", { planId: quota.planId })}
         >

@@ -68,8 +68,8 @@ export async function POST(req: NextRequest) {
       planName: plan.name,
       period: parsed.data.period,
       amountCents,
-      returnUrl: `${origin}/billing/success`,
-      cancelUrl: `${origin}/billing?cancelled=1`});
+      returnUrl: `${origin}/settings/billing/success`,
+      cancelUrl: `${origin}/settings/billing?cancelled=1`});
 
     // Bind the PayPal order ID back to our row.
     await db

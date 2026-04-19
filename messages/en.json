@@ -1309,6 +1309,103 @@
           "generic": "Invitation could not be sent."
         }
       }
+    },
+    "billing": {
+      "pageHeader": {
+        "title": "Billing",
+        "description": "Plan, invoices, and payment history."
+      },
+      "planSection": {
+        "currentPlanLabel": "Current plan",
+        "currentPlanDescription": "{storage} storage · {files} files · {notes} notes",
+        "changePlan": "Change plan",
+        "cancelled": {
+          "title": "Order cancelled",
+          "description": "PayPal sent you back without a payment. Your plan stays unchanged."
+        },
+        "kpis": {
+          "status": "Status",
+          "expiresAt": "Expires at",
+          "renewedAt": "Last renewed"
+        },
+        "status": {
+          "active": "active",
+          "expired": "expired",
+          "free": "free"
+        },
+        "noExpiry": "No expiry date",
+        "daysLeft": "{count} days left",
+        "upgrade": {
+          "title": "Need more storage?",
+          "description": "Starter from {monthly}/month or {yearly}/year.",
+          "cta": "View plans"
+        },
+        "expired": {
+          "title": "Your plan has expired",
+          "description": "You're currently on free limits only. Existing data stays available — renew to get the full quota again.",
+          "cta": "Renew"
+        }
+      },
+      "invoicesSection": {
+        "title": "Invoices",
+        "description": "PDF downloads for all previous payments. Invoice numbers follow the LK-YYYY-NNNN format.",
+        "empty": "No invoices yet — you're on the Free plan.",
+        "issuedAtLabel": "Issued {date}",
+        "amountLabel": "{amount}",
+        "status": {
+          "paid": "Paid",
+          "open": "Open",
+          "void": "Voided",
+          "draft": "Draft"
+        },
+        "download": "Download PDF"
+      },
+      "plansPage": {
+        "title": "Plans",
+        "subtitle": "Pick a plan that fits you. One-time payment via PayPal.",
+        "period": {
+          "monthly": "Monthly",
+          "yearly": "Yearly"
+        },
+        "recommended": "Recommended",
+        "perMonth": "/month",
+        "yearlyOption": "or {price}/year ({discount}% saved)",
+        "features": {
+          "storage": "{bytes} storage",
+          "files": "{count} files",
+          "notes": "{count} notes",
+          "search": "Semantic search and MCP access",
+          "privacy": "No ads, no training usage"
+        },
+        "currentBadge": "Current plan"
+      },
+      "successPage": {
+        "capturing": {
+          "title": "Confirming payment…",
+          "description": "We're fetching PayPal confirmation and activating your plan. This usually takes 1–3 seconds."
+        },
+        "title": "Payment confirmed",
+        "body": "Your plan is active. The invoice is available in your billing documents.",
+        "backToDashboard": "Back to dashboard",
+        "backToBilling": "Back to billing",
+        "openInvoice": "Open invoice",
+        "contactSupport": "Contact support",
+        "errorTitle": "Something went wrong",
+        "errors": {
+          "missingToken": "PayPal did not include an order token.",
+          "captureFailed": "Payment could not be confirmed.",
+          "network": "Network error"
+        }
+      },
+      "errors": {
+        "createOrderFailed": "PayPal order failed.",
+        "noApproveUrl": "No approval URL received from PayPal.",
+        "captureFailed": "Payment could not be completed."
+      },
+      "upgradeButton": {
+        "label": "Upgrade",
+        "opening": "Opening PayPal…"
+      }
     }
   },
   "profile": {
@@ -1505,108 +1602,6 @@
           "generic": "Could not start account deletion."
         }
       }
-    }
-  },
-  "billing": {
-    "layout": {
-      "title": "Billing",
-      "subtitle": "Plan, invoices, and payments.",
-      "navigation": {
-        "overview": "Overview",
-        "plans": "Plans",
-        "invoices": "Invoices"
-      }
-    },
-    "overview": {
-      "currentPlanLabel": "Current plan",
-      "currentPlanDescription": "{storage} storage · {files} files · {notes} notes",
-      "changePlan": "Change plan",
-      "cancelled": {
-        "title": "Order cancelled",
-        "description": "PayPal sent you back without a payment. Your plan stays unchanged."
-      },
-      "kpis": {
-        "status": "Status",
-        "expiresAt": "Expires at",
-        "renewedAt": "Last renewed"
-      },
-      "status": {
-        "active": "active",
-        "expired": "expired",
-        "free": "free"
-      },
-      "noExpiry": "No expiry date",
-      "daysLeft": "{count} days left",
-      "upgrade": {
-        "title": "Need more storage?",
-        "description": "Starter from {monthly}/month or {yearly}/year.",
-        "cta": "View plans"
-      },
-      "expired": {
-        "title": "Your plan has expired",
-        "description": "You're currently on free limits only. Existing data stays available — renew to get the full quota again.",
-        "cta": "Renew"
-      }
-    },
-    "plans": {
-      "title": "Plans",
-      "subtitle": "Pick a plan that fits you. One-time payment via PayPal.",
-      "period": {
-        "monthly": "Monthly",
-        "yearly": "Yearly"
-      },
-      "recommended": "Recommended",
-      "perMonth": "/month",
-      "yearlyOption": "or {price}/year ({discount}% saved)",
-      "features": {
-        "storage": "{bytes} storage",
-        "files": "{count} files",
-        "notes": "{count} notes",
-        "search": "Semantic search and MCP access",
-        "privacy": "No ads, no training usage"
-      },
-      "currentBadge": "Current plan"
-    },
-    "invoices": {
-      "title": "Invoices",
-      "description": "PDF downloads for all previous payments. Invoice numbers follow the LK-YYYY-NNNN format.",
-      "empty": "No invoices yet — you're on the Free plan.",
-      "issuedAtLabel": "Issued {date}",
-      "amountLabel": "{amount}",
-      "status": {
-        "paid": "Paid",
-        "open": "Open",
-        "void": "Voided",
-        "draft": "Draft"
-      },
-      "download": "Download PDF"
-    },
-    "success": {
-      "capturing": {
-        "title": "Confirming payment…",
-        "description": "We're fetching PayPal confirmation and activating your plan. This usually takes 1–3 seconds."
-      },
-      "title": "Payment confirmed",
-      "body": "Your plan is active. The invoice is available in your billing documents.",
-      "backToDashboard": "Back to dashboard",
-      "backToBilling": "Back to billing",
-      "openInvoice": "Open invoice",
-      "contactSupport": "Contact support",
-      "errorTitle": "Something went wrong",
-      "errors": {
-        "missingToken": "PayPal did not include an order token.",
-        "captureFailed": "Payment could not be confirmed.",
-        "network": "Network error"
-      }
-    },
-    "errors": {
-      "createOrderFailed": "PayPal order failed.",
-      "noApproveUrl": "No approval URL received from PayPal.",
-      "captureFailed": "Payment could not be completed."
-    },
-    "upgradeButton": {
-      "label": "Upgrade",
-      "opening": "Opening PayPal…"
     }
   },
   "marketing": {

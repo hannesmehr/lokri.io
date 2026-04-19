@@ -79,7 +79,7 @@ export function UserMenu({ user, isAdmin = false }: Props) {
           <User className="h-4 w-4" />
           {t("profile")}
         </DropdownMenuItem>
-        <DropdownMenuItem render={<Link href="/billing" />}>
+        <DropdownMenuItem render={<Link href="/settings/billing" />}>
           <CreditCard className="h-4 w-4" />
           {t("billing")}
         </DropdownMenuItem>

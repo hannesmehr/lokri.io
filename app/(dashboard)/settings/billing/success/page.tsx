@@ -25,7 +25,7 @@ export default function BillingSuccessPage() {
 type Phase = "capturing" | "success" | "error";
 
 function Inner() {
-  const t = useTranslations("billing.success");
+  const t = useTranslations("settings.billing.successPage");
   const tErrors = useTranslations("errors.api.billing");
   const params = useSearchParams();
   const paypalOrderId = params.get("token"); // PayPal puts the order id in `token`
@@ -87,7 +87,7 @@ function Inner() {
             className="w-full sm:w-auto"
             nativeButton={false}
             variant="outline"
-            render={<Link href="/billing">{t("backToBilling")}</Link>}
+            render={<Link href="/settings/billing">{t("backToBilling")}</Link>}
           />
           <Button
             className="w-full sm:w-auto"
@@ -125,7 +125,7 @@ function Inner() {
           <Button
             nativeButton={false}
             variant="outline"
-            render={<Link href="/billing">{t("backToBilling")}</Link>}
+            render={<Link href="/settings/billing">{t("backToBilling")}</Link>}
           />
           <Button
             nativeButton={false}

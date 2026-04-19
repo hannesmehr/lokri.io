@@ -15,11 +15,11 @@ interface Props {
 
 /**
  * Creates a PayPal order on click, then redirects the browser to PayPal's
- * approve URL. On return, `/billing/success` captures the order.
+ * approve URL. On return, `/settings/billing/success` captures the order.
  */
 export function UpgradeButton({ planId, period, label, className }: Props) {
-  const t = useTranslations("billing.errors");
-  const tButton = useTranslations("billing.upgradeButton");
+  const t = useTranslations("settings.billing.errors");
+  const tButton = useTranslations("settings.billing.upgradeButton");
   const [loading, setLoading] = useState(false);
 
   async function go() {

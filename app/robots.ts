@@ -22,7 +22,6 @@ export default function robots(): MetadataRoute.Robots {
           "/mcp",
           "/profile",
           "/settings",
-          "/billing",
           "/two-factor",
           "/forgot-password",
           "/reset-password",

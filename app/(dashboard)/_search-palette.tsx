@@ -176,7 +176,7 @@ export function SearchPalette() {
         id: "nav-billing",
         label: t("commands.billing.label"),
         icon: CreditCard,
-        run: (r) => r.push("/billing"),
+        run: (r) => r.push("/settings/billing"),
         keywords: t("commands.billing.keywords").split(" "),
       },
       {
