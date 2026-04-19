@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
 import { auth, microsoftSsoProvider } from "@/lib/auth";
@@ -13,7 +13,11 @@ import {
   type SsoErrorCode,
 } from "@/lib/auth/sso";
 import { db } from "@/lib/db";
-import { teamSsoConfigs, users } from "@/lib/db/schema";
+import {
+  accounts as authAccounts,
+  teamSsoConfigs,
+  users,
+} from "@/lib/db/schema";
 
 export const runtime = "nodejs";
 
@@ -120,7 +124,9 @@ export async function GET(req: NextRequest) {
 
   // ID-Token Signatur-Validierung gegen Entra's public keys.
   // Besteht der Check, ist der Token authentisch und nicht
-  // gefälscht.
+  // gefälscht. Wir nutzen unseren eigenen `verifyIdToken`
+  // (siehe `lib/auth.ts::verifyEntraIdToken`) wegen eines Better-
+  // Auth-Bugs im Built-in.
   try {
     const ok = await microsoftSsoProvider.verifyIdToken(
       idToken,
@@ -183,7 +189,7 @@ export async function GET(req: NextRequest) {
     return redirectError(req, "sso.notTeamMember");
   }
 
-  // JIT-Link in `user_sso_identities`.
+  // JIT-Link in `user_sso_identities` (unser Team-SSO-Record).
   try {
     await upsertSsoIdentity({
       userId: user.id,
@@ -207,6 +213,61 @@ export async function GET(req: NextRequest) {
       return redirectError(req, "sso.configurationError");
     }
     throw err;
+  }
+
+  // Pre-insert Better-Auth's eigene `accounts`-Row (Provider-Account-
+  // Link) bevor wir signInSocial aufrufen.
+  //
+  // Grund: Wir haben accountLinking im Default belassen (disabled),
+  // damit die Standard-Better-Auth-/sign-in/social-Route nicht zum
+  // Backdoor wird — dort würde ein Entra-User mit einer beliebigen
+  // Tenant-Herkunft per Email-Match zu einem lokri-User zu-gelinkt,
+  // ohne unsere Team-SSO-Validierung (tid + Domain + Membership) zu
+  // durchlaufen. Unser Callback validiert das alles vorher, also
+  // wissen wir: der Link (user_id, provider=microsoft, subject) ist
+  // legitim. Durch das explizite Vorab-Insert findet Better-Auth's
+  // `handleOAuthUserInfo` den Account-Record und skippt die Auto-
+  // Link-Logik (die bei disabled-Linking „User already exist but
+  // account isn't linked" loggen würde).
+  //
+  // Idempotent via uniq-Index `(providerId, accountId)` — der Index
+  // existiert in Better-Auth's Schema implizit, wir nutzen einen
+  // SELECT-then-INSERT, weil Drizzle + pg kein onConflict mit
+  // Composite-Target ohne expliziten uniqueIndex erlaubt.
+  // WICHTIG: `accountId` muss gleich `claims.sub` (JWT-Standard-Subject)
+  // sein, NICHT `claims.subject` (unser oid-preferring Field). Grund:
+  // Better-Auth's `getUserInfo` für Microsoft setzt `userInfo.user.id =
+  // payload.sub`, und `handleOAuthUserInfo` sucht die Account-Row mit
+  // `accountId = userInfo.user.id`. Würden wir `oid` reinschreiben,
+  // fände Better-Auth's Lookup keinen Match und würde erneut
+  // versuchen auto-zu-linken (was disabled ist → WARN + keine
+  // Session).
+  const [existingAccount] = await db
+    .select({ id: authAccounts.id })
+    .from(authAccounts)
+    .where(
+      and(
+        eq(authAccounts.providerId, "microsoft"),
+        eq(authAccounts.accountId, claims.sub),
+      ),
+    )
+    .limit(1);
+  if (!existingAccount) {
+    const nowForAccount = new Date();
+    await db.insert(authAccounts).values({
+      id: crypto.randomUUID(),
+      userId: user.id,
+      providerId: "microsoft",
+      accountId: claims.sub,
+      idToken,
+      createdAt: nowForAccount,
+      updatedAt: nowForAccount,
+    });
+  } else {
+    await db
+      .update(authAccounts)
+      .set({ idToken, updatedAt: new Date() })
+      .where(eq(authAccounts.id, existingAccount.id));
   }
 
   // Session minten via Better-Auth. Die API akzeptiert

@@ -199,7 +199,7 @@ test("decodeIdTokenClaims — falsches Format → null", () => {
   assert.equal(decodeIdTokenClaims("a.@@@.c"), null);
 });
 
-test("extractEntraClaims — bevorzugt oid vor sub für subject", () => {
+test("extractEntraClaims — bevorzugt oid vor sub für subject, exposed beide", () => {
   const token = makeIdToken({
     oid: "oid-value",
     sub: "sub-value",
@@ -208,24 +208,39 @@ test("extractEntraClaims — bevorzugt oid vor sub für subject", () => {
   });
   const claims = extractEntraClaims(token);
   assert.ok(claims);
+  // `subject` (für user_sso_identities) bevorzugt oid
   assert.equal(claims!.subject, "oid-value");
+  // `sub` (für Better-Auth accounts) ist immer der JWT-Standard-Sub
+  assert.equal(claims!.sub, "sub-value");
   assert.equal(claims!.tenantId, "tenant-abc");
   assert.equal(claims!.email, "user@firma.de");
 });
 
-test("extractEntraClaims — fällt auf sub zurück, wenn oid fehlt", () => {
+test("extractEntraClaims — ohne oid: subject === sub (beide gleich)", () => {
   const token = makeIdToken({
     sub: "sub-value",
     tid: "tenant-abc",
     email: "user@firma.de",
   });
   const claims = extractEntraClaims(token);
-  assert.equal(claims?.subject, "sub-value");
+  assert.ok(claims);
+  assert.equal(claims!.subject, "sub-value");
+  assert.equal(claims!.sub, "sub-value");
+});
+
+test("extractEntraClaims — ohne sub → null (Better-Auth braucht sub)", () => {
+  const token = makeIdToken({
+    oid: "oid-value",
+    tid: "tenant-abc",
+    email: "user@firma.de",
+  });
+  assert.equal(extractEntraClaims(token), null);
 });
 
 test("extractEntraClaims — nutzt preferred_username, wenn email fehlt", () => {
   const token = makeIdToken({
     oid: "oid-value",
+    sub: "sub-value",
     tid: "tenant-abc",
     preferred_username: "user@firma.de",
   });
@@ -239,11 +254,15 @@ test("extractEntraClaims — ohne subject → null", () => {
 });
 
 test("extractEntraClaims — ohne tid → null", () => {
-  const token = makeIdToken({ oid: "x", email: "user@firma.de" });
+  const token = makeIdToken({
+    oid: "x",
+    sub: "x",
+    email: "user@firma.de",
+  });
   assert.equal(extractEntraClaims(token), null);
 });
 
 test("extractEntraClaims — ohne email/preferred_username → null", () => {
-  const token = makeIdToken({ oid: "x", tid: "tenant-abc" });
+  const token = makeIdToken({ oid: "x", sub: "x", tid: "tenant-abc" });
   assert.equal(extractEntraClaims(token), null);
 });

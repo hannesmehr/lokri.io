@@ -109,8 +109,19 @@ export function validateSsoTokenClaims(args: {
 // ---------------------------------------------------------------------------
 
 export interface EntraClaims {
-  /** `oid` (Object-ID, bevorzugt) oder `sub` als stabile Subject-ID. */
+  /**
+   * Team-SSO-Identity-Key. `oid` (Object-ID) bevorzugt — stabil über
+   * alle Apps desselben Tenants. Fallback `sub` für nicht-Entra-v2-
+   * Tokens. Nutzen wir in `user_sso_identities.subject`.
+   */
   subject: string;
+  /**
+   * Better-Auth-Account-Key. Immer `sub` (JWT-Standard-Subject) — so
+   * matched es mit Better-Auth's `getUserInfo`, das `user.id =
+   * payload.sub` setzt. Nutzen wir in `accounts.account_id` beim
+   * Pre-Insert vor `auth.api.signInSocial`.
+   */
+  sub: string;
   /** `tid` — Tenant-ID des authentifizierten Users. */
   tenantId: string;
   /** `email` oder `preferred_username` (Entra setzt eines der beiden). */
@@ -156,6 +167,6 @@ export function extractEntraClaims(idToken: string): EntraClaims | null {
       : typeof payload.preferred_username === "string"
         ? payload.preferred_username
         : null;
-  if (!subject || !tid || !email) return null;
-  return { subject, tenantId: tid, email };
+  if (!subject || !sub || !tid || !email) return null;
+  return { subject, sub, tenantId: tid, email };
 }
