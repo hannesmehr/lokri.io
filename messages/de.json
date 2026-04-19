@@ -296,6 +296,16 @@
       "billing": {
         "captureFailed": "Zahlung konnte nicht bestätigt werden.",
         "network": "Netzwerkfehler. Bitte erneut versuchen."
+      },
+      "sso": {
+        "userNotInvited": "Deine Organisation hat dich noch nicht in diesem Team eingeladen.",
+        "notTeamMember": "Dein Account ist kein Member dieses Teams. Wende dich an deinen Team-Admin.",
+        "tenantMismatch": "Dein Microsoft-Account gehört zu einer anderen Organisation.",
+        "domainNotAllowed": "Deine E-Mail-Domain ist für dieses Team-SSO nicht freigegeben.",
+        "providerUnreachable": "Microsoft-Login ist aktuell nicht erreichbar.",
+        "configurationError": "SSO-Konfiguration ungültig. Wende dich an deinen Team-Admin.",
+        "stateInvalid": "Der Anmelde-Link ist abgelaufen oder wurde bereits verwendet. Bitte erneut starten.",
+        "fallbackAdminRequired": "Dieses Team braucht mindestens einen Owner oder Admin mit Email/Passwort-Zugang, bevor SSO aktiviert werden kann."
       }
     }
   },

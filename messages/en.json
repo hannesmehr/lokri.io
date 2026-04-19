@@ -296,6 +296,16 @@
       "billing": {
         "captureFailed": "Payment could not be confirmed.",
         "network": "Network error. Please try again."
+      },
+      "sso": {
+        "userNotInvited": "Your organization has not yet invited you to this team.",
+        "notTeamMember": "Your account is not a member of this team. Contact your team admin.",
+        "tenantMismatch": "Your Microsoft account belongs to a different organization.",
+        "domainNotAllowed": "Your email domain is not enabled for this team's SSO.",
+        "providerUnreachable": "Microsoft sign-in is currently unavailable.",
+        "configurationError": "SSO configuration is invalid. Contact your team admin.",
+        "stateInvalid": "Sign-in link expired or was already used. Please try again.",
+        "fallbackAdminRequired": "This team requires at least one owner or admin with email/password access before SSO can be enabled."
       }
     }
   },
