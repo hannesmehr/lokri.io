@@ -178,17 +178,6 @@
   body {
     @apply bg-background text-foreground;
   }
-  /*
-   * `.font-display` wird nach dem Admin-Redesign entfernt. Im User-Scope
-   * wird die Klasse nicht mehr genutzt; aktuell bleibt sie nur als
-   * Back-compat-Helfer für verbleibende Admin-Call-Sites bestehen.
-   */
-  .font-display {
-    font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
-    font-style: normal;
-    font-weight: 600;
-    letter-spacing: -0.02em;
-  }
   .tabular-nums {
     font-variant-numeric: tabular-nums;
   }
