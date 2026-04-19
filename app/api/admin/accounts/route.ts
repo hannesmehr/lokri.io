@@ -61,12 +61,20 @@ export async function GET(req: NextRequest) {
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;
 
+    // Korrelierte Subqueries: die äussere `owner_accounts.id` muss
+    // explizit qualifiziert sein. Drizzle rendert `${ownerAccounts.
+    // id}` im Subquery-Kontext als unqualifiziertes `"id"`, das im
+    // inneren Scope bei `owner_account_members.id` (ebenfalls uuid)
+    // landet — Subquery wird zur Identitätsprüfung und liefert
+    // durchgehend 0. Silent-Bug (anders als im users-Pendant, wo
+    // Typ-Mismatch wirft), hier mitgefixt, damit `memberCount` wieder
+    // echte Werte zeigt.
     const memberCount = sql<number>`
-      (SELECT count(*)::int FROM ${ownerAccountMembers}
-        WHERE ${ownerAccountMembers.ownerAccountId} = ${ownerAccounts.id})`;
+      (SELECT count(*)::int FROM "owner_account_members"
+        WHERE "owner_account_members"."owner_account_id" = "owner_accounts"."id")`;
     const usedBytes = sql<number>`
-      (SELECT coalesce(${usageQuota.usedBytes}, 0)::bigint FROM ${usageQuota}
-        WHERE ${usageQuota.ownerAccountId} = ${ownerAccounts.id})`;
+      (SELECT coalesce("usage_quota"."used_bytes", 0)::bigint FROM "usage_quota"
+        WHERE "usage_quota"."owner_account_id" = "owner_accounts"."id")`;
 
     const orderCol =
       q.sort === "name"

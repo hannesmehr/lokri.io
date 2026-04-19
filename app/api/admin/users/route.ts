@@ -88,12 +88,19 @@ export async function GET(req: NextRequest) {
     const where =
       conditions.length > 0 ? and(...conditions) : undefined;
 
+    // Korrelierte Subqueries — die äussere User-ID muss explizit
+    // `"users"."id"` sein. Drizzle rendert `${users.id}` im
+    // Subquery-Scope ohne Table-Prefix, weshalb Postgres im
+    // Subquery-Scope nach einer lokalen `id`-Spalte sucht
+    // (`owner_account_members.id` ist uuid, `user_id` ist text →
+    // `operator does not exist: text = uuid`). Pre-existing-Bug,
+    // hier mit hartkodiertem Alias fixed.
     const lastLogin = sql<Date | null>`
-      (SELECT max(${sessions.createdAt}) FROM ${sessions}
-        WHERE ${sessions.userId} = ${users.id})`;
+      (SELECT max("sessions"."created_at") FROM "sessions"
+        WHERE "sessions"."user_id" = "users"."id")`;
     const accountCount = sql<number>`
-      (SELECT count(*)::int FROM ${ownerAccountMembers}
-        WHERE ${ownerAccountMembers.userId} = ${users.id})`;
+      (SELECT count(*)::int FROM "owner_account_members"
+        WHERE "owner_account_members"."user_id" = "users"."id")`;
 
     const orderCol =
       q.sort === "login"
