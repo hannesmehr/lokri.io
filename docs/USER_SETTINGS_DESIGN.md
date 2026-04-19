@@ -74,14 +74,16 @@ Dialog. „Plan wechseln"-Button auf `/settings/billing`, navigiert zu
 
 ---
 
-## Bereichs-Matrix
+## Bereichs-Matrix (finaler Stand)
 
-| Bereich | Struktur-Typ | Kommentar |
+| Bereich | Routen | Struktur-Typ |
 |---|---|---|
-| `/dashboard` | Single-Page mit Hero-Header | Landing-Seite; kein PageHeader (Hero ist eigenes Pattern) |
-| `/profile/*` | Tabs (Übersicht / Sicherheit / Daten) | Drei Perspektiven auf denselben User; Konto-Löschen als Danger-Card auf `/profile/data` |
-| `/settings/*` | Tabs (Allgemein / MCP / Storage / Billing) | Allgemein ist Widget-Dashboard mit Embedding-Key-Section; Billing hat eine Sub-Route `/settings/billing/plans` für den Plan-Wechsel-Flow |
-| `/team/*` | Tabs (Übersicht / Mitglieder / Sicherheit) | Hybrid: Übersicht = Widget-Dashboard + Danger-Zone; Mitglieder = Tabelle + Invites; Sicherheit = SSO-Shell (Phase 3) |
+| `/dashboard` | `/dashboard` | Single-Page, Hero-Header (kein PageHeader — Hero ist eigenes Pattern) |
+| `/profile/*` | `/profile`, `/profile/security`, `/profile/data` | Tabs (3). **Konto-Löschen** ausschliesslich als Danger-Card auf `/profile/data` |
+| `/settings/*` | `/settings/general`, `/settings/mcp`, `/settings/storage`, `/settings/billing` | Tabs (4). `/general` ist Widget-Dashboard mit Embedding-Key-Section; `/billing` ist Single-Page mit Plan + Invoices, Plan-Wechsel via Sub-Route `/settings/billing/plans` |
+| `/team/*` | `/team`, `/team/members`, `/team/security` | Tabs (3). `/team` ist Widget-Dashboard + Name-Edit + Danger-Zone (Owner only); `/team/security` ist SSO-Shell (Phase-3-Füllung folgt). **Team-Löschen** ausschliesslich auf `/team` |
+
+Detaillierte Routen-Referenz: siehe `docs/ROUTES.md`.
 
 ## Komponenten-Patterns
 
