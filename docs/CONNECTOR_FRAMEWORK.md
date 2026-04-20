@@ -1,6 +1,6 @@
 # Connector Framework — Design Document
 
-**Status:** Framework + Confluence-Cloud-Provider implementiert. UI + MCP-Endpoint-Integration offen.
+**Status:** Framework + Confluence-Cloud-Provider + MCP-Integration aktiv. Admin-UI + Mapping-UI offen.
 **Erstellt:** April 2026
 **Basis:** Obot-Learnings (`docs/REFERENCES/obot-learnings.md`) + lokri-Produktvision ("persistenter KI-Kontext")
 
@@ -20,14 +20,42 @@
 | &nbsp;&nbsp;— `read-page`, `list-recent`, `get-page-children` (v2) | ✅ |
 | &nbsp;&nbsp;— CQL-Builder mit Injection-Escape | ✅ |
 | Auto-Registrierung der Provider via `instrumentation.ts` | ✅ Implementiert |
-| MCP-Endpoint-Routing (Tool-Handler ruft Gateway auf) | ⏳ Offen |
-| Admin-UI für Integration-CRUD | ⏳ Offen |
-| Team-Space-Mapping-UI | ⏳ Offen |
-| API-Routen für Integration + Scope + Mapping | ⏳ Offen |
+| **MCP-Endpoint-Integration** | ✅ Implementiert |
+| &nbsp;&nbsp;— `search` als Unified-Federation (lokri + external sources) | ✅ |
+| &nbsp;&nbsp;— `confluence-read-page`, `confluence-list-recent`, `confluence-get-page-children` | ✅ |
+| &nbsp;&nbsp;— Per-Source-Cap, Hybrid-Score, Degradation-Meta | ✅ |
+| Admin-UI für Integration-CRUD | ⏳ Offen (Block 5) |
+| Team-Space-Mapping-UI | ⏳ Offen (Block 6) |
+| API-Routen für Integration + Scope + Mapping | ⏳ Offen (Block 5) |
 
-**Noch nicht erreichbar über MCP-Clients** — der Confluence-Provider steht
-im Repo bereit, aber der MCP-Endpoint routet noch keine Tool-Calls an ihn.
-Das kommt in einem separaten Build-Block.
+**MCP-Clients** (Claude Desktop, ChatGPT, Cursor, …) erreichen den
+Confluence-Provider **jetzt** über den produktiven `/api/mcp`-Endpoint.
+Setup erfolgt aktuell nur via Dev-Shortcut `scripts/confluence-setup-dev.ts`
+— die Admin-UI für Self-Service kommt in Block 5.
+
+### Dev-Setup
+
+Für lokale Entwicklung + E2E-Tests:
+
+```bash
+# Env-Vars in .env.local setzen
+CONFLUENCE_LIVE_TEST_EMAIL=<atlassian-account>
+CONFLUENCE_LIVE_TEST_API_TOKEN=<aus id.atlassian.com>
+CONFLUENCE_LIVE_TEST_SITE_URL=https://<tenant>.atlassian.net
+
+# Integration + Mappings für einen Team-Account anlegen
+pnpm tsx --env-file=.env.local scripts/confluence-setup-dev.ts \
+  <owner-account-uuid> \
+  <space-key>,<space-key>,... \
+  <space-key>:<lokri-space-uuid>,...
+
+# E2E gegen Empro-Confluence (braucht zusätzlich
+# CONFLUENCE_LIVE_TEST_OWNER_ACCOUNT_ID in der env)
+pnpm tsx --env-file=.env.local --test tests/mcp-confluence-e2e.test.ts
+```
+
+Der E2E-Test skippt sauber, wenn die Env-Vars fehlen — CI läuft also
+ohne Confluence-Kontakt durch.
 
 ---
 
