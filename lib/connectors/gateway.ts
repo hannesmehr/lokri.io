@@ -76,14 +76,35 @@ export interface ExecuteConnectorToolInput {
   integrationId: string;
   toolName: string;
   args: unknown;
-  callerUserId: string;
-  spaceId: string;
+  /** Null bei Legacy-Tokens ohne `created_by_user_id`; Usage-Log
+   *  handhabt null sauber (FK `set null`). */
+  callerUserId: string | null;
+  /** lokri-Space im Kontext des Calls. Null für Tools, die keinen
+   *  konkreten Space-Kontext haben (z.B. MCP-Client fragt eine
+   *  External-Page ohne lokri-Space-Attribution). Landet im Usage-Log
+   *  als `space_id` (dort auch nullable, FK `set null`). */
+  spaceId: string | null;
   /**
    * Scopes, die dieser Call anfassen will. Vom Tool-Handler populiert.
    * Leer ⇒ keine Pre-Filter-Prüfung (Defense-in-Depth via Post-Filter
    * bleibt aktiv, falls `extractObservedScopes` populiert).
    */
   requiredScopes: ScopeRef[];
+  /**
+   * Scope-Subset, das der Provider in `ExecutionContext.scopes` sieht.
+   * Der Gateway lädt alle Scopes der Integration und filtert auf diese
+   * IDs — so sieht ein space-mapping-Tool wie `read-page` nur die
+   * Scopes, die zum Request-lokri-Space gemappt sind, nicht die
+   * gesamte Integration-Allowlist.
+   *
+   * - `undefined` ⇒ alle Scopes der Integration sind sichtbar
+   *   (Unified-Search, wenn der Caller auf Mapping-Ebene bereits
+   *   gefiltert hat; siehe search/external.ts)
+   * - `[]` (leerer Array) ⇒ keine Scopes. Der Tool erhält eine leere
+   *   `context.scopes` und entscheidet selbst (z.B. Confluence-search
+   *   returnt leere Hits sofort ohne Upstream-Call).
+   */
+  scopeIds?: string[];
   /**
    * Optional: extrahiert Scope-Refs aus der Tool-Response für den
    * Post-Filter. Connector-spezifisch (z.B. für Confluence-search:
@@ -225,7 +246,18 @@ export async function executeConnectorTool(
     }
 
     const provider = getProvider(integration.connectorType);
-    const scopes = await ops.loadScopes(integration.id);
+    const allScopes = await ops.loadScopes(integration.id);
+    // Filter auf scopeIds-Subset, wenn gegeben. Undefined ⇒ alle.
+    // Leerer Array ⇒ leere Liste (Tool entscheidet, meist Early-Return).
+    const scopes =
+      input.scopeIds === undefined
+        ? allScopes
+        : input.scopeIds.length === 0
+          ? []
+          : (() => {
+              const wanted = new Set(input.scopeIds);
+              return allScopes.filter((s) => wanted.has(s.id));
+            })();
 
     const executionContext: ExecutionContext = {
       integration,

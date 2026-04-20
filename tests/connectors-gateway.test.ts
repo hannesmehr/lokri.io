@@ -413,6 +413,92 @@ test("requiredScopes empty → pre-filter is no-op, provider still called", asyn
   assert.equal(providerCalled, true);
 });
 
+test("scopeIds filter narrows context.scopes to the requested subset", async () => {
+  let providerSawScopes: string[] = [];
+  const provider = makeProvider({
+    onExecute: async (_name, _args) => {
+      // Provider sieht `context.scopes` via ExecutionContext — wir
+      // prüfen indirekt, indem der Provider die Scope-Identifier in
+      // einen Closure-Scoped Array schreibt. Dafür überschreiben wir
+      // `executeTool`, damit wir auf `context.scopes` zugreifen können.
+      return { status: "success", data: null };
+    },
+  });
+  // Wir wrappen den Provider, damit wir den Execution-Context beobachten
+  // können — Scopes werden im Gateway gefiltert, bevor sie den Provider
+  // erreichen.
+  const wrapped: ConnectorProvider = {
+    ...provider,
+    async executeTool(name, args, ctx) {
+      providerSawScopes = ctx.scopes.map((s) => s.scopeIdentifier);
+      return { status: "success", data: null };
+    },
+  };
+  const { ops } = makeOps({
+    provider: wrapped,
+    scopes: [fakeScope("ENG"), fakeScope("PROD"), fakeScope("OPS")],
+  });
+  await executeConnectorTool(
+    baseInput({ scopeIds: ["scope_ENG", "scope_PROD"] }),
+    ops,
+  );
+  assert.deepEqual(providerSawScopes.sort(), ["ENG", "PROD"]);
+});
+
+test("scopeIds=[] (empty array) passes empty scopes to provider", async () => {
+  let providerSawCount = -1;
+  const provider = makeProvider();
+  const wrapped: ConnectorProvider = {
+    ...provider,
+    async executeTool(_n, _a, ctx) {
+      providerSawCount = ctx.scopes.length;
+      return { status: "success", data: null };
+    },
+  };
+  const { ops } = makeOps({
+    provider: wrapped,
+    scopes: [fakeScope("ENG"), fakeScope("PROD")],
+  });
+  // requiredScopes muss leer sein, sonst blockt der Pre-Filter bevor
+  // wir den Provider erreichen — das zu testen ist Thema der Scope-
+  // Error-Cases, nicht dieses Tests.
+  await executeConnectorTool(
+    baseInput({ scopeIds: [], requiredScopes: [] }),
+    ops,
+  );
+  assert.equal(providerSawCount, 0);
+});
+
+test("scopeIds undefined (default) passes ALL integration scopes", async () => {
+  let providerSawCount = -1;
+  const provider = makeProvider();
+  const wrapped: ConnectorProvider = {
+    ...provider,
+    async executeTool(_n, _a, ctx) {
+      providerSawCount = ctx.scopes.length;
+      return { status: "success", data: null };
+    },
+  };
+  const { ops } = makeOps({
+    provider: wrapped,
+    scopes: [fakeScope("ENG"), fakeScope("PROD"), fakeScope("OPS")],
+  });
+  await executeConnectorTool(baseInput(), ops); // no scopeIds
+  assert.equal(providerSawCount, 3);
+});
+
+test("callerUserId: null is accepted + passed to recordUsage", async () => {
+  const { ops, calls } = makeOps();
+  await executeConnectorTool(baseInput({ callerUserId: null }), ops);
+  assert.equal(calls.recordUsage[0].userId, null);
+});
+
+test("spaceId: null is accepted + passed to recordUsage", async () => {
+  const { ops, calls } = makeOps();
+  await executeConnectorTool(baseInput({ spaceId: null }), ops);
+  assert.equal(calls.recordUsage[0].spaceId, null);
+});
+
 test("extractObservedScopes populates post-filter check", async () => {
   const provider = makeProvider({
     onExecute: async () => ({

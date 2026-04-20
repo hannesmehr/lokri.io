@@ -126,12 +126,18 @@ export interface ToolResult {
  */
 export interface ExecutionContext {
   integration: ConnectorIntegration;
-  /** Effektive Scope-Allowlist — bereits gefiltert auf das, was für
-   *  diesen Request relevant ist (MVP: alle Scopes der Integration). */
+  /** Effektive Scope-Allowlist — pro Tool-Call gefiltert über das
+   *  `scopeIds`-Input am Gateway. Bei space-mapping-Tools enthält
+   *  das nur die Scopes, die zum Request-lokri-Space gemappt sind;
+   *  bei unscoped Calls (z.B. OAuth-Tokens ohne spaceScope) alle
+   *  Scopes der Integration. */
   scopes: ConnectorScope[];
-  /** Der User, der den MCP-Request ausgelöst hat. Für Audit-Log. */
-  callerUserId: string;
-  /** Der lokri-Space, in dessen Kontext der Call läuft. Für Audit-Log
-   *  und Scope-Resolution. */
-  spaceId: string;
+  /** Der User, der den MCP-Request ausgelöst hat. Für Audit-Log.
+   *  Null bei Legacy-Tokens ohne `created_by_user_id` (Pre-0014
+   *  Migrations-Bestand). */
+  callerUserId: string | null;
+  /** Der lokri-Space, in dessen Kontext der Call läuft. Null für
+   *  Tools ohne konkreten Space-Kontext (MCP-Client fragt eine
+   *  External-Ressource ohne lokri-Space-Attribution). */
+  spaceId: string | null;
 }

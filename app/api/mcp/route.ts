@@ -1,5 +1,6 @@
 import { createMcpHandler, withMcpAuth } from "mcp-handler";
 import { extractBearer, verifyMcpBearer } from "@/lib/mcp/auth";
+import { registerConnectorTools } from "@/lib/mcp/connectors";
 import { registerPrompts } from "@/lib/mcp/prompts";
 import { registerResources } from "@/lib/mcp/resources";
 import { registerTools } from "@/lib/mcp/tools";
@@ -30,6 +31,7 @@ export const maxDuration = 60;
 const handler = createMcpHandler(
   (server) => {
     registerTools(server);
+    registerConnectorTools(server);
     registerPrompts(server);
     registerResources(server);
   },
@@ -49,6 +51,7 @@ const authed = withMcpAuth(
       scopes: [],
       extra: {
         ownerAccountId: ctx.ownerAccountId,
+        userId: ctx.userId,
         authKind: ctx.kind,
         spaceScope: ctx.spaceScope,
         readOnly: ctx.readOnly,

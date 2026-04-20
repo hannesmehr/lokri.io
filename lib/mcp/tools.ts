@@ -7,7 +7,7 @@
  * return a loud error rather than silently operating on a wrong account.
  */
 
-import { and, cosineDistance, desc, eq, inArray, isNotNull, sql, type AnyColumn, type SQL } from "drizzle-orm";
+import { and, desc, eq, inArray, type AnyColumn, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { db } from "@/lib/db";
@@ -19,6 +19,7 @@ import {
   getProviderForFile,
   getProviderForNewUpload,
 } from "@/lib/storage";
+import { runUnifiedSearch } from "@/lib/mcp/tools/search";
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 
@@ -32,6 +33,7 @@ type ToolExtra = {
   authInfo?: {
     extra?: {
       ownerAccountId?: string;
+      userId?: string | null;
       spaceScope?: string[] | null;
       readOnly?: boolean;
     };
@@ -40,6 +42,10 @@ type ToolExtra = {
 
 interface AuthCtx {
   ownerAccountId: string;
+  /** Human user behind the call — null for legacy tokens minted before
+   *  migration 0014 (per-user attribution didn't exist yet). Needed
+   *  for connector audit logs; core lokri tools don't consume it. */
+  userId: string | null;
   /** Null = unrestricted; Array = only these spaces are accessible. */
   spaceScope: string[] | null;
   readOnly: boolean;
@@ -54,6 +60,7 @@ function requireAuth(extra: ToolExtra): AuthCtx {
   }
   return {
     ownerAccountId: id,
+    userId: extra?.authInfo?.extra?.userId ?? null,
     spaceScope: extra?.authInfo?.extra?.spaceScope ?? null,
     readOnly: extra?.authInfo?.extra?.readOnly ?? false,
   };
@@ -105,13 +112,19 @@ function toolError(message: string): ToolResult {
 
 export function registerTools(server: McpServer): void {
   // ----- search ------------------------------------------------------------
+  // Unified federation: lokri-pgvector + alle auf die User-Spaces
+  // gemappten External-Connectors (Confluence Cloud im MVP) parallel.
+  // Pro-Source-Cap 20, Hybrid-Score-Merge, Degradation-Info bei
+  // nicht-erreichbaren Quellen. Implementation in `tools/search/*`.
   server.registerTool(
     "search",
     {
       title: "Search",
       description:
-        "Semantic search across all notes and file chunks in the account. " +
-        "Returns an array of opaque IDs usable with `fetch`.",
+        "Unified semantic search across lokri notes/files and any connected " +
+        "external sources (Confluence spaces mapped to this team). Returns " +
+        "hits with a `source` marker and a `degraded_sources` field when " +
+        "external systems are unavailable.",
       inputSchema: {
         query: z.string().min(1).describe("Natural-language search query"),
         limit: z
@@ -120,86 +133,27 @@ export function registerTools(server: McpServer): void {
           .positive()
           .max(50)
           .optional()
-          .describe("Max results (default 10)"),
+          .describe("Max results across all sources combined (default 10)"),
       },
     },
     async ({ query, limit }, extra) => {
       const auth = requireAuth(extra as ToolExtra);
-      const { ownerAccountId, spaceScope } = auth;
       const n = limit ?? 10;
-      const { embedding } = await embedText(query, ownerAccountId);
-
-      const noteSim = sql<number>`1 - (${cosineDistance(notes.embedding, embedding)})`;
-      const noteScope = scopeCondition(notes.spaceId, spaceScope);
-      const noteRows = await db
-        .select({
-          id: notes.id,
-          title: notes.title,
-          contentText: notes.contentText,
-          similarity: noteSim,
-        })
-        .from(notes)
-        .where(
-          and(
-            eq(notes.ownerAccountId, ownerAccountId),
-            eq(notes.mcpHidden, false),
-            isNotNull(notes.embedding),
-            ...(noteScope ? [noteScope] : []),
-          ),
-        )
-        .orderBy(desc(noteSim))
-        .limit(n);
-
-      const chunkSim = sql<number>`1 - (${cosineDistance(fileChunks.embedding, embedding)})`;
-      const fileScope = scopeCondition(files.spaceId, spaceScope);
-      const chunkRows = await db
-        .select({
-          id: fileChunks.id,
-          filename: files.filename,
-          contentText: fileChunks.contentText,
-          similarity: chunkSim,
-        })
-        .from(fileChunks)
-        .innerJoin(files, eq(files.id, fileChunks.fileId))
-        .where(
-          and(
-            eq(files.ownerAccountId, ownerAccountId),
-            eq(files.mcpHidden, false),
-            isNotNull(fileChunks.embedding),
-            ...(fileScope ? [fileScope] : []),
-          ),
-        )
-        .orderBy(desc(chunkSim))
-        .limit(n);
-
-      const snippet = (t: string) => {
-        const s = t.trim().replace(/\s+/g, " ");
-        return s.length <= 300 ? s : `${s.slice(0, 300)}…`;
-      };
-
-      const merged = [
-        ...noteRows.map((r) => ({
-          id: r.id,
-          type: "note" as const,
-          title: r.title,
-          snippet: snippet(r.contentText),
-          similarity: Number(r.similarity),
-        })),
-        ...chunkRows.map((r) => ({
-          id: r.id,
-          type: "file_chunk" as const,
-          title: r.filename,
-          snippet: snippet(r.contentText),
-          similarity: Number(r.similarity),
-        })),
-      ]
-        .sort((a, b) => b.similarity - a.similarity)
-        .slice(0, n);
-
-      // `ids` is returned for ChatGPT-style consumers; `results` now carries
-      // snippets so agents don't need a second round-trip via `fetch` for a
-      // quick decision.
-      return ok({ ids: merged.map((m) => m.id), results: merged });
+      const aggregated = await runUnifiedSearch({
+        ownerAccountId: auth.ownerAccountId,
+        userId: auth.userId,
+        spaceScope: auth.spaceScope,
+        query,
+        limit: n,
+      });
+      // `ids` for ChatGPT-style consumers that follow up with `fetch`.
+      // External IDs are prefixed (`confluence:<pageId>`), internal ones
+      // are raw UUIDs — `fetch` keeps routing by the prefix.
+      return ok({
+        ids: aggregated.results.map((r) => r.id),
+        results: aggregated.results,
+        degraded_sources: aggregated.degradedSources,
+      });
     },
   );
 

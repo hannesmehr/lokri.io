@@ -7,6 +7,16 @@ import { TOKEN_FORMAT, verifyApiToken } from "@/lib/tokens";
 
 export interface McpAuthContext {
   ownerAccountId: string;
+  /**
+   * The human user behind this MCP call, used for connector audit logs
+   * (`connector_usage_log.user_id`) and anywhere else per-user
+   * attribution is needed.
+   *
+   * - OAuth path: always set (Better-Auth session carries `userId`).
+   * - Legacy path: `apiTokens.createdByUserId` if present; null for
+   *   pre-0014 tokens minted before per-user attribution existed.
+   */
+  userId: string | null;
   tokenId: string;
   tokenName: string;
   /** "oauth" for Better-Auth-issued OAuth 2.1 access tokens, "legacy" for `lk_` bearer. */
@@ -44,6 +54,7 @@ export async function verifyMcpBearer(
       );
       return {
         ownerAccountId,
+        userId: oauthSession.userId,
         tokenId: oauthSession.accessToken,
         tokenName: oauthSession.clientId,
         kind: "oauth",
@@ -68,6 +79,7 @@ export async function verifyMcpBearer(
       tokenHash: apiTokens.tokenHash,
       spaceScope: apiTokens.spaceScope,
       readOnly: apiTokens.readOnly,
+      createdByUserId: apiTokens.createdByUserId,
     })
     .from(apiTokens)
     .where(
@@ -84,6 +96,7 @@ export async function verifyMcpBearer(
         });
       return {
         ownerAccountId: row.ownerAccountId,
+        userId: row.createdByUserId,
         tokenId: row.id,
         tokenName: row.name,
         kind: "legacy",

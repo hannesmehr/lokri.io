@@ -13,13 +13,18 @@
  * Funktions-Signatur hier bleibt gleich.
  */
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
+  connectorIntegrations,
   connectorScopeAllowlist,
   spaceExternalSources,
 } from "@/lib/db/schema";
-import type { ConnectorScope, SpaceExternalSource } from "./types";
+import type {
+  ConnectorIntegration,
+  ConnectorScope,
+  SpaceExternalSource,
+} from "./types";
 
 export interface CreateMappingInput {
   spaceId: string;
@@ -87,6 +92,60 @@ export async function listSpaceExternalSources(
     )
     .where(eq(spaceExternalSources.spaceId, spaceId));
   return rows;
+}
+
+/**
+ * Bulk-Variante für Unified-Search: alle External-Sources für eine
+ * Liste von lokri-Space-IDs, mit vollem Join auf Scope + Integration.
+ *
+ * Returnt pro Mapping-Row den kompletten Kontext, den der Search-
+ * Federation-Code braucht: welcher Mapping-Scope wurde auf welchen
+ * lokri-Space gemappt, zu welcher Integration gehört der, welcher
+ * Connector-Typ ist das.
+ *
+ * Integrations mit `enabled = false` werden ausgefiltert — deaktivierte
+ * Integrationen sollen nicht mitfedieren.
+ *
+ * Gibt leeres Array zurück, wenn `spaceIds` leer ist (statt Query mit
+ * `IN ()`-Syntax-Fehler).
+ */
+export async function listExternalSourcesForSpaces(
+  spaceIds: string[],
+): Promise<
+  Array<{
+    mapping: SpaceExternalSource;
+    scope: ConnectorScope;
+    integration: ConnectorIntegration;
+  }>
+> {
+  if (spaceIds.length === 0) return [];
+  return db
+    .select({
+      mapping: spaceExternalSources,
+      scope: connectorScopeAllowlist,
+      integration: connectorIntegrations,
+    })
+    .from(spaceExternalSources)
+    .innerJoin(
+      connectorScopeAllowlist,
+      eq(
+        spaceExternalSources.connectorScopeId,
+        connectorScopeAllowlist.id,
+      ),
+    )
+    .innerJoin(
+      connectorIntegrations,
+      eq(
+        connectorScopeAllowlist.connectorIntegrationId,
+        connectorIntegrations.id,
+      ),
+    )
+    .where(
+      and(
+        inArray(spaceExternalSources.spaceId, spaceIds),
+        eq(connectorIntegrations.enabled, true),
+      ),
+    );
 }
 
 /** Alle Spaces, die einen Scope dieser Integration nutzen — umgekehrte
