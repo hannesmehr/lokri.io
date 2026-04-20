@@ -20,6 +20,23 @@ test("resolveAppOrigin prefers canonical configured origin", () => {
   }
 });
 
+test("resolveAppOrigin strips trailing slashes so path concat stays clean", () => {
+  const prevBetter = process.env.BETTER_AUTH_URL;
+  const prevProd = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+  const prevVercel = process.env.VERCEL_URL;
+  process.env.BETTER_AUTH_URL = "https://www.lokri.io/";
+  delete process.env.VERCEL_PROJECT_PRODUCTION_URL;
+  delete process.env.VERCEL_URL;
+  try {
+    assert.equal(resolveAppOrigin(), "https://www.lokri.io");
+    assert.equal(`${resolveAppOrigin()}/api/mcp`, "https://www.lokri.io/api/mcp");
+  } finally {
+    process.env.BETTER_AUTH_URL = prevBetter;
+    process.env.VERCEL_PROJECT_PRODUCTION_URL = prevProd;
+    process.env.VERCEL_URL = prevVercel;
+  }
+});
+
 test("serverError hides internal details in production", async () => {
   const prev = process.env.NODE_ENV;
   Object.assign(process.env, { NODE_ENV: "production" });
