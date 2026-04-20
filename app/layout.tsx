@@ -80,10 +80,9 @@ export default async function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        {/* ThemeProvider mounts the `.dark` class on <html> via next-themes.
-         *  `suppressHydrationWarning` above is required because the class
-         *  is set client-side and would otherwise mismatch the server-
-         *  rendered HTML. */}
+        {/* ThemeProvider mounts the `.dark` class on <html> as früh wie
+         *  möglich im Client-Lifecycle, ohne einen `<script>`-Pfad im
+         *  React-Tree zu rendern. */}
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

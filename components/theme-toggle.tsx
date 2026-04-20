@@ -1,7 +1,7 @@
 "use client";
 
 import { Laptop, Moon, Sun } from "lucide-react";
-import { useTheme } from "next-themes";
+import { useTheme } from "@/components/theme-provider";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,6 +9,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+
+type Theme = "light" | "dark" | "system";
 
 /**
  * Theme-Toggle nach shadcn-Standard.
@@ -93,7 +95,7 @@ export function ThemeToggle({ variant = "icon", className }: Props) {
 }
 
 /** Shared Menu-Items für beide Varianten. */
-function MenuItems({ setTheme }: { setTheme: (t: string) => void }) {
+function MenuItems({ setTheme }: { setTheme: (t: Theme) => void }) {
   return (
     <>
       <DropdownMenuItem onClick={() => setTheme("light")}>
