@@ -1,14 +1,27 @@
 /**
- * Public Re-Exports für das Connector-Framework.
+ * Public Barrel für das Connector-Framework — **DB-frei**.
  *
- * Block-1-Scope: Kern-Typen, Provider-Interface, Registry, Filter-
- * Pipeline, CRUD-Helper, Encryption, Errors. Kein Gateway, kein
- * konkreter Connector (Confluence, Slack, …) — das kommt mit Block 2
- * und späteren Bausteinen.
+ * Hier werden nur Module re-exportiert, die keine Datenbank-Abhängigkeit
+ * ins Ziel ziehen. Alles mit DB-Touch (CRUD-Helpers, Gateway-Live-
+ * Binding, Usage-Log-INSERT) bleibt direkt importierbar über Sub-Pfade:
  *
- * Call-Sites sollten von `@/lib/connectors` importieren, nicht von
- * den Unterpfaden. Das hält uns die Freiheit, interne Dateien
- * umzubenennen/umzuorganisieren.
+ *   ```ts
+ *   import { getIntegrationForAccount } from "@/lib/connectors/integrations";
+ *   import { listScopes } from "@/lib/connectors/scopes";
+ *   import { createMapping } from "@/lib/connectors/mappings";
+ *   import { recordUsage } from "@/lib/connectors/usage-log";
+ *   import { executeConnectorToolLive } from "@/lib/connectors/gateway-live";
+ *   ```
+ *
+ * Der pure Gateway (DI-Form, DB-frei) wird hier re-exportiert, damit
+ * Tests und Edge-Runtime-safe Call-Sites ihn ohne DB-Import laden
+ * können. Der DB-gebundene `executeConnectorToolLive` lebt bewusst
+ * *nicht* im Barrel.
+ *
+ * Motivation: Der Barrel soll aus einer Edge-Runtime oder in einer
+ * Test-Umgebung ohne `DATABASE_URL` importierbar bleiben. Ein einziger
+ * Transitiv-Import von `@/lib/db` würde den Export-Graph kippen und
+ * jeden Caller zwingen, sich um ENV-Variablen zu kümmern.
  */
 
 export * from "./errors";
@@ -33,8 +46,8 @@ export {
   register as registerConnectorProvider,
 } from "./registry";
 export {
-  encryptConnectorCredentials,
   decryptConnectorCredentials,
+  encryptConnectorCredentials,
 } from "./encryption";
 export {
   MVP_PIPELINE,
@@ -49,10 +62,9 @@ export type {
   ResponseContext,
   ScopeRef,
 } from "./filters";
-
-// CRUD namespaces — grouped re-exports so call-sites don't have to know
-// which file each function lives in.
-export * as Integrations from "./integrations";
-export * as Scopes from "./scopes";
-export * as Mappings from "./mappings";
-export * as UsageLog from "./usage-log";
+export { sanitizeArgs } from "./sanitize";
+export {
+  executeConnectorTool,
+  type ExecuteConnectorToolInput,
+  type GatewayOps,
+} from "./gateway";
