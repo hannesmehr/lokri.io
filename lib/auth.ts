@@ -18,6 +18,7 @@ import {
   verifications,
 } from "./db/schema";
 import { logAuditEvent } from "./audit/log";
+import { ensureUniqueSlug, slugifyOwnerAccountName } from "./teams/slug";
 import { localeForUserEmail } from "./i18n/user-locale";
 import { sendMail } from "./mailer";
 import {
@@ -417,11 +418,25 @@ export const auth = betterAuth({
       create: {
         after: async (user) => {
           try {
+            const name = user.name ?? user.email;
+            const slug = await ensureUniqueSlug(
+              slugifyOwnerAccountName(name, "user"),
+              async (candidate) => {
+                const [row] = await db
+                  .select({ id: ownerAccounts.id })
+                  .from(ownerAccounts)
+                  .where(eq(ownerAccounts.slug, candidate))
+                  .limit(1);
+                return Boolean(row);
+              },
+            );
+
             const [ownerAccount] = await db
               .insert(ownerAccounts)
               .values({
                 type: "personal",
-                name: user.name ?? user.email,
+                name,
+                slug,
                 planId: FREE_PLAN_ID,
               })
               .returning({ id: ownerAccounts.id });

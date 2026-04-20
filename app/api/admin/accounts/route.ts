@@ -23,6 +23,7 @@ import {
   usageQuota,
   users,
 } from "@/lib/db/schema";
+import { ensureUniqueSlug, slugifyOwnerAccountName } from "@/lib/teams/slug";
 
 export const runtime = "nodejs";
 
@@ -205,17 +206,31 @@ export async function POST(req: NextRequest) {
     // Transactional: owner_accounts + (optional) owner_account_members
     // + usage_quota in einer Transaktion.
     const account = await db.transaction(async (tx) => {
+      const slug = await ensureUniqueSlug(
+        slugifyOwnerAccountName(input.name, "team"),
+        async (candidate) => {
+          const [row] = await tx
+            .select({ id: ownerAccounts.id })
+            .from(ownerAccounts)
+            .where(eq(ownerAccounts.slug, candidate))
+            .limit(1);
+          return Boolean(row);
+        },
+      );
+
       const [created] = await tx
         .insert(ownerAccounts)
         .values({
           type: "team",
           name: input.name,
+          slug,
           planId: input.planId,
           quotaOverride: overrideToPersist,
         })
         .returning({
           id: ownerAccounts.id,
           name: ownerAccounts.name,
+          slug: ownerAccounts.slug,
           type: ownerAccounts.type,
           planId: ownerAccounts.planId,
           createdAt: ownerAccounts.createdAt,

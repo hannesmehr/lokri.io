@@ -47,6 +47,61 @@ Die Seite liefert nur die MCP-URL + eine 7-Schritte-Anleitung für die ChatGPT-C
 
 **Voraussetzungen** (ChatGPT-seitig): Pro/Team/Enterprise + Developer-Mode. ChatGPT Plus hat keinen Custom-Connector-Support.
 
+## Team-scoped MCP-Endpoint — `/api/mcp/team/[slug]`
+
+Der reguläre MCP-Endpoint `/api/mcp` läuft immer gegen den **Personal**-
+Owner-Account des eingeloggten Users. Wer Team-Connector-Integrationen
+(z. B. ein Confluence-Link, der auf dem Team-Account liegt) über Claude
+Desktop / Cursor erreichen will, verbindet sich stattdessen mit
+`/api/mcp/team/<team-slug>`.
+
+- **Slug:** wird beim Team-Anlegen aus dem Namen abgeleitet
+  (`slugifyOwnerAccountName`), immutable — Rename ändert den Slug nicht.
+  Sichtbar in der Team-Settings-UI. Kollisionen bekommen numerischen
+  Suffix (`empro`, `empro-2`, …). Reservierte Wörter (`api`, `admin`,
+  `mcp`, …) werden mit `-team`-Suffix vergeben (`api` → `api-team`).
+- **Auth:** gleiche zwei Pfade wie `/api/mcp`.
+  - **OAuth 2.1:** User muss Mitglied des Teams sein (`owner_account_members`).
+  - **Legacy `lk_`-Bearer:** Token muss für genau diesen Team-Account
+    gemintet sein (`apiTokens.ownerAccountId === team.id`).
+  - Alle Fehlschläge → 401 mit `WWW-Authenticate`-Hint auf
+    `/api/mcp/team/[slug]/oauth-protected-resource` (RFC 9728 per Team).
+- **Rate-Limit:** eigener Bucket pro Slug (`team:<slug>`-Prefix), damit
+  ein heißes Team ein kaltes nicht verhungern lässt.
+
+**Claude-Desktop-Config** (OAuth, empfohlen):
+
+```json
+{
+  "mcpServers": {
+    "lokri-empro": {
+      "command": "/Users/<du>/.nvm/versions/node/v22.x.x/bin/node",
+      "args": [
+        "/Users/<du>/.nvm/versions/node/v22.x.x/bin/npx",
+        "-y", "mcp-remote",
+        "https://lokri.io/api/mcp/team/empro"
+      ]
+    }
+  }
+}
+```
+
+Beim ersten Start öffnet `mcp-remote` den Browser für den OAuth-Flow,
+speichert den Access-Token in `~/.mcp-auth/`, und alle folgenden Starts
+sind silent. Ein User kann mehrere `mcpServers`-Einträge parallel haben
+(Personal + je Team einer) — Claude Desktop verschmilzt die Tool-Listen.
+
+Discovery-Kette:
+
+1. Client fetcht `https://lokri.io/api/mcp/team/empro` ohne Bearer → 401
+2. Liest `WWW-Authenticate: resource_metadata="…/oauth-protected-resource"`
+3. Fetcht die team-spezifische Metadata → enthält `resource` (URL des
+   Team-Endpoints) + gemeinsamen `authorization_servers`-Eintrag
+4. Fetcht `https://lokri.io/.well-known/oauth-authorization-server` →
+   Better-Auth-gemanagter AS (einer für alle Team-Endpoints)
+5. DCR + PKCE gegen `/api/auth/mcp/register` + `/authorize` + `/token`
+6. Access-Token an Team-Endpoint — Membership-Check → Tool-Liste
+
 ## Token-Management — `/settings/mcp`
 
 Die bestehende Advanced-UI bleibt erhalten und bekommt zwei Erweiterungen:

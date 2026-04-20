@@ -349,6 +349,23 @@ export const ownerAccounts = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     type: ownerAccountTypeEnum("type").notNull().default("personal"),
     name: text("name").notNull(),
+    /**
+     * URL-safe, globally-unique handle for this account. Used as the team
+     * identifier in `/api/mcp/team/[slug]` (so OAuth-MCP sessions can
+     * target a specific team's connector integrations) and reserved for
+     * future user-facing routes like `/team/[slug]/...`.
+     *
+     * **Immutable after creation.** Renaming the account does NOT re-slug —
+     * MCP clients cache registrations keyed by URL, so a slug change would
+     * silently break existing Claude-Desktop/Cursor configs. If a user
+     * ever needs to "rename" the slug, we make them delete + recreate the
+     * team.
+     *
+     * Backfilled from `name` via `slugifyOwnerAccountName` (lib/teams/slug.ts)
+     * in migration 0020; new rows get a slug computed the same way at
+     * insert time, with a numeric suffix on collision.
+     */
+    slug: text("slug").notNull(),
     planId: text("plan_id")
       .notNull()
       .references(() => plans.id),
@@ -381,7 +398,10 @@ export const ownerAccounts = pgTable(
       .notNull()
       .defaultNow(),
   },
-  (t) => [index("owner_accounts_plan_id_idx").on(t.planId)],
+  (t) => [
+    index("owner_accounts_plan_id_idx").on(t.planId),
+    uniqueIndex("owner_accounts_slug_idx").on(t.slug),
+  ],
 );
 
 /**

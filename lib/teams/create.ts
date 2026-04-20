@@ -8,6 +8,7 @@ import {
   users,
 } from "@/lib/db/schema";
 import { TeamError } from "./errors";
+import { ensureUniqueSlug, slugifyOwnerAccountName } from "./slug";
 
 const TEAM_PLAN_ID = "team";
 const MAX_NAME_LEN = 200;
@@ -23,6 +24,7 @@ export interface CreateTeamResult {
   account: {
     id: string;
     name: string;
+    slug: string;
     type: "team";
     planId: string;
     createdAt: Date;
@@ -61,16 +63,32 @@ export async function createTeam(
   }
 
   const account = await db.transaction(async (tx) => {
+    // Slug-Kollisions-Check in der selben Transaktion — sonst Race bei
+    // zwei parallelen Team-Creates mit demselben Namen.
+    const slug = await ensureUniqueSlug(
+      slugifyOwnerAccountName(name, "team"),
+      async (candidate) => {
+        const [row] = await tx
+          .select({ id: ownerAccounts.id })
+          .from(ownerAccounts)
+          .where(eq(ownerAccounts.slug, candidate))
+          .limit(1);
+        return Boolean(row);
+      },
+    );
+
     const [created] = await tx
       .insert(ownerAccounts)
       .values({
         type: "team",
         name,
+        slug,
         planId: TEAM_PLAN_ID,
       })
       .returning({
         id: ownerAccounts.id,
         name: ownerAccounts.name,
+        slug: ownerAccounts.slug,
         type: ownerAccounts.type,
         planId: ownerAccounts.planId,
         createdAt: ownerAccounts.createdAt,

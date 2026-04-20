@@ -23,6 +23,7 @@ import {
   sessions,
   users,
 } from "@/lib/db/schema";
+import { ensureUniqueSlug, slugifyOwnerAccountName } from "@/lib/teams/slug";
 
 const FREE_PLAN_ID = "free";
 
@@ -119,11 +120,25 @@ export async function getOrCreateOwnerAccountForUser(
 
   if (existing.length > 0) return existing[0].id;
 
+  const name = userName ?? "Personal";
+  const slug = await ensureUniqueSlug(
+    slugifyOwnerAccountName(name, "user"),
+    async (candidate) => {
+      const [row] = await db
+        .select({ id: ownerAccounts.id })
+        .from(ownerAccounts)
+        .where(eq(ownerAccounts.slug, candidate))
+        .limit(1);
+      return Boolean(row);
+    },
+  );
+
   const [created] = await db
     .insert(ownerAccounts)
     .values({
       type: "personal",
-      name: userName ?? "Personal",
+      name,
+      slug,
       planId: FREE_PLAN_ID,
     })
     .returning({ id: ownerAccounts.id });

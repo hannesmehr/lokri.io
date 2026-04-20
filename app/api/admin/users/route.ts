@@ -27,6 +27,7 @@ import {
 } from "@/lib/db/schema";
 import { sendMail } from "@/lib/mailer";
 import { accountSetupInvitationTemplate } from "@/lib/mailer/templates";
+import { ensureUniqueSlug, slugifyOwnerAccountName } from "@/lib/teams/slug";
 
 export const runtime = "nodejs";
 
@@ -266,9 +267,25 @@ export async function POST(req: NextRequest) {
     // Step 3: Personal owner_account + Owner-Membership (spiegelt den
     // `user.create.after`-Hook aus lib/auth.ts, den wir hier
     // umgehen — der Hook läuft nur bei Better-Auth-seitiger Erstellung).
+    const personalSlug = await ensureUniqueSlug(
+      slugifyOwnerAccountName(nameValue, "user"),
+      async (candidate) => {
+        const [row] = await db
+          .select({ id: ownerAccounts.id })
+          .from(ownerAccounts)
+          .where(eq(ownerAccounts.slug, candidate))
+          .limit(1);
+        return Boolean(row);
+      },
+    );
     const [personalAccount] = await db
       .insert(ownerAccounts)
-      .values({ type: "personal", name: nameValue, planId: FREE_PLAN_ID })
+      .values({
+        type: "personal",
+        name: nameValue,
+        slug: personalSlug,
+        planId: FREE_PLAN_ID,
+      })
       .returning({ id: ownerAccounts.id });
     if (personalAccount) {
       await db.insert(ownerAccountMembers).values({
