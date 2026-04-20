@@ -1,8 +1,33 @@
 # Connector Framework — Design Document
 
-**Status:** Design finalisiert, Implementation ausstehend
+**Status:** Framework + Confluence-Cloud-Provider implementiert. UI + MCP-Endpoint-Integration offen.
 **Erstellt:** April 2026
 **Basis:** Obot-Learnings (`docs/REFERENCES/obot-learnings.md`) + lokri-Produktvision ("persistenter KI-Kontext")
+
+---
+
+## Implementation Status
+
+| Komponente | Status |
+|---|---|
+| Framework (types, registry, filter pipeline, gateway, encryption) | ✅ Implementiert |
+| Datenmodell (4 Tabellen, Migration 0019) | ✅ Implementiert |
+| Filter-Pipeline (scope-enforcement, scope-post) | ✅ Implementiert |
+| Usage-Log-Orchestrierung im Gateway (try/finally) | ✅ Implementiert |
+| **Confluence Cloud Provider** | ✅ Implementiert |
+| &nbsp;&nbsp;— testCredentials + Scope-Discovery | ✅ |
+| &nbsp;&nbsp;— `search` (v1 CQL) | ✅ |
+| &nbsp;&nbsp;— `read-page`, `list-recent`, `get-page-children` (v2) | ✅ |
+| &nbsp;&nbsp;— CQL-Builder mit Injection-Escape | ✅ |
+| Auto-Registrierung der Provider via `instrumentation.ts` | ✅ Implementiert |
+| MCP-Endpoint-Routing (Tool-Handler ruft Gateway auf) | ⏳ Offen |
+| Admin-UI für Integration-CRUD | ⏳ Offen |
+| Team-Space-Mapping-UI | ⏳ Offen |
+| API-Routen für Integration + Scope + Mapping | ⏳ Offen |
+
+**Noch nicht erreichbar über MCP-Clients** — der Confluence-Provider steht
+im Repo bereit, aber der MCP-Endpoint routet noch keine Tool-Calls an ihn.
+Das kommt in einem separaten Build-Block.
 
 ---
 
