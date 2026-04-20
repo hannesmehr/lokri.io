@@ -45,3 +45,24 @@ export async function canManageSsoForTeam(
   const role = await getTeamRoleForUser(userId, ownerAccountId);
   return canManageSsoRole(role);
 }
+
+/**
+ * Prüft, ob ein User Connector-Integrations (Confluence, Slack, …) eines
+ * Teams verwalten darf.
+ *
+ * Gate: strikt nur Team-Owner (analog SSO — externe Zugriffe,
+ * Credentials-Handling, potentielle Datenabflüsse in fremde Systeme
+ * gehören in die Owner-Verantwortung; Admins verwalten Members,
+ * nicht externe Datenflüsse).
+ */
+export function canManageConnectorsRole(role: MemberRole | null): boolean {
+  return role === "owner";
+}
+
+export async function canManageConnectorsForTeam(
+  userId: string,
+  ownerAccountId: string,
+): Promise<boolean> {
+  const role = await getTeamRoleForUser(userId, ownerAccountId);
+  return canManageConnectorsRole(role);
+}

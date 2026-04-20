@@ -166,6 +166,21 @@ export const limiters = {
     limit: 5,
     window: "10 m",
   }),
+
+  /**
+   * Connector-Admin-Actions: `/validate`, `/test`, `/discover`,
+   * `/credentials` (Rotation). Tight per-user Budget weil das der
+   * Credential-Stuffing-Vektor ist — ein kompromittiertes
+   * Team-Owner-Konto soll nicht unbegrenzt Tokens gegen Atlassian
+   * ausprobieren können. CRUD (create/patch/delete) läuft nicht durch
+   * diesen Bucket — das landet später bei `mcpCall`/generic.
+   */
+  connectorAction: makeLimiter({
+    name: "connector-action",
+    limit: 30,
+    window: "5 m",
+    analytics: true,
+  }),
 } satisfies Record<string, Ratelimit | null>;
 
 export type LimiterName = keyof typeof limiters;
