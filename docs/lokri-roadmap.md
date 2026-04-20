@@ -234,3 +234,37 @@ Pattern im Einsatz bei:
 - **Datadog Agent** — lokaler Collector, zentrale Cloud-Analyse
 
 Alle haben Cloud-UI + On-Prem-Runtime-Komponente. Das Pattern ist bewährt.
+
+## REST-to-MCP-Adapter (Phase 3+)
+
+Generischer Connector-Typ, der beliebige REST-APIs als MCP-Tools exposed. 
+Kein API-spezifischer Code, stattdessen Mapping-Config pro Integration.
+
+**Ausgelöst wird das, wenn:**
+- Mindestens 3 Confluence-Kunden lokri produktiv nutzen
+- Klare Nachfrage nach REST-Integration aus mehreren Richtungen
+- Pattern erkennbar: welche Teile sind wirklich gemeinsam, welche API-spezifisch
+
+**Nicht gebaut werden im MVP:**
+- OpenAPI-Spec-Parser mit Auto-Tool-Generierung
+- Admin-UI für Mapping-Editor
+- Authentication-Strategy-Matrix (Bearer, API-Key, OAuth, Cookie)
+- Pagination-Abstraktion
+
+**Technische Skizze (für später):**
+- `RestApiProvider` als zweiter ConnectorProvider-Typ neben Providern wie 
+  Confluence-Cloud
+- Mapping-Definition als YAML oder JSON, gespeichert in 
+  `connector_integrations.config`
+- Tools werden aus Mapping-Config dynamisch generiert, nicht hart-codiert
+- Search-Semantik: wenn API keinen Such-Endpunkt hat, lokri macht 
+  Listing + Client-Side-Filtering
+
+**Offene Fragen:**
+- Wie wird Response-Shape auf lokri-interne Hits gemappt (titleField, snippetField)?
+- Wie wird Scope-Enforcement generisch umgesetzt (Space-Keys → ???)
+- Gibt es Bedarf für einen "API-Import"-Flow, der OpenAPI-Specs automatisch 
+  einliest und Tools vorschlägt?
+
+Referenz: IBM ContextForge hat das Feature implementiert, kann als 
+Benchmark dienen wenn's soweit ist.
