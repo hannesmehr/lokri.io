@@ -44,6 +44,25 @@ export interface McpRouteConfig {
    * behaviour where `bearerKey` is used unchanged.
    */
   rateLimitKeyPrefix?: string;
+  /**
+   * If set, the incoming request's URL **pathname** is rewritten to
+   * this value before `mcp-handler` sees it. Origin, query, headers,
+   * and body are preserved.
+   *
+   * **Why this exists:** `mcp-handler` was created once with
+   * `basePath: "/api"`, which fixes its internal Streamable-HTTP /
+   * SSE routes at `/api/mcp`, `/api/sse`, `/api/message`. Any request
+   * URL that doesn't match one of those paths returns 404 *after* the
+   * auth stage — which is exactly what team-endpoint URLs like
+   * `/api/mcp/team/infected` hit. Rewriting the pathname to `/api/mcp`
+   * before the handler sees the request makes it route correctly; the
+   * team-specific context is already baked into the resolver closure
+   * and the `extra.ownerAccountId` on the AuthInfo, so the downstream
+   * tools don't care what URL the request originally had.
+   *
+   * Leave unset for the personal endpoint (URL already matches).
+   */
+  rewriteUrlPathTo?: string;
 }
 
 /** MCP-Handler Singleton — Tools sind stateless, ein Handler reicht für alle Routes. */
@@ -117,7 +136,21 @@ export function createMcpRouteHandler(config: McpRouteConfig) {
     const rl = await limit("mcpCall", bearerKey(bearer, ip, prefix));
     if (!rl.ok) return rateLimitResponse(rl);
 
-    const res = await authed(req);
+    // URL-Rewrite für Team-Endpoints. `new Request(url, init)` mit
+    // `body: req.body` braucht in Node/undici den `duplex: "half"`-
+    // Hint, weil der Body ein ReadableStream ist — ohne den wirft
+    // das Konstruktor. `duplex` ist (noch) nicht in der Standard-
+    // RequestInit-Typsignatur, daher der Cast.
+    const reqForHandler = config.rewriteUrlPathTo
+      ? new Request(rewritePath(req.url, config.rewriteUrlPathTo), {
+          method: req.method,
+          headers: req.headers,
+          body: req.body,
+          duplex: "half",
+        } as RequestInit)
+      : req;
+
+    const res = await authed(reqForHandler);
     if (res.status !== 401) return res;
 
     const resourceMetadataUrl = config.resourceMetadataUrlFor(req);
@@ -130,4 +163,11 @@ export function createMcpRouteHandler(config: McpRouteConfig) {
     const body = await res.arrayBuffer();
     return new Response(body, { status: 401, headers });
   };
+}
+
+/** Ersetzt nur die pathname-Komponente, lässt Origin/Search/Hash intakt. */
+function rewritePath(originalUrl: string, newPath: string): string {
+  const u = new URL(originalUrl);
+  u.pathname = newPath;
+  return u.toString();
 }

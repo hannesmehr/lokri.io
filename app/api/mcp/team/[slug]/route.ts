@@ -47,6 +47,11 @@ async function handle(
     resourceMetadataUrlFor: (r) =>
       `${new URL(r.url).origin}/api/mcp/team/${encodeURIComponent(slug)}/oauth-protected-resource`,
     rateLimitKeyPrefix: `team:${slug}`,
+    // `mcp-handler` erwartet die Streamable-HTTP-Route auf `/api/mcp`
+    // (aus seinem `basePath: "/api"`). Die Next-Route lebt aber unter
+    // `/api/mcp/team/[slug]`, d. h. ohne Rewrite 404t jeder
+    // authentifizierte Tool-Call. Siehe `McpRouteConfig.rewriteUrlPathTo`.
+    rewriteUrlPathTo: "/api/mcp",
   });
   return handler(req);
 }
