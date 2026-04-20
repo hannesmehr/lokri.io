@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { Key } from "lucide-react";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
@@ -56,7 +56,7 @@ export default async function McpPage() {
       .leftJoin(
         auditEvents,
         and(
-          eq(auditEvents.targetId, apiTokens.id),
+          eq(auditEvents.targetId, sql<string>`${apiTokens.id}::text`),
           eq(auditEvents.action, "user.connect.token_created"),
         ),
       )
