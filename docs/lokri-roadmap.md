@@ -155,3 +155,82 @@ Diese Lücken sind **keine Krise**, solange lokri in seiner Knowledge-Worker-Nis
 - Kubernetes-Deployments / On-Premise (aktuell Vercel + Neon reicht)
 - Agent-to-Agent-Protokoll (Gatana macht das, lokri braucht's noch nicht)
 - Runnable Code / JS-Hosted-Tools (Gatana macht das, zu breit für lokris Scope)
+
+# Roadmap-Ergänzung: Hybrid-Deployment-Pattern
+
+**Status:** Idee / Strategische Option
+**Erfasst:** April 2026
+**Anlass:** Gedanke aus Connector-Framework-Diskussion — Runner-Trennung zwischen Cloud und On-Prem
+
+---
+
+## Idee in einem Satz
+
+Die Komponente von lokri, die mit externen APIs spricht (Connector-Runtime), könnte später als eigenständiger Runner extrahiert werden, den Kunden in ihrem eigenen Netzwerk deployen — während die Cloud-UI für Konfiguration, Team-Management, Billing und MCP-Endpoint zentral bleibt.
+
+## Zielgruppe
+
+Kunden, für die "EU-Hosting" nicht ausreicht, weil ihre Compliance-Anforderungen vollständige Daten-Souveränität verlangen:
+- Banken, Versicherungen
+- Öffentliche Hand, Behörden
+- Healthcare (Kliniken, Pharma)
+- Anwaltskanzleien, Steuerberater
+
+Das ist eine **kleine, aber zahlungsstarke** Zielgruppe, die typischerweise Enterprise-Pricing rechtfertigt.
+
+## Wie das Pattern aussähe
+
+- **Cloud (lokri.io):** User-Accounts, Teams, Billing, Connector-Konfiguration, MCP-Endpoint, UI
+- **On-Prem-Runner:** Führt Connector-API-Calls aus, hält Upstream-Credentials lokal, spricht mit internem Confluence/Slack/Jira
+- **Protokoll zwischen beiden:** Runner pollt Cloud für Jobs (oder Cloud pusht via Websocket), Results kommen zurück. Credentials verlassen nie den Runner.
+
+## Warum das architektonisch tragbar bleibt
+
+Das aktuelle Connector-Framework-Design (in `CONNECTOR_FRAMEWORK.md`) hat die richtige Abstraktion:
+
+- `ConnectorProvider.executeTool(name, args, context)` als klarer Vertrag
+- Keine DB-Zugriffe aus Providern
+- Keine Cross-Layer-Shortcuts
+
+Das bedeutet: Ein zukünftiger `RemoteConnectorProvider`, der denselben Vertrag erfüllt aber HTTP gegen einen Runner spricht, ist **einfügbar**, ohne den Rest des Frameworks anzufassen.
+
+## Was dafür heute wichtig ist
+
+**Nicht bauen, aber schützen:**
+- Provider-Vertrag nicht aufweichen (keine direkten DB-Zugriffe, keine Out-of-Band-Credentials-Behandlung)
+- Filter-Pipeline bleibt in der Cloud (generisch), Provider-Interne in der Runner-Boundary
+- Keine starke Kopplung zwischen Providern und Cloud-internen Services wie Auth oder Team-DB
+
+**Nicht heute vorwegnehmen:**
+- Kein `RemoteConnectorProvider`-Skeleton
+- Kein Wire-Protokoll zwischen Cloud und Runner
+- Kein Runner-Lifecycle (Update, Heartbeat, Health)
+
+Diese Sachen würden heute falsch designt, weil echte Requirements fehlen.
+
+## Trigger für die Umsetzung
+
+Die Entscheidung, Hybrid-Deployment zu bauen, wird getroffen, wenn:
+
+1. Mindestens **drei** Enterprise-Kunden explizit On-Prem als Blocker nennen
+2. Der erste davon bereit ist, das als paid Pilot zu finanzieren
+3. Lokri hat genug Stabilität (viele Millionen MCP-Calls, bewährtes Team), um ein Second-Tier-Produkt zu betreuen
+
+Bevor diese Trigger erfüllt sind, ist Hybrid-Deployment eine Idee, kein Projekt.
+
+## Was es explizit NICHT ist
+
+- **Keine UI/Backend-Trennung der gesamten lokri-App.** Nur der Connector-Runtime-Teil wird separierbar.
+- **Kein Kubernetes-Operator-Pattern.** Der Runner ist ein simpler Container (Docker oder Binary), den Kunden per docker-compose oder systemd betreiben.
+- **Keine Offline-Fähigkeit.** Der Runner braucht Verbindung zur Cloud, sonst keine Jobs.
+- **Kein Self-Hosted-lokri-Komplett.** Das wäre ein anderes Produkt mit anderem Support-Modell. Hybrid-Deployment ist Cloud-Produkt mit Runner-Extension.
+
+## Referenzen aus dem Feld
+
+Pattern im Einsatz bei:
+- **GitLab** — gitlab.com + selbst-gehostete Runner für CI
+- **HashiCorp Cloud** — Agents, die in Kunden-Infrastruktur laufen
+- **Sentry Relay** — on-prem Proxy, der Events vorfiltert bevor sie zu Sentry Cloud gehen
+- **Datadog Agent** — lokaler Collector, zentrale Cloud-Analyse
+
+Alle haben Cloud-UI + On-Prem-Runtime-Komponente. Das Pattern ist bewährt.

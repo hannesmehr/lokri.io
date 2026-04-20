@@ -1069,3 +1069,190 @@ export const userSsoIdentities = pgTable(
     ),
   ],
 );
+
+// ---------------------------------------------------------------------------
+// Connector Framework — externe Datenquellen (Confluence, Slack, GitHub, …)
+// an lokri-Spaces mappen. Vier Tabellen pro `docs/CONNECTOR_FRAMEWORK.md`:
+//
+//   * `connector_integrations` — konfigurierte Instanz eines Connector-Typs
+//     pro Team (z.B. „Empro Confluence"). `credentials_encrypted` hält die
+//     verschlüsselten Upstream-Tokens (PAT im MVP, OAuth später), `config`
+//     die plain-Params (site_url, etc.).
+//   * `connector_scope_allowlist` — Whitelist-Einträge pro Integration.
+//     Eine Row pro freigegebener Sub-Ressource (z.B. Confluence-Space-Key
+//     „ENGINEERING"). Bildet die Defense-in-Depth gegen das naive
+//     Token-Durchreichen an den Upstream.
+//   * `space_external_sources` — Mapping lokri-Space ↔ Scope-Eintrag.
+//     MVP: hartes 1:1 via Partial-Unique-Index auf `connector_scope_id`
+//     (Phase 2 dropt den Index für n:1-Compositions).
+//   * `connector_usage_log` — gemeinsame Audit+Usage-Tabelle. Schreibt
+//     pro Tool-Execution eine Row mit status (success/failure/degraded).
+//
+// Abweichung vom Design-Doc: `credentials` ist `text` (nicht `jsonb`) —
+// wir folgen dem Storage-Provider/Embedding-Key-Pattern, das schon einen
+// versionierten Envelope `v1:<base64(...)>` + `encryptJson/decryptJson`-
+// Helper in `lib/storage/encryption.ts` nutzt.
+//
+// `connector_type` und `auth_type` sind `text` ohne CHECK-Constraint —
+// Enforcement via TS-Union (`ConnectorDefinition`). Neue Typen = Code-
+// Deploy, keine Migration (Prinzip 3).
+// ---------------------------------------------------------------------------
+
+export const connectorIntegrations = pgTable(
+  "connector_integrations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    ownerAccountId: uuid("owner_account_id")
+      .notNull()
+      .references(() => ownerAccounts.id, { onDelete: "cascade" }),
+    /** Connector-Typ-Slug aus der Code-Registry — z.B. `"confluence-cloud"`. */
+    connectorType: text("connector_type").notNull(),
+    /** User-definierter Label — z.B. `"Empro Confluence"`. */
+    displayName: text("display_name").notNull(),
+    /** Aktuell nur `"pat"`; `"oauth2"` kommt mit Phase 2. */
+    authType: text("auth_type").notNull(),
+    /**
+     * AES-256-GCM-verschlüsselter JSON-Envelope mit den Upstream-Credentials
+     * (PAT, OAuth-Tokens etc.). Format: `v1:<base64(salt ‖ iv ‖ tag ‖ ct)>`.
+     * Ver-/Entschlüsselung über `encryptJson`/`decryptJson` aus
+     * `lib/storage/encryption.ts` (gleicher Helper wie S3 + Embedding-Keys).
+     */
+    credentialsEncrypted: text("credentials_encrypted").notNull(),
+    /**
+     * Plain-structured Konfiguration (nicht verschlüsselt):
+     *   - Confluence: `{ siteUrl, email }`
+     *   - GitHub: `{ baseUrl, org }`
+     * Schema connector-spezifisch — validiert vom jeweiligen Provider.
+     */
+    config: jsonb("config").notNull().default(sql`'{}'::jsonb`),
+    enabled: boolean("enabled").notNull().default(true),
+    /** Letzter erfolgreicher `testCredentials()`-Durchlauf. */
+    lastTestedAt: timestamp("last_tested_at", { withTimezone: true }),
+    /** Fehlertext des letzten fehlgeschlagenen Tests oder Tool-Calls. */
+    lastError: text("last_error"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdateFn(() => new Date()),
+  },
+  (t) => [
+    index("connector_integrations_owner_account_id_idx").on(t.ownerAccountId),
+  ],
+);
+
+export const connectorScopeAllowlist = pgTable(
+  "connector_scope_allowlist",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    connectorIntegrationId: uuid("connector_integration_id")
+      .notNull()
+      .references(() => connectorIntegrations.id, { onDelete: "cascade" }),
+    /** Provider-specific scope-type — z.B. `"confluence-space"`,
+     *  `"github-repo"`, `"slack-channel"`. */
+    scopeType: text("scope_type").notNull(),
+    /** Provider-specific identifier — z.B. `"ENGINEERING"` (Confluence
+     *  Space-Key), `"owner/repo"` (GitHub). */
+    scopeIdentifier: text("scope_identifier").notNull(),
+    /** Optionale Metadaten für UI-Display (display name, icon, etc.) —
+     *  z.B. `{ displayName: "Engineering Wiki" }`. */
+    scopeMetadata: jsonb("scope_metadata"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("connector_scope_allowlist_integration_id_idx").on(
+      t.connectorIntegrationId,
+    ),
+    // Idempotenz beim Scope-Discovery + Upsert.
+    uniqueIndex("connector_scope_allowlist_unique_idx").on(
+      t.connectorIntegrationId,
+      t.scopeType,
+      t.scopeIdentifier,
+    ),
+  ],
+);
+
+export const spaceExternalSources = pgTable(
+  "space_external_sources",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    spaceId: uuid("space_id")
+      .notNull()
+      .references(() => spaces.id, { onDelete: "cascade" }),
+    connectorScopeId: uuid("connector_scope_id")
+      .notNull()
+      .references(() => connectorScopeAllowlist.id, { onDelete: "cascade" }),
+    /** Wer hat das Mapping angelegt. Set-null, damit Member-Leave das
+     *  Mapping nicht wegräumt — bleibt für Audit sichtbar. */
+    addedByUserId: text("added_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("space_external_sources_space_id_idx").on(t.spaceId),
+    // Kein Space referenziert denselben Scope zweimal.
+    uniqueIndex("space_external_sources_space_scope_unique_idx").on(
+      t.spaceId,
+      t.connectorScopeId,
+    ),
+    // MVP-Constraint: 1:1-Mapping zwischen Scope und Space.
+    // Phase 2 entfernt diesen Index für n:1-Compositions.
+    uniqueIndex("space_external_sources_scope_unique_idx").on(
+      t.connectorScopeId,
+    ),
+  ],
+);
+
+export const connectorUsageLog = pgTable(
+  "connector_usage_log",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    ownerAccountId: uuid("owner_account_id")
+      .notNull()
+      .references(() => ownerAccounts.id, { onDelete: "cascade" }),
+    /** Audit-Erhalt: user gelöscht ⇒ log bleibt. */
+    userId: text("user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    /** Audit-Erhalt: integration entfernt ⇒ log bleibt mit Kontext. */
+    connectorIntegrationId: uuid("connector_integration_id").references(
+      () => connectorIntegrations.id,
+      { onDelete: "set null" },
+    ),
+    /** Audit-Erhalt: space gelöscht ⇒ log bleibt. */
+    spaceId: uuid("space_id").references(() => spaces.id, {
+      onDelete: "set null",
+    }),
+    /** Slug: `"search"`, `"read-page"`, `"list-recent"`, … */
+    action: text("action").notNull(),
+    /** `"success"` | `"failure"` | `"degraded"`. TS-Union, kein CHECK. */
+    status: text("status").notNull(),
+    /** Sanitized Request-Args (keine Credentials, keine Secrets). */
+    requestMetadata: jsonb("request_metadata"),
+    /** Response-Metadata: Trefferanzahl, degradation_reason, etc. */
+    responseMetadata: jsonb("response_metadata"),
+    durationMs: integer("duration_ms"),
+    /** Vorbereitung für spätere Abrechnung/Quota — MVP: immer 0. */
+    tokensUsed: integer("tokens_used").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("connector_usage_log_owner_account_id_created_at_idx").on(
+      t.ownerAccountId,
+      t.createdAt.desc(),
+    ),
+    index("connector_usage_log_integration_id_created_at_idx").on(
+      t.connectorIntegrationId,
+      t.createdAt.desc(),
+    ),
+  ],
+);

@@ -134,6 +134,13 @@
       "when": 1776584308335,
       "tag": "0018_sleepy_karnak",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1776673122619,
+      "tag": "0019_flashy_quasimodo",
+      "breakpoints": true
     }
   ]
 }
