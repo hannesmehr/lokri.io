@@ -15,6 +15,10 @@ interface Token {
   readOnly: boolean;
   lastUsedAt: Date | string | null;
   createdAt: Date | string;
+  /** Aus `audit_events.metadata.clientType` (user.connect.token_created).
+   *  Null für Tokens, die über `/settings/mcp`-Create angelegt wurden.
+   *  Werte: "claude-desktop", später "chatgpt", "cursor", … */
+  createdVia?: string | null;
 }
 
 export function TokenList({ tokens }: { tokens: Token[] }) {
@@ -72,6 +76,11 @@ export function TokenList({ tokens }: { tokens: Token[] }) {
               {token.scopeType === "team" ? (
                 <span className="rounded border bg-muted px-1.5 py-0.5 text-[10px] font-medium text-foreground">
                   {t("teamWide")}
+                </span>
+              ) : null}
+              {token.createdVia ? (
+                <span className="rounded border bg-muted px-1.5 py-0.5 text-[10px] font-medium text-foreground">
+                  {t(`createdVia.${token.createdVia}` as never)}
                 </span>
               ) : null}
             </div>

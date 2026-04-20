@@ -1,5 +1,5 @@
 import { and, desc, eq, isNull } from "drizzle-orm";
-import { FileText, Key, Plus, StickyNote, Upload } from "lucide-react";
+import { FileText, Plug, Plus, StickyNote, Upload } from "lucide-react";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import {
@@ -166,10 +166,16 @@ export default async function DashboardPage({
           description={t("quickActions.uploadFile.description")}
         />
         <QuickActionCard
-          href="/settings/mcp"
-          icon={<Key className="h-4 w-4" />}
-          label={t("quickActions.mcpToken.label")}
-          description={t("quickActions.mcpToken.description")}
+          href="/connect"
+          icon={<Plug className="h-4 w-4" />}
+          label={t("quickActions.connect.label")}
+          description={
+            tokenCount > 0
+              ? t("quickActions.connect.descriptionWithTokens", {
+                  count: tokenCount,
+                })
+              : t("quickActions.connect.descriptionEmpty")
+          }
         />
       </div>
 

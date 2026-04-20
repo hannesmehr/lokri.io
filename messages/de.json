@@ -498,9 +498,10 @@
           "label": "File hochladen",
           "description": "Drag & Drop, bis 10 MB pro Datei."
         },
-        "mcpToken": {
-          "label": "MCP-Token",
-          "description": "Claude Desktop, ChatGPT, Cursor anbinden."
+        "connect": {
+          "label": "Mit KI-Client verbinden",
+          "descriptionEmpty": "Claude Desktop, ChatGPT, Codex — geführter Setup-Wizard.",
+          "descriptionWithTokens": "Bereits {count} {count, plural, one {Verbindung} other {Verbindungen}} aktiv. Weitere hinzufügen."
         }
       },
       "sections": {
@@ -1032,7 +1033,11 @@
         "revoke": "Widerrufen",
         "revokeConfirm": "Token \"{name}\" widerrufen? Clients verlieren sofort den Zugriff.",
         "revokeFailed": "Konnte Token nicht widerrufen.",
-        "revoked": "Token widerrufen."
+        "revoked": "Token widerrufen.",
+        "createdVia": {
+          "claude-desktop": "Claude Desktop",
+          "chatgpt": "ChatGPT"
+        }
       },
       "tokenCreate": {
         "newButton": "Neuer Token",
@@ -1072,36 +1077,6 @@
       "oauth": {
         "title": "OAuth 2.1 aktiv.",
         "body": "Clients discovern lokri über /.well-known/oauth-protected-resource, registrieren sich per DCR (RFC 7591) und tauschen PKCE-Codes gegen Access-Tokens. Du musst keinen Token manuell kopieren — die Tokens oben sind für Skripte und CLI der Legacy-Pfad."
-      },
-      "instructions": {
-        "title": "Client einrichten",
-        "subtitle": "Copy-&-Paste-Snippets für Claude Desktop, ChatGPT, Cursor.",
-        "shared": {
-          "copy": "Kopieren",
-          "copied": "Kopiert",
-          "copiedToast": "In die Zwischenablage kopiert.",
-          "endpoint": "Endpoint",
-          "discovery": "Discovery"
-        },
-        "claudeDesktop": {
-          "title": "Claude Desktop",
-          "badge": "via mcp-remote-Bridge (OAuth)",
-          "intro": "Einmalig npm install -g mcp-remote.",
-          "bridgeNote": "Die Config-Datei erlaubt Claude Desktop weiterhin nur stdio-Subprozesse. mcp-remote bridged zu HTTP und übernimmt die OAuth-Discovery selbst. Kein --header und kein Token nötig.",
-          "copyLabel": "claude_desktop_config.json"
-        },
-        "chatgpt": {
-          "title": "ChatGPT (Developer Tools)",
-          "intro": "MCP-Connector anlegen.",
-          "fallbackNote": "ChatGPT discovert OAuth automatisch. Falls ein statischer Bearer erwartet wird, nutze einen Token aus MCP-Tokens oben.",
-          "copyLabel": "Connector-Settings"
-        },
-        "cursor": {
-          "title": "Cursor / Codex",
-          "intro": "In ~/.cursor/mcp.json bzw. der Codex-MCP-Config.",
-          "fallbackNote": "Cursor unterstützt OAuth-Discovery. Falls das nicht verfügbar ist, trage einen Authorization: Bearer lk_…-Header ein.",
-          "copyLabel": "mcp.json"
-        }
       },
       "tokens": {
         "title": "Legacy-Bearer-Tokens",
@@ -1144,6 +1119,11 @@
           "generic": "Konnte Token nicht erstellen.",
           "selectAtLeastOne": "Wähle mindestens einen Space — oder nimm „alle Spaces“."
         }
+      },
+      "connectPromo": {
+        "title": "Neuen Client anbinden",
+        "description": "Claude Desktop und ChatGPT/Codex haben einen geführten Setup-Wizard mit Scope-Auswahl.",
+        "cta": "Setup-Wizard öffnen"
       }
     },
     "storage": {
@@ -1968,6 +1948,119 @@
           }
         }
       }
+    }
+  },
+  "connect": {
+    "landing": {
+      "title": "Mit KI-Client verbinden",
+      "description": "Wähle, mit welchem Client du lokri nutzen möchtest. Jeder Setup-Pfad führt dich durch Scope, Authentifizierung und Config in vier Schritten.",
+      "claude": {
+        "title": "Claude Desktop",
+        "description": "Lokale App von Anthropic (macOS, Windows, Linux).",
+        "note": "Setup via Bearer-Token: lokri generiert einen personal-scoped Token, du fügst ihn in die Config-Datei ein."
+      },
+      "chatgpt": {
+        "title": "ChatGPT / Codex",
+        "description": "ChatGPT Plus/Pro mit Developer-Mode — Custom MCP-Connector.",
+        "note": "Setup via OAuth: ChatGPT registriert sich automatisch bei lokri, du bestätigst mit deinem Account."
+      },
+      "moreClients": "Weitere Clients (Cursor, Zed, Codex CLI) sind in Vorbereitung."
+    },
+    "claudeDesktop": {
+      "breadcrumb": "Claude Desktop",
+      "title": "Claude Desktop einrichten",
+      "description": "Vier Schritte: Spaces wählen, Token benennen, Config einfügen, fertig.",
+      "common": {
+        "back": "Zurück",
+        "next": "Weiter",
+        "copy": "Kopieren",
+        "copied": "Kopiert"
+      },
+      "step1": {
+        "short": "Scope",
+        "title": "Welche Spaces soll Claude Desktop sehen?",
+        "description": "Du kannst Claude auf bestimmte Spaces einschränken oder ihm alle erlauben. Einschränkung ist reversibel — du kannst den Token später widerrufen.",
+        "scopeLabel": "Zugriff",
+        "allLabel": "Alle Spaces",
+        "allHint": "Claude Desktop kann auf alle deine Spaces zugreifen. Einfachste Variante.",
+        "selectedLabel": "Nur ausgewählte Spaces",
+        "selectedHint": "Claude Desktop sieht nur die hier angekreuzten Spaces.",
+        "noSpaces": "Noch keine Spaces angelegt. Leg erst einen an, dann kannst du diese Option nutzen.",
+        "readOnlyLabel": "Schreib-Zugriff",
+        "readOnlyHint": "Nur-Lese-Zugriff — Claude darf nichts anlegen, updaten oder löschen.",
+        "expiryNote": "Der Token ist gültig, bis du ihn in der Token-Verwaltung widerrufst. Keine automatische Ablaufzeit."
+      },
+      "step2": {
+        "short": "Name",
+        "title": "Wie soll der Token heißen?",
+        "description": "Ein Name hilft dir später, Tokens auseinanderzuhalten — etwa wenn du Claude auf mehreren Geräten nutzt.",
+        "nameLabel": "Token-Name",
+        "nameHint": "Sichtbar nur in der Token-Verwaltung, nicht für Claude.",
+        "createToken": "Token erstellen",
+        "creatingToken": "Wird erstellt …"
+      },
+      "step3": {
+        "short": "Config",
+        "title": "Token erstellt",
+        "description": "Kopiere die Config und füge sie in die Claude-Desktop-Config-Datei ein.",
+        "oneTimeWarning": "Der Token wird nur jetzt angezeigt. Wenn du ihn schließt und verlierst, musst du einen neuen erstellen — der alte kann dann widerrufen werden.",
+        "configLabel": "Config für Claude Desktop",
+        "osLabel": "Dein Betriebssystem",
+        "os": {
+          "macos": "macOS",
+          "windows": "Windows",
+          "linux": "Linux"
+        },
+        "pathLabel": "Pfad zur Config-Datei",
+        "pathNote": "Wenn die Datei noch nicht existiert, leg sie einfach mit dem kopierten Inhalt an."
+      },
+      "step4": {
+        "short": "Fertig",
+        "title": "Fast geschafft",
+        "description": "Nach Config-Update + Claude-Desktop-Neustart sollte lokri in der Tool-Liste auftauchen.",
+        "step1": "Config in die Datei einfügen und speichern.",
+        "step2": "Claude Desktop beenden und neu starten.",
+        "step3": "In einem Chat nach deinen Inhalten fragen — Claude sollte lokri nutzen.",
+        "tryLabel": "Erster Test",
+        "tryExample": "„Was habe ich zu API-Design in meinen Notes?“",
+        "tokensLink": "Tokens verwalten",
+        "doneCta": "Fertig"
+      }
+    },
+    "chatgpt": {
+      "copy": "Kopieren",
+      "copied": "Kopiert",
+      "title": "ChatGPT & Codex verbinden",
+      "description": "lokri als Custom-MCP-Connector in ChatGPT einrichten. Authentifizierung läuft über OAuth — kein Token zum Kopieren.",
+      "scopeWarning": {
+        "title": "Aktuell: Zugriff auf alle Spaces",
+        "body": "Der OAuth-Connector sieht alle Spaces deines Teams. Feingranulare Scope-Auswahl (analog zum Claude-Desktop-Wizard) folgt, sobald die nötige OAuth-Scope-Erweiterung bereit ist. Bis dahin: nutze Claude Desktop mit Token-Scope, wenn du Spaces gezielt einschränken willst."
+      },
+      "prereq": {
+        "title": "Voraussetzungen",
+        "description": "Custom-Connectors sind ein ChatGPT-Paid-Feature und müssen freigeschaltet sein.",
+        "plan": "ChatGPT Pro, Team oder Enterprise — Custom-Connectors sind in ChatGPT Plus nicht verfügbar.",
+        "devMode": "Developer-Mode aktiviert in ChatGPT Settings → Personalization → Advanced (falls nicht schon an)."
+      },
+      "url": {
+        "title": "lokri-MCP-Endpoint",
+        "description": "Diese URL trägst du in ChatGPT ein. Sie ist gleich, egal für welches Team du die Verbindung einrichtest — die Team-Zuordnung passiert während des OAuth-Flows.",
+        "oauthNote": "Nach dem Eintragen startet ChatGPT automatisch den OAuth-Flow: du wirst kurz zu lokri geleitet, bestätigst den Zugriff, und landest zurück in ChatGPT. Kein Token kopieren, kein Client-Secret, keine manuelle Konfiguration."
+      },
+      "steps": {
+        "title": "Schritt für Schritt",
+        "description": "Sieben kurze Klicks in ChatGPT — lokri macht den Rest.",
+        "step1": "Öffne ChatGPT und geh in Settings.",
+        "step2": "Wähle „Apps & Connectors“ (oder „Connectors“, je nach UI-Version).",
+        "step3": "Klick auf „Create“ bzw. „Add custom connector“.",
+        "step4Part1": "Gib einen Namen ein (z. B.",
+        "step4Part2": "„lokri“) und trage die URL oben als MCP-Endpoint ein.",
+        "step5": "Speichern. ChatGPT erkennt den OAuth-Schutz automatisch und zeigt dir einen „Authorize“-Button.",
+        "step6": "Klick „Authorize“. Du wirst zu lokri weitergeleitet — ggf. einloggen, dann Zugriff bestätigen.",
+        "step7": "ChatGPT zeigt den Connector als aktiv. In einem neuen Chat kannst du direkt nach deinen lokri-Inhalten fragen."
+      },
+      "externalHelp": "OpenAI-Dokumentation zu Custom-Connectors",
+      "doneCta": "Fertig"
     }
   }
 }
