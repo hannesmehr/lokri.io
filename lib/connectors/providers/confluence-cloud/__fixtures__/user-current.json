@@ -1,0 +1,23 @@
+{
+  "type": "known",
+  "accountId": "712020:d3f1a2c4-5678-90ab-cdef-1234567890ab",
+  "accountType": "atlassian",
+  "email": "jane.empro@empro.ch",
+  "publicName": "Jane Empro",
+  "displayName": "Jane Empro",
+  "profilePicture": {
+    "path": "/wiki/aa-avatar/712020:d3f1a2c4-5678-90ab-cdef-1234567890ab",
+    "width": 48,
+    "height": 48,
+    "isDefault": false
+  },
+  "isExternalCollaborator": false,
+  "_expandable": {
+    "operations": "",
+    "details": "",
+    "personalSpace": ""
+  },
+  "_links": {
+    "self": "https://empro.atlassian.net/wiki/rest/api/user?accountId=712020:d3f1a2c4-5678-90ab-cdef-1234567890ab"
+  }
+}

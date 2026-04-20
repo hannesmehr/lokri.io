@@ -1,0 +1,33 @@
+{
+  "results": [
+    {
+      "id": "196608",
+      "key": "OPS",
+      "name": "Operations",
+      "type": "global",
+      "status": "current",
+      "homepageId": "196609",
+      "description": null,
+      "icon": null,
+      "_links": {
+        "webui": "/spaces/OPS"
+      }
+    },
+    {
+      "id": "229376",
+      "key": "HR",
+      "name": "People & Culture",
+      "type": "global",
+      "status": "current",
+      "homepageId": "229377",
+      "description": null,
+      "icon": null,
+      "_links": {
+        "webui": "/spaces/HR"
+      }
+    }
+  ],
+  "_links": {
+    "base": "https://empro.atlassian.net/wiki"
+  }
+}

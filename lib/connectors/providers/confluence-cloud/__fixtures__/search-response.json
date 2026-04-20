@@ -1,0 +1,72 @@
+{
+  "results": [
+    {
+      "content": {
+        "id": "6750201",
+        "type": "page",
+        "status": "current",
+        "title": "Onboarding Checklist",
+        "space": {
+          "id": 98304,
+          "key": "ENG",
+          "name": "Engineering"
+        },
+        "history": {
+          "lastUpdated": {
+            "when": "2026-04-10T14:22:33.000Z",
+            "friendlyWhen": "10 days ago"
+          }
+        },
+        "_links": {
+          "webui": "/spaces/ENG/pages/6750201/Onboarding+Checklist",
+          "self": "https://empro.atlassian.net/wiki/rest/api/content/6750201"
+        }
+      },
+      "title": "Onboarding Checklist",
+      "excerpt": "<strong>lokri</strong> setup for new hires. Click <em>here</em>&nbsp;to start.",
+      "url": "/spaces/ENG/pages/6750201/Onboarding+Checklist",
+      "score": 42.5,
+      "resultGlobalContainer": {
+        "title": "Engineering",
+        "displayUrl": "/spaces/ENG"
+      },
+      "lastModified": "2026-04-10T14:22:33.000Z"
+    },
+    {
+      "content": {
+        "id": "6750310",
+        "type": "page",
+        "status": "current",
+        "title": "lokri Deployment Notes",
+        "space": {
+          "id": 131072,
+          "key": "PROD",
+          "name": "Product"
+        },
+        "history": {
+          "lastUpdated": {
+            "when": "2026-04-18T09:15:00.000Z",
+            "friendlyWhen": "2 days ago"
+          }
+        },
+        "_links": {
+          "webui": "/spaces/PROD/pages/6750310/lokri+Deployment+Notes"
+        }
+      },
+      "title": "lokri Deployment Notes",
+      "excerpt": "Production deploy playbook for <strong>lokri</strong>.",
+      "score": 31.1,
+      "resultGlobalContainer": {
+        "title": "Product",
+        "displayUrl": "/spaces/PROD"
+      },
+      "lastModified": "2026-04-18T09:15:00.000Z"
+    }
+  ],
+  "start": 0,
+  "limit": 20,
+  "size": 2,
+  "totalSize": 2,
+  "cqlQuery": "type = \"page\" AND space IN (\"ENG\", \"PROD\") AND text ~ \"lokri\"",
+  "searchDuration": 42
+}

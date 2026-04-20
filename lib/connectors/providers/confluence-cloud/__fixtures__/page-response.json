@@ -1,0 +1,29 @@
+{
+  "id": "6750201",
+  "status": "current",
+  "title": "Onboarding Checklist",
+  "spaceId": "98304",
+  "parentId": "6750100",
+  "parentType": "page",
+  "position": 2,
+  "authorId": "712020:aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+  "ownerId": "712020:aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+  "createdAt": "2026-03-01T08:00:00.000Z",
+  "version": {
+    "number": 5,
+    "authorId": "712020:aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+    "createdAt": "2026-04-10T14:22:33.000Z",
+    "message": "Added BYOK section",
+    "minorEdit": false
+  },
+  "body": {
+    "view": {
+      "representation": "view",
+      "value": "<h1>Welcome to lokri</h1><p>Follow these steps:</p><ol><li>Get your API token</li><li>Connect Confluence</li></ol>"
+    }
+  },
+  "_links": {
+    "webui": "/spaces/ENG/pages/6750201/Onboarding+Checklist",
+    "base": "https://empro.atlassian.net/wiki"
+  }
+}

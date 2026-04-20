@@ -1,0 +1,47 @@
+{
+  "results": [
+    {
+      "id": "98304",
+      "key": "ENG",
+      "name": "Engineering",
+      "type": "global",
+      "status": "current",
+      "homepageId": "98305",
+      "description": null,
+      "icon": null,
+      "_links": {
+        "webui": "/spaces/ENG"
+      }
+    },
+    {
+      "id": "131072",
+      "key": "PROD",
+      "name": "Product",
+      "type": "global",
+      "status": "current",
+      "homepageId": "131073",
+      "description": null,
+      "icon": null,
+      "_links": {
+        "webui": "/spaces/PROD"
+      }
+    },
+    {
+      "id": "163840",
+      "key": "DOC",
+      "name": "Documentation",
+      "type": "global",
+      "status": "current",
+      "homepageId": "163841",
+      "description": null,
+      "icon": null,
+      "_links": {
+        "webui": "/spaces/DOC"
+      }
+    }
+  ],
+  "_links": {
+    "next": "/wiki/api/v2/spaces?cursor=eyJpZCI6MTYzODQwLCJkaXIiOiJhc2MifQ%3D%3D&limit=250&type=global",
+    "base": "https://empro.atlassian.net/wiki"
+  }
+}
