@@ -1,11 +1,16 @@
 #!/usr/bin/env tsx
 /**
- * DEV-SHORTCUT — create/update a Confluence-Cloud integration + scope
- * allowlist + space mappings for a team, directly via the database.
+ * DEBUG-ONLY — CLI-Tooling für Confluence-Cloud-Integration-Setup.
  *
- * For production the Admin-UI (Block 5) owns this flow. This script
- * exists for local/dev/CI: setting up an E2E-Test fixture, recovery
- * scenarios, and Hannes' personal Empro-Instance wiring.
+ * **Die Admin-UI unter `/team/connectors` ist der produktive Weg.**
+ * Dieses Script bleibt ausschliesslich als CLI-Debug-Werkzeug: CI-
+ * Smoke-Tests, Recovery wenn die UI bricht, Bulk-Setup für Test-Teams.
+ *
+ * Duplikat-Risiko: Das Script spricht direkt mit der DB-Layer
+ * (`createIntegration`, `replaceIntegrationScopes`, `createMapping`),
+ * genau wie die API-Route hinter der UI. Es gibt kein zweites Logik-
+ * Set — dieselben Helpers, dieselben Schemas. Wenn du etwas änderst,
+ * ändere es in den CRUD-Helpern, nicht hier.
  *
  * Usage:
  *

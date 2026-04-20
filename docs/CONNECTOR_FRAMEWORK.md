@@ -1,6 +1,6 @@
 # Connector Framework — Design Document
 
-**Status:** Framework + Confluence-Cloud-Provider + MCP-Integration aktiv. Admin-UI + Mapping-UI offen.
+**Status:** Framework + Confluence-Cloud-Provider + MCP-Integration + Admin-UI aktiv. Produktiv nutzbar.
 **Erstellt:** April 2026
 **Basis:** Obot-Learnings (`docs/REFERENCES/obot-learnings.md`) + lokri-Produktvision ("persistenter KI-Kontext")
 
@@ -24,18 +24,33 @@
 | &nbsp;&nbsp;— `search` als Unified-Federation (lokri + external sources) | ✅ |
 | &nbsp;&nbsp;— `confluence-read-page`, `confluence-list-recent`, `confluence-get-page-children` | ✅ |
 | &nbsp;&nbsp;— Per-Source-Cap, Hybrid-Score, Degradation-Meta | ✅ |
-| Admin-UI für Integration-CRUD | ⏳ Offen (Block 5) |
-| Team-Space-Mapping-UI | ⏳ Offen (Block 6) |
-| API-Routen für Integration + Scope + Mapping | ⏳ Offen (Block 5) |
+| **Admin-UI für Integration-Management** | ✅ Implementiert |
+| &nbsp;&nbsp;— `/team/connectors` Übersicht mit Status-Badges | ✅ |
+| &nbsp;&nbsp;— Setup-Wizard `/team/connectors/new/confluence` (Credentials → Scopes → Mappings → Confirm) | ✅ |
+| &nbsp;&nbsp;— Detail-Seite `/team/connectors/[id]` (flach, 4 Cards + Status-Banner) | ✅ |
+| &nbsp;&nbsp;— Scope-Refresh mit Cascade-Warnung | ✅ |
+| &nbsp;&nbsp;— Space-Mapping-Management mit 1:1-Constraint-UI | ✅ |
+| &nbsp;&nbsp;— Credentials-Rotation mit Pre-Persist-Test | ✅ |
+| &nbsp;&nbsp;— Owner-only Gate, rate-limited auf Credential-Touching-Routes | ✅ |
+| API-Routen (11 Endpoints, 9 Route-Files) | ✅ Implementiert |
+| i18n (Deutsch + Englisch, ~130 Keys) | ✅ |
+| Audit-Events (10 Actions, `team.connector.*`) | ✅ |
 
-**MCP-Clients** (Claude Desktop, ChatGPT, Cursor, …) erreichen den
-Confluence-Provider **jetzt** über den produktiven `/api/mcp`-Endpoint.
-Setup erfolgt aktuell nur via Dev-Shortcut `scripts/confluence-setup-dev.ts`
-— die Admin-UI für Self-Service kommt in Block 5.
+### Team-Admin-Flow
 
-### Dev-Setup
+**Einrichten einer Confluence-Integration** (als Team-Owner, über die Web-UI):
 
-Für lokale Entwicklung + E2E-Tests:
+1. `/team/connectors` → „Neue Verbindung"-Button
+2. Setup-Wizard: Email + API-Token aus `id.atlassian.com`, Site-URL → „Verbindung testen"
+3. Scope-Auswahl: Checkbox-Liste der Upstream-Spaces (mit Such-Feld)
+4. Optionale Space-Mappings: Confluence-Space → lokri-Space pro Eintrag
+5. Confirm → atomares `POST /api/teams/[id]/connectors`
+
+Danach: Detail-Seite mit Status-Monitoring, Scope-Refresh, Mapping-CRUD, Credentials-Rotation, Delete (mit Typing-Confirmation). MCP-Clients erreichen die Integration sofort ohne weiteren Schritt.
+
+### Dev-Setup-Script
+
+`scripts/confluence-setup-dev.ts` bleibt als **Debug-Only CLI-Werkzeug** im Repo. Primärer Einsatz: CI-Smoke-Test-Fixture, Recovery wenn die UI bricht, Bulk-Setup für Test-Teams. Der Script-Header markiert das explizit. Kein Logik-Duplikat: das Script nutzt dieselben CRUD-Helper wie die API-Routes hinter der UI.
 
 ```bash
 # Env-Vars in .env.local setzen
@@ -43,7 +58,7 @@ CONFLUENCE_LIVE_TEST_EMAIL=<atlassian-account>
 CONFLUENCE_LIVE_TEST_API_TOKEN=<aus id.atlassian.com>
 CONFLUENCE_LIVE_TEST_SITE_URL=https://<tenant>.atlassian.net
 
-# Integration + Mappings für einen Team-Account anlegen
+# Integration + Mappings für einen Team-Account anlegen (Debug-Weg)
 pnpm tsx --env-file=.env.local scripts/confluence-setup-dev.ts \
   <owner-account-uuid> \
   <space-key>,<space-key>,... \
