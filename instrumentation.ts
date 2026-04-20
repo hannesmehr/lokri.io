@@ -1,26 +1,37 @@
 /**
  * Next.js instrumentation hook — läuft einmal pro Server-Instance
- * beim Start (Node + Edge Runtime; siehe
- * `node_modules/next/dist/docs/01-app/03-api-reference/03-file-conventions/instrumentation.md`).
+ * beim Start. Stable seit Next 15.
  *
- * Aktuell nutzen wir den Hook ausschliesslich, um die Connector-
- * Framework-Registry zu befüllen. Weiteren Start-Side-Effect-Code
- * hier nicht rein — OTel, DB-Migrations-Checks, etc. bekommen ggf.
- * später ihre eigene Zeile in `register()`, aber jeweils klein und
- * ohne Scope-Creep.
+ * **Runtime-Guard ist pflicht.** Next instanziiert die instrumentation
+ * in *beiden* Runtimes (Node + Edge). Unser Connector-Provider-Graph
+ * zieht `lib/storage/encryption.ts` → `node:crypto` (scrypt, AES-GCM
+ * via `createCipheriv`) — das existiert in der Edge-Runtime nicht.
+ * Ohne Guard bricht der Vercel-Build beim Edge-Bundle mit
+ * „edge runtime does not support Node.js 'crypto' module".
  *
- * `registerAllProviders()` ist idempotent (Flag im Modul), darum
- * spielt es keine Rolle, wenn Next die Instrumentation in Node- und
- * Edge-Runtime separat initialisiert — die Registry ist pro Modul-
- * Context ein Singleton, und die Funktion blockt Doppel-Registrierung.
+ * Lösung:
+ *   1. Frühes `return` wenn `NEXT_RUNTIME !== 'nodejs'`. Next macht
+ *      Dead-Code-Elimination auf diese Condition — der gesamte
+ *      Import-Subgraph hinter dem Guard wird aus dem Edge-Bundle
+ *      gestrippt.
+ *   2. Dynamischer `await import(...)` statt statischem Top-Level-
+ *      Import. Verstärkt die DCE — Edge-Bundler sieht den Providers-
+ *      Pfad gar nicht erst als Modul-Dependency.
  *
- * Confluence-Cloud-Provider ist pures fetch/URL-Code — kein DB-
- * Touch. Das macht ihn in beiden Runtimes safe, auch wenn Edge-
- * Worker nur minimale Module laden dürfen.
+ * Consequence: Edge-Workers haben eine leere Connector-Registry. Das
+ * ist für uns ok — MCP-Endpoints laufen in Node-Runtime (sie brauchen
+ * DB + Encryption). Middleware + statische Routen, die eventuell in
+ * Edge laufen, nutzen das Connector-Framework nicht.
+ *
+ * Idempotenz: `registerAllProviders()` hat einen Flag gegen Doppel-
+ * Registrierung. Falls Next den Hook mehrfach triggert (Hot-Reload),
+ * wird der zweite Call zum No-Op.
  */
 
-import { registerAllProviders } from "@/lib/connectors/providers/register";
-
-export function register() {
+export async function register() {
+  if (process.env.NEXT_RUNTIME !== "nodejs") return;
+  const { registerAllProviders } = await import(
+    "@/lib/connectors/providers/register"
+  );
   registerAllProviders();
 }
