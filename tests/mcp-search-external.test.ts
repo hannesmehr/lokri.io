@@ -238,34 +238,74 @@ test("externalSearch: thrown error from execute becomes failure outcome (no reth
 });
 
 // ---------------------------------------------------------------------------
-// Timeout
+// Abort-Signal (Federation-Timeout-Semantik)
 // ---------------------------------------------------------------------------
 
-test("externalSearch: timeout wins over slow execute → degraded with 'Timeout after …ms'", async () => {
+test("externalSearch: aborted signal before dispatch → degraded, execute NOT called", async () => {
+  let executeCalled = false;
+  const ctrl = new AbortController();
+  ctrl.abort();
   const outcome = await externalSearch(
     source(),
     "x",
     10,
     { ownerAccountId: "acct_1", userId: "user_1" },
     {
-      timeoutMs: 20,
-      execute: () =>
-        new Promise((resolve) =>
-          setTimeout(
-            () =>
-              resolve({
-                status: "success",
-                data: { hits: [], total: 0, cql: "" },
-              }),
-            200, // viel länger als Timeout
-          ),
-        ),
+      abortSignal: ctrl.signal,
+      execute: async () => {
+        executeCalled = true;
+        return { status: "success", data: { hits: [], total: 0, cql: "" } };
+      },
+    },
+  );
+  assert.equal(executeCalled, false);
+  assert.equal(outcome.status, "degraded");
+  if (outcome.status === "degraded") {
+    assert.match(outcome.reason, /aborted-before-dispatch/);
+  }
+});
+
+test("externalSearch: abort during execute → degraded (signal.aborted gewinnt über error message)", async () => {
+  const ctrl = new AbortController();
+  const outcome = await externalSearch(
+    source(),
+    "x",
+    10,
+    { ownerAccountId: "acct_1", userId: "user_1" },
+    {
+      abortSignal: ctrl.signal,
+      execute: async () => {
+        // Simuliert: Federation ruft abort(), Gateway wirft
+        // ConnectorUpstreamError mit AbortError als cause.
+        ctrl.abort();
+        const err = new Error("Confluence request aborted");
+        throw err;
+      },
     },
   );
   assert.equal(outcome.status, "degraded");
   if (outcome.status === "degraded") {
-    assert.match(outcome.reason, /Timeout after 20ms/);
+    assert.match(outcome.reason, /timeout-or-aborted/);
   }
+});
+
+test("externalSearch: passes abortSignal through to execute input", async () => {
+  const ctrl = new AbortController();
+  let sawSignal: AbortSignal | undefined;
+  await externalSearch(
+    source(),
+    "x",
+    10,
+    { ownerAccountId: "acct_1", userId: "user_1" },
+    {
+      abortSignal: ctrl.signal,
+      execute: async (input) => {
+        sawSignal = input.abortSignal;
+        return { status: "success", data: { hits: [], total: 0, cql: "" } };
+      },
+    },
+  );
+  assert.strictEqual(sawSignal, ctrl.signal);
 });
 
 // ---------------------------------------------------------------------------

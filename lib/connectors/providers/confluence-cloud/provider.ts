@@ -242,7 +242,11 @@ export class ConfluenceCloudProvider implements ConnectorProvider {
     );
     const parsedArgs = tool.argsSchema.parse(args);
 
-    const client = this.buildClient(validatedCredentials, validatedConfig);
+    const client = this.buildClient(
+      validatedCredentials,
+      validatedConfig,
+      context.abortSignal,
+    );
     return tool.execute(client, parsedArgs, context);
   }
 
@@ -250,13 +254,17 @@ export class ConfluenceCloudProvider implements ConnectorProvider {
   // Helpers
   // -------------------------------------------------------------------------
 
+  /** Federation-Layer reicht einen `abortSignal` über `ExecutionContext`
+   *  rein; setup-flows (testCredentials/discoverScopes) lassen ihn weg. */
   private buildClient(
     credentials: ConfluenceCloudCredentials,
     config: ConfluenceCloudConfig,
+    abortSignal?: AbortSignal,
   ): ConfluenceCloudClient {
     return new ConfluenceCloudClient(credentials, config, {
       fetchImpl: this.options.fetchImpl,
       timeoutMs: this.options.timeoutMs,
+      abortSignal,
     });
   }
 }

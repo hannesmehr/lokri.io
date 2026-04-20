@@ -499,6 +499,53 @@ test("spaceId: null is accepted + passed to recordUsage", async () => {
   assert.equal(calls.recordUsage[0].spaceId, null);
 });
 
+test("abortSignal is threaded into ExecutionContext", async () => {
+  let seenSignal: AbortSignal | undefined;
+  const provider = makeProvider();
+  const wrapped: ConnectorProvider = {
+    ...provider,
+    async executeTool(_n, _a, ctx) {
+      seenSignal = ctx.abortSignal;
+      return { status: "success", data: null };
+    },
+  };
+  const { ops } = makeOps({ provider: wrapped });
+  const ctrl = new AbortController();
+  await executeConnectorTool(
+    baseInput({ abortSignal: ctrl.signal }),
+    ops,
+  );
+  assert.strictEqual(
+    seenSignal,
+    ctrl.signal,
+    "ExecutionContext.abortSignal must be the same reference passed in",
+  );
+});
+
+test("AbortError from provider → degraded ToolResult, no integration.last_error", async () => {
+  const { ConnectorUpstreamError } = await import(
+    "@/lib/connectors/errors"
+  );
+  const abortErr = new Error("aborted");
+  abortErr.name = "AbortError";
+  const provider = makeProvider({
+    onExecute: async () => {
+      // Simuliert wie der Client es wirft: ConnectorUpstreamError
+      // mit AbortError als cause.
+      throw new ConnectorUpstreamError("Confluence request aborted", {
+        cause: abortErr,
+      });
+    },
+  });
+  const { ops, calls } = makeOps({ provider });
+  const result = await executeConnectorTool(baseInput(), ops);
+  assert.equal(result.status, "degraded");
+  assert.equal(calls.recordUsage[0].status, "degraded");
+  // Post-filter / Scope-Errors würden integration.last_error setzen —
+  // ein Abort ist aber ein Upstream-Problem, nicht Auth. Kein Persist.
+  assert.equal(calls.recordIntegrationError.length, 0);
+});
+
 test("extractObservedScopes populates post-filter check", async () => {
   const provider = makeProvider({
     onExecute: async () => ({

@@ -111,6 +111,15 @@ export interface ExecuteConnectorToolInput {
    * hit.space.key aus jedem Hit ziehen).
    */
   extractObservedScopes?: (result: ToolResult) => ScopeRef[];
+  /**
+   * Externer AbortSignal. Wird in den ExecutionContext geschoben;
+   * Provider reicht ihn an seinen HTTP-Client. Federation-Layer
+   * nutzt das für hart durchgesetzten 5s-Timeout pro Source (siehe
+   * `runUnifiedSearch`). Aborted-Signal ⇒ Upstream-Client wirft
+   * `ConnectorUpstreamError` mit `AbortError` als cause ⇒ Gateway
+   * klassifiziert als `degraded`.
+   */
+  abortSignal?: AbortSignal;
 }
 
 /**
@@ -264,6 +273,7 @@ export async function executeConnectorTool(
       scopes,
       callerUserId: input.callerUserId,
       spaceId: input.spaceId,
+      abortSignal: input.abortSignal,
     };
     const reqCtx: RequestContext = {
       toolName: input.toolName,

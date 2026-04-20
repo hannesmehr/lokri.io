@@ -2,22 +2,24 @@
  * Connector-Seite der Unified-Search-Federation.
  *
  * Pro gemappter External-Source ein Gateway-Call. Der Gateway handhabt
- * Filter-Pipeline, Usage-Log, Error-Klassifikation. Wir wrappen das
- * nur noch in einem 5s-Timeout (Design-Doc §Request-Flow) und mappen
- * `ToolResult` in die Federation-interne Hit-Shape.
+ * Filter-Pipeline, Usage-Log, Error-Klassifikation. `externalSearch`
+ * selbst ist nur Shape-Mapping von `ToolResult` auf die Federation-
+ * interne `ExternalSearchHit`-Form.
  *
- * **Kein Upstream-Call-Fanout hier.** `externalSearch` läuft pro Source.
- * Der Aggregator ruft `Promise.allSettled([...sources.map(externalSearch)])`
- * parallel auf.
+ * **Abort-Modell:** Der Timeout wird vom Caller (`runUnifiedSearch`)
+ * via `AbortController` + `setTimeout(controller.abort, …)` aufgespannt;
+ * `externalSearch` reicht den Signal an den Gateway-Call durch und
+ * wandelt `signal.aborted` am Catch-Pfad in ein `degraded`-Outcome um.
+ * Kein Promise.race, kein hängender Hintergrund-Fetch.
  *
  * **Kein direkter Provider-Call, niemals.** Security-Prinzip: nur via
  * Gateway, damit Pipeline + Audit konsequent greifen. Kein Shortcut
  * für „performance".
  *
  * Confluence-spezifisch: wir importieren `confluenceSearchTool` nur um
- * `requiredScopes`/`extractObservedScopes`-Funktionen zu bekommen. Sobald
- * ein zweiter Connector-Typ dazukommt (Slack, GitHub), entscheidet ein
- * Switch auf `source.integration.connectorType`.
+ * `extractObservedScopes` zu bekommen. Sobald ein zweiter Connector-
+ * Typ dazukommt (Slack, GitHub), entscheidet ein Switch auf
+ * `source.integration.connectorType`.
  */
 
 import type { ExecuteConnectorToolInput } from "@/lib/connectors/gateway";
@@ -29,12 +31,9 @@ import type {
 import type {
   ConnectorIntegration,
   ConnectorScope,
-  ExecutionContext,
   SpaceExternalSource,
   ToolResult,
 } from "@/lib/connectors/types";
-
-const DEFAULT_TIMEOUT_MS = 5_000;
 
 /** Ein einzelnes gemapptes External-Source-Tuple, geliefert von
  *  `listExternalSourcesForSpaces`. */
@@ -85,38 +84,13 @@ export interface ExternalSearchCaller {
 }
 
 export interface ExternalSearchOptions {
-  timeoutMs?: number;
+  /** Externer Timeout-Signal vom Federation-Layer. `signal.aborted
+   *  === true` nach dem await ⇒ wir liefern `degraded`-Outcome mit
+   *  Timeout-Reason. */
+  abortSignal?: AbortSignal;
   /** Test-Override: statt `executeConnectorToolLive` eine Mock-Funktion.
    *  Produktion nutzt den Default-Live-Pfad. */
   execute?: (input: ExecuteConnectorToolInput) => Promise<ToolResult>;
-}
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/** Race `promise` gegen `ms` Timeout. Bei Timeout: Resolve mit der
- *  Fallback-Shape. Hintergrund-Request läuft weiter, wird aber
- *  verworfen — pragmatisches Leak für den MVP (kein AbortController-
- *  Durchreichen in den Gateway). */
-function withTimeout<T>(
-  promise: Promise<T>,
-  ms: number,
-  onTimeout: () => T,
-): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    const timer = setTimeout(() => resolve(onTimeout()), ms);
-    promise.then(
-      (value) => {
-        clearTimeout(timer);
-        resolve(value);
-      },
-      (err) => {
-        clearTimeout(timer);
-        reject(err);
-      },
-    );
-  });
 }
 
 // ---------------------------------------------------------------------------
@@ -160,14 +134,7 @@ export async function externalSearch(
   options: ExternalSearchOptions = {},
 ): Promise<ExternalSearchOutcome> {
   const sourceLabel = source.integration.displayName;
-  // Lazy default import: gateway-live zieht `lib/db` rein, was den
-  // Edge-Runtime-freien sowie den Test-Import-Graph kaputt machen
-  // würde. Der static `import type { ExecuteConnectorToolInput }`
-  // bleibt OK (TypeScript-Type-only, wird gestript).
-  const execute =
-    options.execute ??
-    (await import("@/lib/connectors/gateway-live")).executeConnectorToolLive;
-  const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const abortSignal = options.abortSignal;
 
   // Connector-Dispatch. Aktuell nur confluence-cloud; Slack/GitHub
   // kommen hier mit eigenen Branches dazu.
@@ -179,6 +146,26 @@ export async function externalSearch(
       reason: `Unsupported connector type for federation: ${source.integration.connectorType}`,
     };
   }
+
+  // Fast-path: wenn der Signal bereits aborted ist (Caller hat noch
+  // vor dem Gateway-Call Timeout oder Error gecaught), erspart uns
+  // das einen unnötigen Upstream-Call.
+  if (abortSignal?.aborted) {
+    return {
+      status: "degraded",
+      hits: [],
+      sourceLabel,
+      reason: "aborted-before-dispatch",
+    };
+  }
+
+  // Lazy default import: gateway-live zieht `lib/db` rein, was den
+  // Edge-Runtime-freien sowie den Test-Import-Graph kaputt machen
+  // würde. Der static `import type { ExecuteConnectorToolInput }`
+  // bleibt OK (TypeScript-Type-only, wird gestript).
+  const execute =
+    options.execute ??
+    (await import("@/lib/connectors/gateway-live")).executeConnectorToolLive;
 
   const args = { query, limit };
   const scopeRef = {
@@ -200,23 +187,43 @@ export async function externalSearch(
     scopeIds: [source.scope.id],
     extractObservedScopes: (result: ToolResult) =>
       confluenceSearchTool.extractObservedScopes(result),
+    abortSignal,
   };
 
   let result: ToolResult;
   try {
-    result = await withTimeout(execute(input), timeoutMs, () => ({
-      status: "degraded" as const,
-      data: null,
-      reason: `Timeout after ${timeoutMs}ms`,
-    }));
+    result = await execute(input);
   } catch (err) {
-    // Gateway rethrowt bei unclassified errors — die wollen wir als
-    // degradation behandeln, nicht die komplette Federation kippen.
+    // Abort-Pfad: der Gateway hat entweder ConnectorUpstreamError aus
+    // einem AbortError erzeugt, oder der Fetch wurde direkt gestoppt.
+    // Wir unterscheiden hier den Grund:
+    if (abortSignal?.aborted) {
+      return {
+        status: "degraded",
+        hits: [],
+        sourceLabel,
+        reason: "timeout-or-aborted",
+      };
+    }
+    // Nicht-abortbezogene Errors behandeln wir weiterhin als failure —
+    // Gateway rethrowt bei unclassified errors, die wollen wir nicht
+    // die ganze Federation kippen lassen.
     return {
       status: "failure",
       hits: [],
       sourceLabel,
       reason: err instanceof Error ? err.message : String(err),
+    };
+  }
+
+  // Gateway hat einen AbortError zum degraded-ToolResult gemacht —
+  // Signal-State hat Vorrang für die reason-Attribution.
+  if (abortSignal?.aborted && result.status !== "success") {
+    return {
+      status: "degraded",
+      hits: [],
+      sourceLabel,
+      reason: "timeout-or-aborted",
     };
   }
 

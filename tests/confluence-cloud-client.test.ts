@@ -206,10 +206,60 @@ test("client: timeout aborts the request and wraps in ConnectorUpstreamError", a
     () => client.get("/wiki/api/v2/spaces"),
     (err) => {
       if (!(err instanceof ConnectorUpstreamError)) return false;
-      if (!/timed out/i.test(err.message)) return false;
+      // Client unterscheidet nicht mehr zwischen internem Timeout und
+      // externem Abort — beide werden als „aborted" gemeldet, mit dem
+      // ursprünglichen AbortError als `cause`.
+      if (!/aborted/i.test(err.message)) return false;
       const cause = err.cause as Error | undefined;
       return cause?.name === "AbortError";
     },
+  );
+});
+
+test("client: external abortSignal wins over internal timeout", async () => {
+  // Externer Signal wird vor dem internen Timeout aborted.
+  const externalCtrl = new AbortController();
+  const fetchImpl: typeof fetch = (_input, init) =>
+    new Promise((_, reject) => {
+      init?.signal?.addEventListener("abort", () => {
+        const err = new Error("aborted");
+        err.name = "AbortError";
+        reject(err);
+      });
+    });
+  const client = new ConfluenceCloudClient(CREDS, CONF, {
+    fetchImpl,
+    timeoutMs: 60_000, // lange — wird vom externen Signal überrannt
+    abortSignal: externalCtrl.signal,
+  });
+  // Nach 10ms aborten — lange vor dem internen Timeout.
+  setTimeout(() => externalCtrl.abort(), 10);
+  await assert.rejects(
+    () => client.get("/wiki/api/v2/spaces"),
+    (err) =>
+      err instanceof ConnectorUpstreamError && /aborted/i.test(err.message),
+  );
+});
+
+test("client: internal timeout works even when external signal is never triggered", async () => {
+  // Kein externer Signal angegeben — nur interner Timeout greift.
+  const fetchImpl: typeof fetch = (_input, init) =>
+    new Promise((_, reject) => {
+      init?.signal?.addEventListener("abort", () => {
+        const err = new Error("aborted");
+        err.name = "AbortError";
+        reject(err);
+      });
+    });
+  const client = new ConfluenceCloudClient(CREDS, CONF, {
+    fetchImpl,
+    timeoutMs: 20,
+    // KEIN abortSignal
+  });
+  await assert.rejects(
+    () => client.get("/wiki/api/v2/spaces"),
+    (err) =>
+      err instanceof ConnectorUpstreamError && /aborted/i.test(err.message),
   );
 });
 

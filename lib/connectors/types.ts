@@ -140,4 +140,15 @@ export interface ExecutionContext {
    *  Tools ohne konkreten Space-Kontext (MCP-Client fragt eine
    *  External-Ressource ohne lokri-Space-Attribution). */
   spaceId: string | null;
+  /**
+   * Externer Abort-Signal, den der Federation-Layer (Unified-Search)
+   * pro Tool-Call aufspannt, um einen 5s-Timeout hart durchzusetzen.
+   * Provider reichen das an ihren HTTP-Client weiter; dort wird es
+   * mit dem internen Client-Timeout kombiniert.
+   *
+   * Null/undefined = kein externer Timeout, nur internes Client-Limit
+   * greift (z.B. Setup-Flows wie testCredentials/discoverScopes, die
+   * nicht über den Gateway laufen).
+   */
+  abortSignal?: AbortSignal;
 }

@@ -4,7 +4,15 @@
  * Zuständig für:
  *   - Basic-Auth-Header-Konstruktion aus `email:apiToken`
  *   - URL-Konstruktion gegen den konfigurierten `siteUrl`
- *   - Timeout-Enforcement via `AbortSignal` (Default 10s)
+ *   - **Same-Origin-Assert** vor jedem Fetch: parse mit `new URL(input, site)`
+ *     und vergleiche Protocol/Host/Port. Defense-in-Depth gegen SSRF aus
+ *     Pagination-Links (`_links.next` in Confluence-v2-Responses), Redirects
+ *     oder manipulierten Payloads. Findet auch Protocol-relative URLs
+ *     (`//evil.com/path` → resolved zu `https://evil.com/path`).
+ *   - Timeout-Enforcement via internem `AbortController` (Default 10s),
+ *     kombinierbar mit einem externen `AbortSignal` aus dem Federation-
+ *     Layer — frühester Abort gewinnt. Nutzt `AbortSignal.any(...)`
+ *     (Node 22+, stable).
  *   - Mapping HTTP-Status → typisierte Connector-Errors:
  *       401/403 → `ConnectorAuthError` (Token ungültig/gesperrt)
  *       404     → `ConnectorUpstreamError` mit 404-Status (Caller
@@ -12,7 +20,10 @@
  *                 Config-Problem ist; v.a. read-page unterscheidet)
  *       429     → `ConnectorUpstreamError` mit `retryAfter`-Metadata
  *       5xx     → `ConnectorUpstreamError` mit Status
- *       Timeout → `ConnectorUpstreamError("timeout", { cause: AbortError })`
+ *       Abort   → `ConnectorUpstreamError("request aborted…", { cause: AbortError })`
+ *                 Keine Unterscheidung zwischen internem Timeout und
+ *                 externem Signal — für den Caller ist beides „Upstream
+ *                 hat nicht rechtzeitig geantwortet".
  *       Netzwerk → `ConnectorUpstreamError(msg, { cause: err })`
  *
  * Security-Hinweis: Der Authorization-Header wird **nie** in Fehler-
@@ -32,6 +43,14 @@ export interface ConfluenceCloudClientOptions {
   timeoutMs?: number;
   /** DI für Tests. Default `globalThis.fetch`. */
   fetchImpl?: typeof fetch;
+  /**
+   * Externer AbortSignal aus dem Federation-Layer (runUnifiedSearch
+   * erzeugt pro Source einen Controller + 5s-Timeout). Wird mit dem
+   * internen Client-Timeout via `AbortSignal.any(...)` kombiniert,
+   * der frühere von beiden gewinnt. Null/undefined = nur interner
+   * Timeout greift.
+   */
+  abortSignal?: AbortSignal;
 }
 
 /** Pfad + Query aus Sicht des Loggings — ohne Auth-Header. */
@@ -48,6 +67,8 @@ export class ConfluenceCloudClient {
   private readonly authHeader: string;
   private readonly timeoutMs: number;
   private readonly fetchImpl: typeof fetch;
+  private readonly abortSignal?: AbortSignal;
+  private readonly baseOrigin: string;
 
   constructor(
     credentials: ConfluenceCloudCredentials,
@@ -61,6 +82,10 @@ export class ConfluenceCloudClient {
     this.authHeader = `Basic ${Buffer.from(token, "utf8").toString("base64")}`;
     this.timeoutMs = options.timeoutMs ?? 10_000;
     this.fetchImpl = options.fetchImpl ?? globalThis.fetch.bind(globalThis);
+    this.abortSignal = options.abortSignal;
+    // Precompute origin für SSRF-Check (Hot-Path). URL-Parser
+    // normalisiert Host-Casing (`EMPRO.atlassian.net` → `empro.atlassian.net`).
+    this.baseOrigin = new URL(this.config.siteUrl).origin;
   }
 
   async get<T>(path: string, query?: URLSearchParams): Promise<T> {
@@ -71,15 +96,14 @@ export class ConfluenceCloudClient {
     return this.request<T>("GET", url);
   }
 
-  /** Absolute Confluence-URL (z.B. aus `_links.next` in einer v2-Response,
-   *  das kommt als relativer Pfad wie `/wiki/api/v2/spaces?cursor=…`). */
+  /**
+   * Für Pagination-Links aus Confluence-Responses (`_links.next`).
+   * Akzeptiert relative Pfade (`/wiki/api/v2/spaces?cursor=…`) und
+   * absolute URLs. Same-Origin-Check läuft in `request()` — hier nur
+   * Parse + Normalisierung.
+   */
   async getAbsolute<T>(urlOrPath: string): Promise<T> {
-    // `_links.next` in v2 ist relativ zum Host (beginnt mit `/wiki/…`).
-    // Wir normalisieren beide Formen (absolute + relative).
-    const url = /^https?:\/\//.test(urlOrPath)
-      ? urlOrPath
-      : buildConfluenceUrl(this.config.siteUrl, urlOrPath);
-    return this.request<T>("GET", url);
+    return this.request<T>("GET", urlOrPath);
   }
 
   async post<T>(path: string, body: unknown): Promise<T> {
@@ -87,13 +111,63 @@ export class ConfluenceCloudClient {
     return this.request<T>("POST", url, body);
   }
 
+  /**
+   * Resolve + Validate: `input` kann relativ, absolut oder protocol-
+   * relative (`//evil.com/…`) sein. Der URL-Konstruktor mit `base`
+   * resolved alle drei Formen. Danach wird der Origin verglichen —
+   * Mismatch ⇒ `ConnectorUpstreamError`.
+   *
+   * Wirft **bevor** fetch oder irgendein Auth-Header die Datei verlässt.
+   * Credentials leaken nicht, selbst wenn ein Atlassian-Payload
+   * manipuliert wurde.
+   */
+  private assertSameOriginOrThrow(input: string): URL {
+    let parsed: URL;
+    try {
+      parsed = new URL(input, this.baseOrigin);
+    } catch (err) {
+      throw new ConnectorUpstreamError(
+        `Invalid Confluence URL: ${input.slice(0, 80)}`,
+        { cause: err instanceof Error ? err : new Error(String(err)) },
+      );
+    }
+    if (parsed.origin !== this.baseOrigin) {
+      throw new ConnectorUpstreamError(
+        // Origin wird geloggt (bewusst), damit Ops den Angriffsversuch
+        // diagnostizieren kann. Der Pfad kommt nicht mit rein — falls
+        // der User-Input PII enthielt, bleibt er implizit.
+        `Upstream URL rejected by same-origin guard: ${parsed.origin} (expected ${this.baseOrigin})`,
+      );
+    }
+    return parsed;
+  }
+
+  private buildRequestSignal(): { signal: AbortSignal; cleanup: () => void } {
+    const internal = new AbortController();
+    const timer = setTimeout(() => internal.abort(), this.timeoutMs);
+    const cleanup = () => clearTimeout(timer);
+    // Keine externe Quelle → direkt der interne Controller.
+    if (!this.abortSignal) {
+      return { signal: internal.signal, cleanup };
+    }
+    // Mit externer Quelle: `AbortSignal.any` kombiniert — der erste
+    // Abort propagiert. Kein Listener-Manual-Wiring nötig.
+    const combined = AbortSignal.any([internal.signal, this.abortSignal]);
+    return { signal: combined, cleanup };
+  }
+
   private async request<T>(
     method: string,
-    url: string,
+    urlOrPath: string,
     body?: unknown,
   ): Promise<T> {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+    // SSRF-Guard: Parse + Same-Origin-Check vor Fetch. Wirft
+    // `ConnectorUpstreamError` bei Foreign-Host — Credentials werden
+    // nie an fremde Hosts gesendet.
+    const parsedUrl = this.assertSameOriginOrThrow(urlOrPath);
+    const url = parsedUrl.toString();
+
+    const { signal, cleanup } = this.buildRequestSignal();
 
     let response: Response;
     try {
@@ -105,18 +179,18 @@ export class ConfluenceCloudClient {
           ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
         },
         body: body !== undefined ? JSON.stringify(body) : undefined,
-        signal: controller.signal,
+        signal,
       });
     } catch (err) {
-      const abort = err instanceof Error && err.name === "AbortError";
+      const aborted = err instanceof Error && err.name === "AbortError";
       throw new ConnectorUpstreamError(
-        abort
-          ? `Confluence request timed out after ${this.timeoutMs}ms (${describeRequest(method, url)})`
+        aborted
+          ? `Confluence request aborted (${describeRequest(method, url)})`
           : `Confluence request failed: ${describeRequest(method, url)}`,
         { cause: err },
       );
     } finally {
-      clearTimeout(timer);
+      cleanup();
     }
 
     if (response.ok) {
